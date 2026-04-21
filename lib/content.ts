@@ -331,11 +331,27 @@ export const engineeringApproach = [
   },
 ];
 
-export const stats = [
-  { value: "4+", label: "AI Systems shipped" },
-  { value: "4+", label: "Cloud / AI certifications" },
-  { value: "100%", label: "Python-native backend" },
-  { value: "24/7", label: "Production-oriented mindset" },
+/**
+ * Qualitative capability signals — no numeric counters.
+ * Each entry describes a discipline, not a count.
+ */
+export const capabilities = [
+  {
+    label: "Agentic AI",
+    body: "Planner / executor / critic loops, typed tool calling, replayable runs.",
+  },
+  {
+    label: "Applied LLM Workflows",
+    body: "RAG, structured outputs, eval harnesses, prompt + model versioning.",
+  },
+  {
+    label: "Python Backends",
+    body: "FastAPI / Flask services with typed contracts, auth, and observability.",
+  },
+  {
+    label: "Data Pipelines",
+    body: "Contract-first ingestion with drift detection and per-job SLIs.",
+  },
 ];
 
 export const profile = {
@@ -345,17 +361,18 @@ export const profile = {
   email: "mikencube03@gmail.com",
   avatar: "/Mike_Org.jpeg",
   portrait: "/Mike_Org.jpeg",
-  headline: "AI Infrastructure Engineer",
-  subHeadline: "Agentic AI · LLM Workflows · Python Backend",
+  headline: "AI Engineer",
+  subHeadline:
+    "Agentic AI & Applied LLM Workflows · Python Backends (Flask / FastAPI) · Data Pipelines",
   oneLiner:
-    "I design and ship agentic AI systems, RAG platforms, LLM workflow automation, and Python backends (FastAPI / Flask) on AWS — production-grade, observable, and built to be run.",
-  availability: "Available for senior AI engineering roles",
+    "I design and build agentic AI systems, applied LLM workflows, and Python backends (Flask / FastAPI) — with data pipelines wired in end-to-end.",
+  availability: "Available for AI engineering roles",
   tags: [
-    "AI Infra Engineer",
-    "RAG Specialist",
-    "LLM Systems",
+    "AI Engineer",
     "Agentic AI",
-    "Python Backend",
+    "Applied LLM Workflows",
+    "Python Backends",
+    "Data Pipelines",
   ],
 };
 

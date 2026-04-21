@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { stats, profile } from "@/lib/content";
+import { capabilities, profile } from "@/lib/content";
 
 export default function Hero() {
   return (
@@ -34,7 +34,7 @@ export default function Hero() {
               className="font-display text-display-xl tracking-tightest text-white text-balance animate-fade-up"
               style={{ animationDelay: "80ms" }}
             >
-              AI Infrastructure{" "}
+              AI{" "}
               <span className="relative inline-block">
                 <span className="bg-gradient-to-br from-accent via-accent to-signal bg-clip-text text-transparent">
                   Engineer
@@ -47,13 +47,13 @@ export default function Hero() {
               className="max-w-xl text-pretty text-[16.5px] leading-relaxed text-ink-200 animate-fade-up"
               style={{ animationDelay: "140ms" }}
             >
-              I design and ship{" "}
+              I design and build{" "}
               <span className="text-white">agentic AI systems</span>,{" "}
-              <span className="text-white">RAG platforms</span>,{" "}
-              <span className="text-white">LLM workflow automation</span>, and{" "}
-              <span className="text-white">Python backends</span> (FastAPI /
-              Flask) on AWS — production-grade, observable, and built to be
-              run.
+              <span className="text-white">applied LLM workflows</span>, and{" "}
+              <span className="text-white">Python backends</span> (Flask /
+              FastAPI) — with{" "}
+              <span className="text-white">data pipelines</span> wired in
+              end-to-end.
             </p>
 
             <div
@@ -70,22 +70,24 @@ export default function Hero() {
               </a>
             </div>
 
-            <div
-              className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 animate-fade-up"
+            <ul
+              className="mt-4 grid gap-3 sm:grid-cols-2 animate-fade-up"
               style={{ animationDelay: "260ms" }}
             >
-              {stats.map((s) => (
-                <div
-                  key={s.label}
+              {capabilities.map((c) => (
+                <li
+                  key={c.label}
                   className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur sm:p-5"
                 >
-                  <div className="font-display text-2xl font-bold tracking-tight text-accent sm:text-3xl">
-                    {s.value}
+                  <div className="font-display text-[15px] font-semibold tracking-tight text-white">
+                    {c.label}
                   </div>
-                  <div className="mt-1 text-[12px] text-ink-300">{s.label}</div>
-                </div>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-ink-300">
+                    {c.body}
+                  </p>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           {/* Right: portrait + identity card */}

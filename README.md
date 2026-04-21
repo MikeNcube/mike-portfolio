@@ -1,10 +1,11 @@
 # Mike — AI Engineer Portfolio
 
-Enterprise-grade portfolio positioning Mike as an **AI Engineer** focused on:
+Portfolio for **Mike S Ncube — AI Engineer**.
 
-- Agentic AI systems
-- LLM workflow automation
-- Python backend engineering (FastAPI / Flask)
+Focus areas:
+
+- Agentic AI & applied LLM workflows
+- Python backends (Flask / FastAPI)
 - Data pipelines & automation
 
 Built as a production-ready Next.js 14 (App Router) site with strict TypeScript, Tailwind CSS, and a systems-first information architecture.

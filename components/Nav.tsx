@@ -39,7 +39,7 @@ export default function Nav() {
           <span className="font-display text-[15px] font-semibold tracking-tight text-white">
             Mike<span className="text-accent">.</span>Ncube
             <span className="ml-2 hidden font-mono text-[11px] font-normal text-ink-400 sm:inline">
-              · AI Infrastructure Engineer
+              · AI Engineer
             </span>
           </span>
         </a>

@@ -19,7 +19,7 @@ export default function Contact() {
                 Have an AI system worth building properly?
               </h2>
               <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-ink-200">
-                I take on senior engineering roles, focused contracts, and
+                I take on AI engineering roles, focused contracts, and
                 platform-level engagements where systems thinking actually
                 matters. If that sounds like your team, let&rsquo;s talk.
               </p>
@@ -57,11 +57,11 @@ export default function Contact() {
           <div className="relative mt-10 grid gap-4 border-t border-white/10 pt-8 sm:grid-cols-3">
             <InfoRow
               label="Availability"
-              value="Senior / contract · remote-first"
+              value="Full-time / contract · remote-first"
             />
             <InfoRow
               label="Focus"
-              value="Agentic AI · RAG · LLM workflows · Python backends"
+              value="Agentic AI · Applied LLM workflows · Python backends · Data pipelines"
             />
             <InfoRow label="Based" value={profile.location} />
           </div>

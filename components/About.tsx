@@ -35,24 +35,23 @@ export default function About() {
 
           <div className="flex flex-col gap-5 text-[15.5px] leading-relaxed text-ink-200">
             <p>
-              I&rsquo;m Mike — an AI Infrastructure Engineer working across
-              Zimbabwe and South Africa. I build AI systems end-to-end: the
-              agent logic, the retrieval layer, the Python backend, the data
-              pipeline feeding it, and the observability wrapped around it.
+              I&rsquo;m Mike — an AI Engineer working across Zimbabwe and
+              South Africa. I build AI systems end-to-end: the agent logic,
+              the retrieval layer, the Python backend, the data pipeline
+              feeding it, and the observability wrapped around it.
             </p>
             <p>
               My default domains:{" "}
               <span className="text-white">agentic AI</span>,{" "}
-              <span className="text-white">RAG and LLM workflow automation</span>
-              ,{" "}
-              <span className="text-white">FastAPI / Flask services</span>, and{" "}
+              <span className="text-white">applied LLM workflows</span>,{" "}
+              <span className="text-white">Flask / FastAPI services</span>, and{" "}
               <span className="text-white">data pipelines with real SLIs</span>
               . I work well with teams shipping AI into regulated or
               high-stakes environments — fintech, insurance, automotive,
               enterprise SaaS.
             </p>
             <p className="text-ink-300">
-              Available for senior AI engineering roles, contract work, and
+              Available for AI engineering roles, contract work, and
               consulting engagements on AI platform design.
             </p>
           </div>
