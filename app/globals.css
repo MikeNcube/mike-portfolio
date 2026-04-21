@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg: #07080a;
-  --bg-elev: #0d0f12;
+  --bg: #0a0d14;
+  --bg-elev: #0f1320;
   --fg: #ededf0;
   --fg-muted: #9a9aa1;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --accent: #7dd3fc;
+  --accent: #0066FF;
+  --signal: #00C896;
 }
 
 html,
@@ -31,7 +32,7 @@ body {
 }
 
 ::selection {
-  background: rgba(125, 211, 252, 0.25);
+  background: rgba(0, 102, 255, 0.28);
   color: #ffffff;
 }
 
@@ -42,8 +43,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(1200px 600px at 15% -10%, rgba(125, 211, 252, 0.06), transparent 60%),
-    radial-gradient(900px 500px at 110% 20%, rgba(168, 85, 247, 0.04), transparent 60%);
+    radial-gradient(1200px 600px at 15% -10%, rgba(0, 102, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 110% 20%, rgba(0, 200, 150, 0.04), transparent 60%);
   z-index: -1;
 }
 

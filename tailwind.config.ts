@@ -19,9 +19,13 @@ const config: Config = {
           900: "#0a0a0b",
         },
         accent: {
-          DEFAULT: "#7dd3fc",
-          glow: "#38bdf8",
-          subtle: "#0ea5e9",
+          DEFAULT: "#0066FF",
+          glow: "#3b82f6",
+          subtle: "#1d4ed8",
+        },
+        signal: {
+          DEFAULT: "#00C896",
+          glow: "#10b981",
         },
       },
       fontFamily: {

@@ -16,49 +16,57 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_NAME = "Mike — AI Engineer";
+const SITE_NAME = "Mike Ncube — AI Infrastructure Engineer";
 const SITE_DESCRIPTION =
-  "AI Engineer building agentic AI systems, LLM workflow automation, and production Python backends (Flask / FastAPI). Systems-first engineering for AI platforms, fintech, and enterprise.";
+  "Mike S Ncube — AI Infrastructure Engineer building agentic AI systems, RAG platforms, LLM workflow automation, and production Python backends (FastAPI / Flask) on AWS.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mike.dev"),
+  metadataBase: new URL("https://mike-portfolio-tawny.vercel.app"),
   title: {
     default: `${SITE_NAME} · Agentic AI · LLM Workflows · Python Backend`,
-    template: "%s · Mike",
+    template: "%s · Mike Ncube",
   },
   description: SITE_DESCRIPTION,
   keywords: [
+    "AI Infrastructure Engineer",
     "AI Engineer",
     "Agentic AI",
+    "RAG",
+    "LangChain",
     "LLM workflows",
     "LLM orchestration",
     "Python backend engineer",
     "FastAPI",
     "Flask",
+    "AWS",
     "data pipelines",
     "workflow automation",
     "systems engineering",
-    "RAG",
-    "vector databases",
+    "Mike Ncube",
   ],
-  authors: [{ name: "Mike" }],
-  creator: "Mike",
+  authors: [{ name: "Mike S Ncube" }],
+  creator: "Mike S Ncube",
+  icons: {
+    icon: "/favicon.ico",
+  },
   openGraph: {
     type: "website",
     title: `${SITE_NAME} · Agentic AI · LLM Workflows · Python Backend`,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
+    images: [{ url: "/Mike_Org.jpeg", width: 1024, height: 1024, alt: "Mike S Ncube" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
+    images: ["/Mike_Org.jpeg"],
   },
   robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07080a",
+  themeColor: "#0a0d14",
   width: "device-width",
   initialScale: 1,
 };

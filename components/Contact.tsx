@@ -1,10 +1,13 @@
+import { profile } from "@/lib/content";
+
 export default function Contact() {
   return (
     <section id="contact" className="border-t border-white/5 py-24 sm:py-32">
       <div className="container-edge">
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent p-8 sm:p-14">
           <div className="pointer-events-none absolute inset-0 bg-grid-dim opacity-40" />
-          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-10 h-52 w-52 rounded-full bg-signal/10 blur-3xl" />
 
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
@@ -24,14 +27,14 @@ export default function Contact() {
 
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
               <a
-                href="mailto:hello@mike.dev"
+                href={`mailto:${profile.email}`}
                 className="btn-primary justify-center"
               >
-                hello@mike.dev
+                {profile.email}
                 <span aria-hidden>→</span>
               </a>
               <a
-                href="https://www.linkedin.com"
+                href="https://www.linkedin.com/in/mike-ncube"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="btn-ghost justify-center"
@@ -40,7 +43,7 @@ export default function Contact() {
                 <span aria-hidden>↗</span>
               </a>
               <a
-                href="https://github.com"
+                href="https://github.com/MikeNcube"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="btn-ghost justify-center"
@@ -52,9 +55,15 @@ export default function Contact() {
           </div>
 
           <div className="relative mt-10 grid gap-4 border-t border-white/10 pt-8 sm:grid-cols-3">
-            <InfoRow label="Availability" value="Senior / contract · remote-first" />
-            <InfoRow label="Focus" value="Agentic AI · LLM workflows · Python backends" />
-            <InfoRow label="Response" value="Within 24 hours on business days" />
+            <InfoRow
+              label="Availability"
+              value="Senior / contract · remote-first"
+            />
+            <InfoRow
+              label="Focus"
+              value="Agentic AI · RAG · LLM workflows · Python backends"
+            />
+            <InfoRow label="Based" value={profile.location} />
           </div>
         </div>
       </div>

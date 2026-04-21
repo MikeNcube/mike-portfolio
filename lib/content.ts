@@ -32,11 +32,11 @@ export const flagshipProjects: Project[] = [
     stack: [
       "Python",
       "FastAPI",
+      "LangChain / LangGraph",
       "OpenAI / Anthropic",
-      "LangGraph-style orchestration",
+      "AWS",
       "PostgreSQL",
       "Redis",
-      "Pydantic",
     ],
     signals: [
       "Agent orchestration",
@@ -63,11 +63,11 @@ export const flagshipProjects: Project[] = [
     stack: [
       "Python",
       "FastAPI",
-      "pgvector",
-      "OpenAI / local embeddings",
+      "LangChain",
+      "pgvector / OpenSearch",
+      "AWS (S3, Lambda, Bedrock)",
       "Redis",
       "Docker",
-      "Pytest",
     ],
     signals: [
       "RAG",
@@ -94,8 +94,8 @@ export const flagshipProjects: Project[] = [
     stack: [
       "Python",
       "FastAPI",
+      "AWS (S3, Lambda, SQS)",
       "PostgreSQL",
-      "Redis / queues",
       "Pandas / Polars",
       "Pydantic",
       "Docker",
@@ -332,11 +332,32 @@ export const engineeringApproach = [
 ];
 
 export const stats = [
-  { value: "20+", label: "Systems engineered" },
-  { value: "10+", label: "AI / LLM workflows shipped" },
+  { value: "4+", label: "AI Systems shipped" },
+  { value: "4+", label: "Cloud / AI certifications" },
   { value: "100%", label: "Python-native backend" },
   { value: "24/7", label: "Production-oriented mindset" },
 ];
+
+export const profile = {
+  name: "Mike S Ncube",
+  shortName: "Mike",
+  location: "Zimbabwe · South Africa",
+  email: "mikencube03@gmail.com",
+  avatar: "/Mike_Org.jpeg",
+  portrait: "/Mike_Org.jpeg",
+  headline: "AI Infrastructure Engineer",
+  subHeadline: "Agentic AI · LLM Workflows · Python Backend",
+  oneLiner:
+    "I design and ship agentic AI systems, RAG platforms, LLM workflow automation, and Python backends (FastAPI / Flask) on AWS — production-grade, observable, and built to be run.",
+  availability: "Available for senior AI engineering roles",
+  tags: [
+    "AI Infra Engineer",
+    "RAG Specialist",
+    "LLM Systems",
+    "Agentic AI",
+    "Python Backend",
+  ],
+};
 
 export const navSections = [
   { id: "flagship", label: "Flagship" },
