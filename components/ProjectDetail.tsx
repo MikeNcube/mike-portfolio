@@ -14,6 +14,7 @@ const DEFAULT_SHOT = "/demo-placeholder.svg";
 export default function ProjectDetail({ project, prev, next }: Props) {
   const systemOverview = project.systemOverview ?? project.approach;
   const architecture = project.architectureImage ?? DEFAULT_ARCH;
+  const architectureIsCustom = Boolean(project.architectureImage);
   const screenshots =
     project.screenshots && project.screenshots.length > 0
       ? project.screenshots
@@ -123,8 +124,9 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                 />
               </div>
               <figcaption className="border-t border-white/10 px-4 py-3 font-mono text-[11px] text-ink-400">
-                Architecture overview · swap with project-specific diagram
-                under <code className="text-ink-200">/public</code>.
+                {architectureIsCustom
+                  ? `System architecture · ${project.name}`
+                  : "Architecture overview · placeholder — swap with project-specific diagram."}
               </figcaption>
             </figure>
           </Section>

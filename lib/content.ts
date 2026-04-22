@@ -48,6 +48,7 @@ export const flagshipProjects: Project[] = [
       "Run traces persisted per step, so any failure resumes from the last good step instead of restarting the whole workflow.",
       "Cost and latency telemetry attached to every trace event — model choice becomes a measurable product decision.",
     ],
+    architectureImage: "/diagrams/agentic-workflow.svg",
     stack: [
       "Python",
       "FastAPI",
