@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Project } from "@/lib/content";
 
 type Props = {
@@ -11,9 +12,14 @@ export default function ProjectCard({
   variant = "default",
   index,
 }: Props) {
+  const href = `/projects/${project.slug}`;
+
   if (variant === "flagship") {
     return (
-      <article className="card-lg shimmer-border group overflow-hidden">
+      <Link
+        href={href}
+        className="card-lg shimmer-border group block overflow-hidden transition hover:-translate-y-0.5"
+      >
         <div className="flex flex-col gap-6 lg:flex-row lg:gap-10">
           <div className="flex w-full flex-col gap-5 lg:w-[58%]">
             <div className="flex items-center gap-3">
@@ -39,6 +45,13 @@ export default function ProjectCard({
               <Block label="Approach" body={project.approach} />
               <Block label="Outcome" body={project.outcome} />
             </div>
+
+            <span className="mt-2 inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-[13px] font-medium text-white transition group-hover:border-accent/50 group-hover:text-accent">
+              View case study
+              <span aria-hidden className="transition group-hover:translate-x-0.5">
+                →
+              </span>
+            </span>
           </div>
 
           <div className="flex w-full flex-col gap-4 border-white/10 lg:w-[42%] lg:border-l lg:pl-10">
@@ -70,13 +83,13 @@ export default function ProjectCard({
             </div>
           </div>
         </div>
-      </article>
+      </Link>
     );
   }
 
   if (variant === "compact") {
     return (
-      <article className="card group">
+      <Link href={href} className="card group block">
         <div className="flex items-start justify-between gap-3">
           <h4 className="font-display text-[17px] font-semibold leading-snug tracking-tight text-white">
             {project.name}
@@ -95,12 +108,21 @@ export default function ProjectCard({
             </span>
           ))}
         </div>
-      </article>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-accent opacity-80 transition group-hover:opacity-100">
+          View case study
+          <span aria-hidden className="transition group-hover:translate-x-0.5">
+            →
+          </span>
+        </span>
+      </Link>
     );
   }
 
   return (
-    <article className="card group flex flex-col gap-4">
+    <Link
+      href={href}
+      className="card group flex flex-col gap-4 transition hover:-translate-y-0.5"
+    >
       <div className="flex items-center gap-3">
         <span className="mono uppercase tracking-[0.18em] text-ink-400">
           {project.domain}
@@ -135,8 +157,15 @@ export default function ProjectCard({
             </span>
           ))}
         </div>
+
+        <span className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-accent opacity-80 transition group-hover:opacity-100">
+          View case study
+          <span aria-hidden className="transition group-hover:translate-x-0.5">
+            →
+          </span>
+        </span>
       </div>
-    </article>
+    </Link>
   );
 }
 

@@ -62,12 +62,15 @@ app/
   page.tsx            # IA-ordered homepage composition
   globals.css         # Design tokens, components, utilities
   not-found.tsx       # 404 route
+  projects/
+    [slug]/page.tsx   # Case-study detail page per project (SSG)
 components/
   Nav.tsx             # Sticky, blurred, responsive nav
   Footer.tsx
   Hero.tsx            # Recruiter-grabbing hero
   SectionHeader.tsx   # Shared section header
-  ProjectCard.tsx     # Flagship / default / compact variants
+  ProjectCard.tsx     # Flagship / default / compact variants (clickable)
+  ProjectDetail.tsx   # Case-study layout (meta sidebar + sections)
   Flagship.tsx        # Section: top AI systems
   Agentic.tsx         # Section: agentic / LLM
   Backend.tsx         # Section: Python backends
@@ -78,7 +81,29 @@ components/
   Contact.tsx         # Section: contact
 lib/
   content.ts          # Typed project + section content
+public/
+  Mike_Org.jpeg                    # portrait (untouched)
+  favicon.ico                      # (untouched)
+  architecture-placeholder.svg     # default architecture diagram
+  demo-placeholder.svg             # default screenshot
 ```
+
+### Case-study pages
+
+Each project in `lib/content.ts` has a matching case-study route at
+`/projects/[slug]`. Pages are statically generated at build time via
+`generateStaticParams`.
+
+To upgrade a project's case study without touching any component:
+
+- Set `engineeringDecisions` to an array of 3–5 decision bullets (the
+  mid-level signal).
+- Set `systemOverview` for a longer write-up (falls back to `approach`).
+- Set `demoUrl` and `repoUrl` — otherwise the sidebar renders
+  "Coming soon" and "Private · available on request".
+- Set `architectureImage` to `/your-diagram.png` once you have one.
+- Set `screenshots: [{ src, caption }, …]` to replace the default
+  placeholder grid.
 
 ## Design principles
 
