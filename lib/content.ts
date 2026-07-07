@@ -1,501 +1,252 @@
+export type ProjectStatus = "Production" | "Shipped" | "Live demo" | "Reference" | "Lab";
+
 export type Project = {
   slug: string;
   name: string;
   tagline: string;
   problem: string;
-  approach: string;
+  built: string;
   outcome: string;
   stack: string[];
-  signals: string[];
+  status: ProjectStatus;
   domain: string;
   year: string;
-  role: string;
-  href?: string;
-  /** Longer-form overview for the case-study page. Falls back to `approach`. */
-  systemOverview?: string;
-  /** 3-5 bullet points showing engineering thought on the detail page. */
-  engineeringDecisions?: string[];
-  /** External live-demo URL. Absent → "Coming soon". */
-  demoUrl?: string;
-  /** External repo URL. Absent → "Private · available on request". */
+  /** External repo URL. Absent → private client work, stated honestly. */
   repoUrl?: string;
-  /** Path to an architecture image (under /public). Defaults to a placeholder. */
-  architectureImage?: string;
-  /** Optional gallery. Defaults to a single placeholder screenshot. */
-  screenshots?: { src: string; caption: string }[];
+  /** In-page anchor or external live URL. */
+  demoUrl?: string;
+  demoLabel?: string;
+  /** Longer-form overview for the case-study page. Falls back to `built`. */
+  systemOverview?: string;
+  /** Bullet points showing engineering thought on the detail page. */
+  engineeringDecisions?: string[];
 };
 
 /**
- * Flagship projects are surfaced first — highest recruiter / hiring-manager signal.
- * Each entry is framed as a SYSTEM, not a tutorial: problem, architectural choices, outcome.
+ * Every project below traces to verifiable material: a public GitHub
+ * repository, this site itself, or Mike's own published portfolio copy
+ * (private client work is labelled as exactly that). No invented systems.
  */
 export const flagshipProjects: Project[] = [
   {
-    slug: "agentic-workflow-automation",
-    name: "Agentic AI Workflow Automation System",
+    slug: "proactive-sentinel",
+    name: "Proactive Sentinel — Multi-Tenant SOC Platform",
     tagline:
-      "Multi-step LLM agent that plans, executes, and self-corrects long-running business workflows.",
+      "Security Operations Centre backend for financial-services providers: event ingestion, MITRE ATT&CK correlation, automated response.",
     problem:
-      "Operations teams lose hours to repetitive, multi-tool workflows (triage, routing, summarising, drafting). Off-the-shelf chatbots can't reliably chain steps or recover from tool failures.",
-    approach:
-      "Designed a tool-calling agent with a planner/executor loop, typed tool registry, deterministic step IDs, and structured memory. Each step is idempotent, retryable, and emits a trace event — so runs can be replayed, audited, or resumed after failure.",
+      "Financial-services providers need security monitoring that catches multi-stage attacks (recon → lateral movement → exfiltration) and business-signal anomalies — without a heavyweight enterprise SIEM or a pre-registered token for every event source.",
+    built:
+      "A multi-tenant Flask backend that ingests events from agents and log shippers, deduplicates them in Redis by SHA-256 fingerprint, correlates MITRE ATT&CK techniques across events into chain alerts, and dispatches automated responses by severity — IP blocking, audit entries, alert routing. POPIA compliance is designed in: PII masking at ingest, AES-256-GCM encrypted columns, immutable audit log, per-request tenant isolation.",
     outcome:
-      "Reduced manual workflow time by an order of magnitude for supported tasks, with 100% replayable runs and full observability across tool calls, token usage, and latency.",
+      "v1.0.0, production-ready and deployed on Railway with PostgreSQL 15 and Redis 7. CI suite of 44 passing tests. Dispatcher failures are non-fatal by design — a Redis outage cannot drop alerts.",
+    systemOverview:
+      "Events route through a DetectionEngine (Redis dedup + MITRE correlation) or a UXObserver for business signals (claims latency, WhatsApp frustration, web errors). After an alert is persisted, an Action Dispatcher fires by severity: critical alerts flag, block the attacker IP in Redis with a 24h TTL, and write an audit entry; lower severities degrade gracefully. All API access is JWT-authenticated and rate-limited; observability is OpenTelemetry plus structured JSON logs.",
     engineeringDecisions: [
-      "Typed tool registry with JSON-schema validation instead of free-form tool arguments — the model can't invent fields.",
-      "Step-level idempotency keys so a retry is safe and a replay is exact; no duplicated side-effects under transient failures.",
-      "Planner and Executor are separate prompts with different models — cheap model plans, stronger model executes only where needed.",
-      "Run traces persisted per step, so any failure resumes from the last good step instead of restarting the whole workflow.",
-      "Cost and latency telemetry attached to every trace event — model choice becomes a measurable product decision.",
+      "SHA-256 fingerprint deduplication in Redis so duplicate events are suppressed at ingest, before they can create alert noise.",
+      "MITRE ATT&CK chain correlation across events — recon followed by lateral movement followed by exfiltration escalates to a critical chain alert, which single-event rules would miss.",
+      "Automated response is severity-tiered (flag / block / report), and dispatcher failures are non-fatal: a Redis outage degrades response, never alert persistence.",
+      "POPIA compliance at the data layer: SA and Zimbabwean IDs masked before storage, PII columns encrypted with AES-256-GCM, every state change written to an immutable audit log.",
+      "Tenant isolation enforced per request — ingest rejects tenant IDs that do not match the authenticated JWT.",
     ],
-    architectureImage: "/diagrams/agentic-workflow.svg",
-    stack: [
-      "Python",
-      "FastAPI",
-      "LangChain / LangGraph",
-      "OpenAI / Anthropic",
-      "AWS",
-      "PostgreSQL",
-      "Redis",
-    ],
-    signals: [
-      "Agent orchestration",
-      "Tool calling",
-      "Idempotent steps",
-      "Run replay & audit",
-      "Typed contracts",
-    ],
-    domain: "Agentic AI · Automation",
-    year: "2025",
-    role: "System design · Backend · LLM orchestration",
+    stack: ["Python 3.11", "Flask", "PostgreSQL 15", "Redis 7", "SQLAlchemy 2.0", "Alembic", "OpenTelemetry", "Docker", "Railway"],
+    status: "Production",
+    domain: "Security · Backend",
+    year: "2026",
+    repoUrl: "https://github.com/MikeNcube/proactive-sentinel",
   },
   {
-    slug: "llm-backend-intelligence",
-    name: "LLM-Powered Backend Intelligence System",
+    slug: "digi-app-form",
+    name: "Digi App Form — Regulated Insurance Intake",
     tagline:
-      "RAG + structured-output service that turns unstructured enterprise data into reliable API responses.",
+      "Digital application system that captures, validates, and processes funeral-assurance policy submissions — and issues the policy documents.",
     problem:
-      "Internal teams needed trustworthy answers grounded in policies, PDFs, and tickets — not hallucinated paragraphs — with auditability and hard latency budgets.",
-    approach:
-      "Built a FastAPI inference service with hybrid retrieval (BM25 + dense vectors), reranking, citation-preserving answer synthesis, and JSON-schema-enforced outputs. Added per-tenant quotas, prompt versioning, and evaluation harness for regression-testing model changes.",
+      "Funeral-assurance intake was manual and paper-driven: client details captured by hand, re-keyed, error-prone, and slow to become an issued policy. In a regulated product, every mistake is a compliance and audit problem.",
+    built:
+      "A multi-step web application flow with server-side validation before anything is persisted, durable submission storage, automated policy-PDF generation, supporting-document upload handling, an admin dashboard for staff review, and a scheduled backup routine for the datastore.",
     outcome:
-      "Sub-second p95 retrieval, measurable grounding rate via eval harness, and a clean HTTP contract any product team can integrate in under a day.",
+      "Shipped and in use for a regulated funeral-assurance workflow: clean data captured once, validated server-side, and turned into an issued policy document without manual re-keying.",
     engineeringDecisions: [
-      "Hybrid retrieval (BM25 + dense) with a reranker — single-index retrieval lost on tail queries during evaluation.",
-      "JSON-schema-enforced outputs with Pydantic validation; malformed generations get one repair retry, then fail fast.",
-      "Per-tenant prompt versioning so a prompt change for Tenant A can't silently regress Tenant B.",
-      "Eval harness wired into CI — prompt or model PRs block on regression against a golden set plus LLM-as-judge.",
-      "Citation-preserving synthesis — every claim in an answer carries a source reference the UI can render.",
+      "Server-side validation is the gate — nothing reaches the datastore until the record is clean, because in a regulated product a bad record is an audit finding.",
+      "Policy PDF generation is automated from the accepted application, removing the manual document-prep step entirely.",
+      "Uploads are stored and associated with the correct application, so the audit trail from submission to issued policy is complete.",
+      "A separate admin dashboard keeps staff workflows isolated from the applicant-facing flow.",
     ],
-    stack: [
-      "Python",
-      "FastAPI",
-      "LangChain",
-      "pgvector / OpenSearch",
-      "AWS (S3, Lambda, Bedrock)",
-      "Redis",
-      "Docker",
-    ],
-    signals: [
-      "RAG",
-      "Hybrid retrieval",
-      "Structured outputs",
-      "Eval harness",
-      "Multi-tenant",
-    ],
-    domain: "LLM Systems · Backend",
-    year: "2025",
-    role: "Backend engineering · Retrieval · Eval",
+    stack: ["Python", "Flask", "SQLite", "Docker"],
+    status: "Shipped",
+    domain: "Insurance · Backend",
+    year: "2026",
+    repoUrl: "https://github.com/MikeNcube/digi-app-form",
   },
   {
-    slug: "automated-data-pipeline",
-    name: "Automated Data Pipeline & Processing System",
+    slug: "portfolio-rag-assistant",
+    name: "This Site's RAG Assistant",
     tagline:
-      "Event-driven ingestion pipeline that normalises messy third-party data into analytics-ready tables.",
+      "A retrieval-augmented chat you can use right now: grounded answers about my work, with clickable source citations.",
     problem:
-      "Downstream dashboards and ML features depended on fragile, ad-hoc CSV pulls — late, schema-drifting, and impossible to debug.",
-    approach:
-      "Built a scheduled + event-driven pipeline with typed contracts at every hop: extractors, validators (Pydantic), transformers, and loaders. Added schema-drift detection, quarantine tables for bad rows, and per-job SLIs (freshness, completeness, row counts).",
+      "Every portfolio claims RAG experience. Almost none let a hiring manager verify it. The honest proof is a working retrieval pipeline they can interrogate — one that cites its sources and refuses to bluff.",
+    built:
+      "A RAG pipeline inside this Next.js site: a knowledge base curated from my real GitHub READMEs and portfolio copy, embedded with Gemini embeddings, retrieved by cosine similarity, and answered by Gemini grounded only in the retrieved chunks. Every answer returns its source documents; out-of-scope questions get an honest refusal with a contact route. Rate-limited, input-validated, and it fails honestly (503 → email) when unconfigured.",
     outcome:
-      "Pipeline freshness moved from daily-and-flaky to near-real-time-and-observable, with automated alerts on schema drift and a clear ownership model per data contract.",
+      "A live, inspectable RAG demo — open devtools, read the network calls, click the citations. The knowledge base and retrieval code are public in this site's repository.",
     engineeringDecisions: [
-      "Pydantic contracts at every hop (extract → validate → transform → load), not only at the edges.",
-      "Schema-drift detection compares inbound payloads to the last-known contract; diffs alert, bad rows go to quarantine — the table never silently mutates.",
-      "Per-job SLIs (freshness, completeness, row count) published to the same dashboard as our HTTP services.",
-      "Backfills are replays of windowed runs — one code path, tested daily by scheduled runs, no one-off scripts.",
-      "Transforms are pure functions against typed inputs — unit-testable, no hidden DB state.",
+      "Every knowledge chunk carries a sourceUrl, and the API returns sources with each answer — citations are part of the contract, not decoration.",
+      "A minimum-similarity threshold gates generation: below it the assistant says it doesn't know rather than letting the model improvise.",
+      "The client sends only an audience hint, never a system prompt — the grounding prompt is server-side, closing the prompt-injection hole.",
+      "Knowledge-base embeddings are computed once per server instance and cached; only the query is embedded per request.",
+      "No API key → a 503 with an honest message directing visitors to email. Nothing on this site pretends to work.",
     ],
-    stack: [
-      "Python",
-      "FastAPI",
-      "AWS (S3, Lambda, SQS)",
-      "PostgreSQL",
-      "Pandas / Polars",
-      "Pydantic",
-      "Docker",
-    ],
-    signals: [
-      "Schema contracts",
-      "Drift detection",
-      "SLIs per job",
-      "Replayable runs",
-      "Quarantine pattern",
-    ],
-    domain: "Data Engineering · Automation",
-    year: "2025",
-    role: "Data pipeline design · Backend",
-  },
-];
-
-export const agenticProjects: Project[] = [
-  {
-    slug: "multi-agent-research",
-    name: "Multi-Agent Research & Synthesis System",
-    tagline:
-      "Coordinated agents that decompose a research goal, fetch sources, cross-verify, and produce cited briefs.",
-    problem:
-      "Single-shot LLM 'research' is shallow and ungrounded — one agent can't plan, browse, verify, and write without supervision.",
-    approach:
-      "Planner → Researcher → Critic → Synthesiser agent graph with shared scratchpad, source registry, and a mandatory citation check before the Synthesiser is allowed to emit output. Critic can reject and re-dispatch steps.",
-    outcome:
-      "Higher factual grounding than single-prompt baselines, with every claim traceable to a source URL and a visible rejection/retry trail.",
-    engineeringDecisions: [
-      "Explicit Critic agent with rejection authority — it can send steps back to the Researcher before the Synthesiser is allowed to emit.",
-      "Source registry with content hashing so every claim cites a specific chunk of a specific document.",
-      "Shared scratchpad is append-only and per-run — no cross-run pollution.",
-      "Every step emits a structured trace event, so the rejection trail is auditable.",
-    ],
-    stack: ["Python", "FastAPI", "OpenAI", "Pydantic", "PostgreSQL"],
-    signals: ["Planner/Critic loop", "Citation enforcement", "Shared memory"],
-    domain: "Agentic AI",
-    year: "2025",
-    role: "Agent graph design",
-  },
-  {
-    slug: "llm-ops-router",
-    name: "LLM Routing & Cost Control Layer",
-    tagline:
-      "Request-level router that picks the cheapest model capable of passing the task's eval suite.",
-    problem:
-      "Teams default to the largest model for every request, burning budget on tasks a smaller model can solve.",
-    approach:
-      "Task-type classifier + per-task eval gates decide whether a cheap model is sufficient; else escalate. All decisions logged with cost-per-request and pass/fail — so model choice becomes a measurable product decision.",
-    outcome:
-      "Meaningful cost-per-task reduction for bulk workloads while keeping quality gated by automated evals instead of vibes.",
-    engineeringDecisions: [
-      "Task-type classifier is a small, cheap model — run on every request before routing decides model tier.",
-      "Each task has its own eval gate; routing is a measurable product decision, not an assumption.",
-      "Cost telemetry per request, per task, per model — rollups live alongside latency dashboards.",
-      "Automatic escalation on repeated low-confidence outputs rather than hard thresholds.",
-    ],
-    stack: ["Python", "FastAPI", "OpenAI / Anthropic / local", "Redis"],
-    signals: ["Eval gates", "Cost telemetry", "Model fallback"],
-    domain: "LLM Systems",
-    year: "2025",
-    role: "LLM infra",
-  },
-  {
-    slug: "rag-eval-harness",
-    name: "RAG Evaluation Harness",
-    tagline:
-      "Offline + online eval framework for retrieval quality, answer grounding, and regression detection.",
-    problem:
-      "RAG systems silently degrade as corpora, chunking, or prompts change — without a harness, regressions ship.",
-    approach:
-      "Golden-set + LLM-as-judge hybrid with per-change diff reports, failure bucketing, and CI integration. Flags regressions on PRs before merge.",
-    outcome:
-      "Every prompt / retrieval / chunking change is a measurable experiment with a reproducible scorecard.",
-    engineeringDecisions: [
-      "Hybrid scoring — deterministic golden-set exact match where possible, LLM-as-judge for open-ended.",
-      "Per-change diff reports on every PR, not just on demand.",
-      "Failure bucketing by retrieval, reasoning, and format — regressions get assigned to the right layer.",
-      "CI gate blocks merge on regression against the golden set.",
-    ],
-    stack: ["Python", "Pytest", "Pandas", "OpenAI"],
-    signals: ["Golden sets", "LLM-as-judge", "CI-gated quality"],
-    domain: "LLM Evaluation",
-    year: "2025",
-    role: "Eval tooling",
-  },
-];
-
-export const backendProjects: Project[] = [
-  {
-    slug: "fastapi-platform-service",
-    name: "FastAPI Platform Service",
-    tagline:
-      "Typed, observable HTTP platform for AI + automation workloads.",
-    problem:
-      "AI features kept getting bolted onto fragile endpoints with no consistent auth, validation, or error semantics.",
-    approach:
-      "FastAPI service with Pydantic contracts, dependency-injected auth, structured JSON logging, request-scoped tracing IDs, OpenAPI-first design, and a shared error envelope. Postgres for durable state, Redis for ephemeral.",
-    outcome:
-      "New AI endpoints ship in hours, not days — with uniform validation, observability, and contract tests out of the box.",
-    engineeringDecisions: [
-      "OpenAPI-first: contract generated from Pydantic, clients auto-generated for frontend.",
-      "Request-scoped trace IDs threaded through logs, background jobs, and LLM calls.",
-      "Versioned error envelope — schema changes don't break consumers.",
-      "Dependency-injected auth with typed roles; endpoints declare what they need, middleware enforces.",
-    ],
-    stack: ["Python", "FastAPI", "Pydantic", "PostgreSQL", "Redis", "Docker"],
-    signals: ["OpenAPI-first", "Typed contracts", "Tracing IDs"],
-    domain: "Backend Engineering",
-    year: "2025",
-    role: "Backend / platform",
-  },
-  {
-    slug: "flask-automation-api",
-    name: "Flask Automation API",
-    tagline:
-      "Lean Flask service powering webhook-driven automations across internal tools.",
-    problem:
-      "Event hooks from SaaS tools needed reliable, auditable fan-out into internal systems without a heavyweight stack.",
-    approach:
-      "Flask + Blueprint-based routing, HMAC-verified webhook ingress, idempotency keys, async task hand-off, and replayable dead-letter storage.",
-    outcome:
-      "Zero duplicated side-effects under retry storms, and every inbound event is recoverable from storage.",
-    engineeringDecisions: [
-      "HMAC verification on every webhook ingress before any side-effect runs.",
-      "Idempotency keys derived from event IDs so retries are safe by default.",
-      "Dead-letter store with a replay command — every inbound event is recoverable.",
-      "Blueprint-per-source routing keeps integrations isolated from each other.",
-    ],
-    stack: ["Python", "Flask", "Celery / RQ", "PostgreSQL"],
-    signals: ["Idempotency keys", "HMAC verify", "Dead-letter replay"],
-    domain: "Backend Engineering",
-    year: "2024",
-    role: "Backend",
-  },
-  {
-    slug: "auth-and-quota",
-    name: "Auth, Tenancy & Quota Layer",
-    tagline:
-      "Re-usable authorisation + per-tenant rate/quota module for AI APIs.",
-    problem:
-      "Exposing LLM endpoints without hard quotas invites cost blowouts and noisy-neighbour outages.",
-    approach:
-      "JWT auth, tenant-scoped API keys, token-bucket rate limits in Redis, and per-tenant monthly quotas with graceful 429s and usage webhooks.",
-    outcome:
-      "Predictable spend and clean tenant isolation — the boring infra that makes an AI product sellable.",
-    engineeringDecisions: [
-      "Token-bucket rate limits in Redis with per-tenant scopes — noisy tenants don't starve others.",
-      "Graceful 429s with Retry-After before budget hits hard limit.",
-      "Per-tenant monthly usage rollups emitted as webhooks for downstream billing.",
-      "JWT for humans, tenant-scoped API keys for services — different auth for different callers.",
-    ],
-    stack: ["Python", "FastAPI", "Redis", "PostgreSQL"],
-    signals: ["Token bucket", "Tenant isolation", "Graceful degradation"],
-    domain: "Backend Engineering",
-    year: "2024",
-    role: "Backend",
-  },
-];
-
-export const pipelineProjects: Project[] = [
-  {
-    slug: "etl-contract-pipeline",
-    name: "Contract-First ETL Pipeline",
-    tagline:
-      "Extract → Validate → Transform → Load with typed contracts and automatic drift alerts.",
-    problem: "Silent schema drift breaking dashboards without anyone noticing.",
-    approach:
-      "Pydantic schemas at every hop, contract diff on each run, and alerting when inbound payloads no longer satisfy the schema.",
-    outcome: "Data consumers trust freshness and shape — not just row count.",
-    engineeringDecisions: [
-      "Pydantic contract at each hop with a contract-diff on every run.",
-      "Inbound payloads that don't satisfy the schema alert instead of mutating the table.",
-      "Transforms are pure functions against typed inputs — unit-testable, no hidden DB state.",
-      "Every run emits freshness and completeness metrics keyed to the data product, not the job.",
-    ],
-    stack: ["Python", "PostgreSQL", "Pandas / Polars", "Pydantic"],
-    signals: ["Schema contracts", "Drift alerts"],
-    domain: "Data Pipelines",
-    year: "2025",
-    role: "Data engineering",
-  },
-  {
-    slug: "document-intelligence",
-    name: "Document Intelligence Pipeline",
-    tagline:
-      "OCR + LLM extraction pipeline that turns PDFs into structured, queryable records.",
-    problem:
-      "Unstructured PDFs (invoices, policies, forms) blocked automation.",
-    approach:
-      "Chunked OCR, structured-output LLM extraction with JSON schema, confidence scoring, and human-in-the-loop review queue for low-confidence rows.",
-    outcome:
-      "High-confidence extractions flow straight through; low-confidence ones are surfaced for review — never silently wrong.",
-    engineeringDecisions: [
-      "Structured extraction with JSON schema — the model can't freestyle a field.",
-      "Confidence scoring per field, not per document — low-confidence fields surface even when the document overall looks fine.",
-      "Human-in-the-loop review queue: low-confidence rows land here; high-confidence flow straight through.",
-      "OCR is chunked and cached by page hash so re-runs don't re-OCR unchanged pages.",
-    ],
-    stack: ["Python", "FastAPI", "OCR", "OpenAI structured outputs", "Postgres"],
-    signals: ["Structured extraction", "Confidence gating", "HITL queue"],
-    domain: "Data Pipelines · AI",
-    year: "2025",
-    role: "Pipeline design",
-  },
-  {
-    slug: "scheduler-and-backfills",
-    name: "Scheduler & Backfill Framework",
-    tagline:
-      "Cron + backfill engine with per-job idempotency, SLIs, and replayable windows.",
-    problem:
-      "Backfills are usually one-off scripts that break production and can't be re-run safely.",
-    approach:
-      "Each job declares a window, idempotency key, and SLI targets. Backfills are just replays of windows — same code path as scheduled runs.",
-    outcome: "Backfills are boring. That's the feature.",
-    engineeringDecisions: [
-      "Each job declares its window, idempotency key, and SLI targets.",
-      "Backfills call the same handler as scheduled runs — one code path, tested every day.",
-      "Windowed runs mean a failed job is recoverable by window, not by manual script.",
-      "SLI breaches alert via the same mechanism as HTTP-service SLOs.",
-    ],
-    stack: ["Python", "PostgreSQL", "Cron / workers"],
-    signals: ["Idempotent windows", "Unified run path"],
-    domain: "Data Pipelines",
-    year: "2024",
-    role: "Platform",
-  },
-];
-
-export const additionalProjects: Project[] = [
-  {
-    slug: "portfolio-platform",
-    name: "Portfolio Platform",
-    tagline: "This site — Next.js 14 App Router, typed, performance-budgeted.",
-    problem: "Static portfolios read as generic. Engineers ship systems.",
-    approach:
-      "Built as a Next.js 14 App Router project with strict TS, content-as-data, semantic sections, accessible nav, and Lighthouse-minded styling.",
-    outcome: "Loads fast, reads like a system, not a CV.",
-    engineeringDecisions: [
-      "Content lives in a single typed module — adding or re-ranking a project is a one-line change.",
-      "App Router with static generation per project slug — detail pages build statically at deploy time.",
-      "Single design-token layer in globals.css + tailwind config; no per-component color overrides.",
-      "Accessibility primitives built in: skip link, focus states, semantic sections, keyboard-reachable nav.",
-    ],
+    stack: ["Next.js", "TypeScript", "Gemini embeddings", "Cosine retrieval", "Resend"],
+    status: "Live demo",
+    domain: "RAG · LLM Systems",
+    year: "2026",
     repoUrl: "https://github.com/MikeNcube/mike-portfolio",
-    stack: ["Next.js 14", "TypeScript", "Tailwind"],
-    signals: ["App Router", "Typed content", "A11y"],
-    domain: "Frontend",
+    demoUrl: "/#assistant",
+    demoLabel: "Try it above",
+  },
+];
+
+export const clientProjects: Project[] = [
+  {
+    slug: "zororo-digital-applications",
+    name: "Zororo Phumulani — Digital Application Platform",
+    tagline:
+      "Compliant insurance onboarding across 26 countries: identity verification, consent capture, payments, and automated policy issue.",
+    problem:
+      "A funeral-assurance provider needed fully digital, compliant onboarding across 26 countries — enforcing 18+ age validation, FIC-compliant ID upload, and POPIA/FAIS consent capture — without manual intervention.",
+    built:
+      "A 7-step workflow engine with dependency enforcement: identity verification → consent capture → payment integration → automated PDF policy generation → multi-recipient SMTP dispatch → audit logging. Deployed on Railway with zero-downtime CI/CD.",
+    outcome:
+      "In production for clients across 26 countries. This is private client work — the code isn't public, so treat the summary as my account of the system; the public repos above are the verifiable evidence of how I build.",
+    stack: ["Python", "Workflow engine", "PDF generation", "SMTP", "Payments", "Railway"],
+    status: "Production",
+    domain: "Insurance · Client work",
+    year: "2025–2026",
+  },
+];
+
+export const labProjects: Project[] = [
+  {
+    slug: "recommender-data-pipeline",
+    name: "End-to-End Recommender Data Pipeline",
+    tagline:
+      "Contract-first data pipeline feeding a recommender, with validation at each hop.",
+    problem:
+      "Recommenders are only as good as the data reaching them — pipelines without validation ship silent drift downstream.",
+    built:
+      "ETL/ELT workflows orchestrated with Airflow DAGs, data-quality gates with Great Expectations, AWS integration (Kinesis, S3), Terraform for infrastructure, and a mock-services mode so the pipeline develops and tests without AWS credentials.",
+    outcome:
+      "A reference architecture showing contract-first pipeline design — labelled as reference, not production.",
+    stack: ["Python", "Airflow", "Great Expectations", "AWS Kinesis / S3", "Terraform", "Pandas"],
+    status: "Reference",
+    domain: "Data Engineering",
     year: "2025",
-    role: "Full-stack",
+    repoUrl: "https://github.com/MikeNcube/End-to-End-Recommender-System-Data-Pipeline",
   },
   {
-    slug: "internal-cli",
-    name: "Internal Developer CLI",
+    slug: "aws-resilient-web-tier",
+    name: "Resilient Web Tier on AWS",
     tagline:
-      "Python CLI that wraps common ops flows (deploys, seeds, evals) with typed subcommands.",
-    problem: "Tribal-knowledge scripts scattered across repos.",
-    approach:
-      "Single typed CLI with subcommands, dry-run mode, and shared config — one tool, one mental model.",
-    outcome: "New engineers productive on day one.",
-    engineeringDecisions: [
-      "One typed CLI rather than a folder of shell scripts — single mental model.",
-      "Dry-run mode on every subcommand that mutates state.",
-      "Shared config across subcommands so environments are declared once.",
-      "Structured JSON output option so the CLI composes with other tools.",
-    ],
-    stack: ["Python", "Typer / Click"],
-    signals: ["Dry-run", "Typed subcommands"],
-    domain: "DX",
-    year: "2024",
-    role: "Tooling",
+      "Well-Architected lab: ALB + Auto Scaling + multi-AZ for a Flask service on EC2.",
+    problem:
+      "Demonstrating that a web tier can absorb instance failure and load spikes without downtime — the reliability half of the Well-Architected Framework.",
+    built:
+      "An Application Load Balancer routing to EC2 instances in an Auto Scaling Group across availability zones, CloudWatch alarms on CPU and requests-per-target driving scale-out/in, with S3, IAM, and VPC providing storage, security, and networking.",
+    outcome:
+      "A working lab covering reliability, security, and cost trade-offs — labelled as a lab, not production.",
+    stack: ["AWS ALB", "EC2 Auto Scaling", "CloudWatch", "VPC", "IAM", "Flask"],
+    status: "Lab",
+    domain: "Cloud · AWS",
+    year: "2025",
+    repoUrl: "https://github.com/MikeNcube/Resilient-Web-Tier-on-AWS-ALB-Auto-Scaling",
+  },
+  {
+    slug: "rds-connectivity-lab",
+    name: "RDS Connectivity Troubleshooting Lab",
+    tagline:
+      "Hands-on AWS networking: diagnosing EC2 → RDS PostgreSQL connectivity end to end.",
+    problem:
+      "Database connectivity failures in AWS are almost always networking — and diagnosing them requires working through VPCs, subnets, security groups, and IAM systematically.",
+    built:
+      "A documented troubleshooting lab across VPC configuration and subnet routing, security-group and NACL setup, IAM roles for EC2-to-S3 access, and automation with boto3 and SQL.",
+    outcome:
+      "A reproducible diagnostic walkthrough — labelled as a lab.",
+    stack: ["AWS RDS", "EC2", "VPC", "IAM", "Python (boto3)", "SQL"],
+    status: "Lab",
+    domain: "Cloud · AWS",
+    year: "2025",
+    repoUrl: "https://github.com/MikeNcube/cloud-project-board-rds-connectivity-lab",
   },
 ];
 
 export const engineeringApproach = [
   {
-    title: "API Design",
-    body: "Contract-first with FastAPI / Flask. Pydantic models at the edges, OpenAPI as the source of truth, consistent error envelopes, versioned routes. A new endpoint should feel like the last one.",
+    title: "Models are fallible dependencies",
+    body: "Every LLM call gets validation, retries, and a fallback path. Structured outputs over free-form generation; JSON-schema checks before anything downstream consumes a response.",
   },
   {
-    title: "LLM Integration Patterns",
-    body: "Treat the model as a fallible dependency. Structured outputs, JSON-schema validation, retries with jitter, typed tool registries, and golden-set evals gating prompt or model changes.",
+    title: "Every run is auditable",
+    body: "Structured JSON logs, trace IDs, and audit entries for state changes. If a regulated client asks what happened, the answer is in the log, not in someone's memory.",
   },
   {
-    title: "Agent Orchestration",
-    body: "Planner / Executor / Critic loops with idempotent steps, typed tool calls, shared memory, and replayable traces. Every step is an event — so runs can be resumed, audited, or debugged offline.",
+    title: "Every pipeline is a contract",
+    body: "Pydantic schemas at system boundaries, validation before persistence, drift caught at ingest. Data consumers should trust shape and freshness, not just row counts.",
   },
   {
-    title: "Data Pipelines",
-    body: "Contract-first ETL with Pydantic, drift detection, quarantine tables for bad rows, and per-job SLIs (freshness, completeness). Backfills are just replays of windowed runs.",
-  },
-  {
-    title: "Reliability & Error Handling",
-    body: "Idempotency keys, dead-letter queues, circuit breakers around model and tool calls, structured logs with trace IDs, and graceful 429s before clients fall off a cliff.",
-  },
-  {
-    title: "Observability",
-    body: "Structured JSON logs, request-scoped trace IDs across services, per-tenant cost & latency telemetry for LLM calls, and dashboards keyed to user-visible SLOs — not infra vanity metrics.",
+    title: "Honest labels on everything",
+    body: "Each public repo is labelled production, reference, or lab — so a reviewer knows exactly what they're looking at. This site follows the same rule.",
   },
 ];
 
-/**
- * Qualitative capability signals — no numeric counters.
- * Each entry describes a discipline, not a count.
- */
 export const capabilities = [
   {
     label: "Agentic AI",
-    body: "Planner / executor / critic loops, typed tool calling, replayable runs.",
+    body: "Planner / executor / critic loops, typed tool calling, auditable runs.",
   },
   {
-    label: "Applied LLM Workflows",
-    body: "RAG, structured outputs, eval harnesses, prompt + model versioning.",
+    label: "RAG & LLM workflows",
+    body: "Retrieval pipelines, structured outputs, grounded generation — one is live on this page.",
   },
   {
-    label: "Python Backends",
+    label: "Python backends",
     body: "FastAPI / Flask services with typed contracts, auth, and observability.",
   },
   {
-    label: "Data Pipelines",
-    body: "Contract-first ingestion with drift detection and per-job SLIs.",
+    label: "Data pipelines",
+    body: "Contract-first ingestion with validation gates and drift detection.",
   },
 ];
 
 export const profile = {
   name: "Mike S Ncube",
   shortName: "Mike",
-  location: "Zimbabwe · South Africa",
+  location: "Zimbabwe · South Africa · Remote-first",
   email: "mikencube03@gmail.com",
+  github: "https://github.com/MikeNcube",
+  linkedin: "https://www.linkedin.com/in/mike-ncube-669563a7/",
   avatar: "/Mike_Org.jpeg",
   portrait: "/Mike_Org.jpeg",
   headline: "AI Engineer",
-  subHeadline:
-    "Agentic AI & Applied LLM Workflows · Python Backends (Flask / FastAPI) · Data Pipelines",
+  subHeadline: "Production RAG & agentic LLM systems · Python backends · AWS",
   oneLiner:
-    "I design and build agentic AI systems, applied LLM workflows, and Python backends (Flask / FastAPI) — with data pipelines wired in end-to-end.",
+    "I build AI systems for environments where mistakes are expensive — insurance, claims, and regulated financial workflows.",
   availability: "Available for AI engineering roles",
-  tags: [
-    "AI Engineer",
-    "Agentic AI",
-    "Applied LLM Workflows",
-    "Python Backends",
-    "Data Pipelines",
-  ],
+  tags: ["RAG", "Agentic AI", "Python", "FastAPI", "AWS"],
 };
 
 export const navSections = [
-  { id: "flagship", label: "Flagship" },
-  { id: "agentic", label: "Agentic AI" },
-  { id: "backend", label: "Backend" },
-  { id: "pipelines", label: "Pipelines" },
+  { id: "work", label: "Work" },
+  { id: "assistant", label: "AI Assistant" },
+  { id: "labs", label: "Labs" },
   { id: "approach", label: "Approach" },
+  { id: "about", label: "About" },
   { id: "contact", label: "Contact" },
 ];
 
-/**
- * Every project, flattened, in stable display order.
- * Used by project detail routes for static param generation and lookup.
- */
+/** Every project, flattened, in stable display order. */
 export const allProjects: Project[] = [
   ...flagshipProjects,
-  ...agenticProjects,
-  ...backendProjects,
-  ...pipelineProjects,
-  ...additionalProjects,
+  ...clientProjects,
+  ...labProjects,
 ];
 
 export function getProjectBySlug(slug: string): Project | undefined {

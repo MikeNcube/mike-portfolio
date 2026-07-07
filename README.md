@@ -1,114 +1,48 @@
-# Mike — AI Engineer Portfolio
+# Mike S Ncube — AI Engineer Portfolio
 
-Portfolio for **Mike S Ncube — AI Engineer**.
+Live at [mike-portfolio-tawny.vercel.app](https://mike-portfolio-tawny.vercel.app) — the single canonical deployment.
 
-Focus areas:
+Next.js 14 (App Router) · TypeScript (strict) · Tailwind CSS. Two typefaces (Inter + JetBrains Mono, self-hosted via `next/font`), a dark, restrained design system, and a working RAG assistant as the centrepiece.
 
-- Agentic AI & applied LLM workflows
-- Python backends (Flask / FastAPI)
-- Data pipelines & automation
+## The RAG assistant
 
-Built as a production-ready Next.js 14 (App Router) site with strict TypeScript, Tailwind CSS, and a systems-first information architecture.
+`/api/chat` is a real retrieval-augmented pipeline, not a canned-response widget:
 
-## Information Architecture
+1. **Knowledge base** — `lib/knowledge.ts`, curated exclusively from verifiable material (GitHub profile + repo READMEs, this site's copy). Every chunk carries a `sourceUrl`.
+2. **Retrieval** — `lib/rag.ts` embeds the KB once per server instance (`gemini-embedding-001`, batched, cached) and each visitor query per request, ranking by cosine similarity.
+3. **Generation** — `gemini-2.5-flash`, grounded only in the retrieved chunks; answers return their sources for the UI to cite.
+4. **Honesty** — below a similarity threshold the assistant refuses and points to email. No API key → 503 with an honest message. Per-IP rate limiting (20 req / 10 min) and input validation throughout.
 
-The homepage follows a deliberate recruiter-first order:
+## Contact form
 
-1. **Hero** — positioning statement + credibility signals
-2. **Flagship AI Systems** — top 2–3 strongest systems, framed as production engineering work
-3. **Agentic AI / LLM Orchestration** — planner/critic loops, routing, eval harnesses
-4. **Backend Engineering** — FastAPI / Flask platform, automation API, auth & quotas
-5. **Data Pipelines / Automation** — contract-first ETL, document intelligence, backfills
-6. **Additional Projects** — secondary work
-7. **How I Build Systems** — engineering mindset (API design, LLM patterns, reliability, observability)
-8. **About** — minimal, non-generic
-9. **Contact**
+`/api/contact` sends real email via Resend: validation, HTML escaping, per-IP rate limiting (5/hour), `replyTo` set to the sender. Failures are reported honestly — there is no fake "sent" state anywhere.
 
-## Stack
+## Environment variables
 
-- Next.js 14 (App Router)
-- React 18
-- TypeScript 5 (strict)
-- Tailwind CSS 3
-- Inter + JetBrains Mono via `next/font`
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | For the assistant | Embeddings + generation ([create](https://aistudio.google.com/apikey)) |
+| `RESEND_API_KEY` | For the contact form | Email delivery ([create](https://resend.com/api-keys)) |
+| `CONTACT_TO_EMAIL` | Optional | Recipient override (defaults to Mike's email) |
+| `CONTACT_FROM_EMAIL` | Optional | Sender identity (defaults to Resend onboarding sender) |
 
-## Getting started
+Without keys both endpoints fail with a 503 and direct visitors to email — nothing on the site pretends to work.
+
+## Develop
 
 ```bash
 npm install
+cp .env.example .env.local   # add keys
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Quality gates before commit:
 
-## Scripts
-
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Start the production server |
-| `npm run lint` | Lint with `next lint` |
-
-## Content
-
-All project and section content lives in [`lib/content.ts`](./lib/content.ts) as typed data. To add, rename, or re-rank a project, edit that file — no markup changes needed.
-
-## Project layout
-
-```
-app/
-  layout.tsx          # Root layout, fonts, metadata
-  page.tsx            # IA-ordered homepage composition
-  globals.css         # Design tokens, components, utilities
-  not-found.tsx       # 404 route
-  projects/
-    [slug]/page.tsx   # Case-study detail page per project (SSG)
-components/
-  Nav.tsx             # Sticky, blurred, responsive nav
-  Footer.tsx
-  Hero.tsx            # Recruiter-grabbing hero
-  SectionHeader.tsx   # Shared section header
-  ProjectCard.tsx     # Flagship / default / compact variants (clickable)
-  ProjectDetail.tsx   # Case-study layout (meta sidebar + sections)
-  Flagship.tsx        # Section: top AI systems
-  Agentic.tsx         # Section: agentic / LLM
-  Backend.tsx         # Section: Python backends
-  Pipelines.tsx       # Section: data pipelines
-  Additional.tsx      # Section: secondary work
-  Approach.tsx        # Section: how I build systems
-  About.tsx           # Section: minimal about
-  Contact.tsx         # Section: contact
-lib/
-  content.ts          # Typed project + section content
-public/
-  Mike_Org.jpeg                    # portrait (untouched)
-  favicon.ico                      # (untouched)
-  architecture-placeholder.svg     # default architecture diagram
-  demo-placeholder.svg             # default screenshot
+```bash
+npx tsc --noEmit   # must exit 0
+npm run build      # must succeed
 ```
 
-### Case-study pages
+## Content rules
 
-Each project in `lib/content.ts` has a matching case-study route at
-`/projects/[slug]`. Pages are statically generated at build time via
-`generateStaticParams`.
-
-To upgrade a project's case study without touching any component:
-
-- Set `engineeringDecisions` to an array of 3–5 decision bullets (the
-  mid-level signal).
-- Set `systemOverview` for a longer write-up (falls back to `approach`).
-- Set `demoUrl` and `repoUrl` — otherwise the sidebar renders
-  "Coming soon" and "Private · available on request".
-- Set `architectureImage` to `/your-diagram.png` once you have one.
-- Set `screenshots: [{ src, caption }, …]` to replace the default
-  placeholder grid.
-
-## Design principles
-
-- **Systems thinking over CV bullets.** Every project is framed as a system: problem → approach → outcome.
-- **Typography hierarchy first.** `display` / `section` / `body` scales are explicit and responsive.
-- **Enterprise restraint.** Monochrome base, single accent, consistent chips/meta, no decorative clutter.
-- **Mobile-responsive.** Grid collapses at `md` / `xl`, hero scales via `clamp()`.
-- **A11y-aware.** Skip link, focus styles, semantic sections, keyboard-reachable nav.
+All portfolio content lives in `lib/content.ts` and the assistant's knowledge in `lib/knowledge.ts`. House rule: **every project, metric, and claim must trace to verifiable material** — a public repo, this site itself, or explicitly-labelled private client work. Status labels (`Production` / `Shipped` / `Live demo` / `Reference` / `Lab`) are honest by design.

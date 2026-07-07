@@ -18,12 +18,12 @@ const jetbrains = JetBrains_Mono({
 
 const SITE_NAME = "Mike Ncube — AI Engineer";
 const SITE_DESCRIPTION =
-  "Mike S Ncube — AI Engineer. Agentic AI & applied LLM workflows, Python backends (Flask / FastAPI), and data pipelines.";
+  "AI Engineer building production RAG and agentic LLM systems in Python — for insurance, claims, and regulated financial workflows. Ask the on-site RAG assistant about my work.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mike-portfolio-tawny.vercel.app"),
   title: {
-    default: `${SITE_NAME} · Agentic AI & Applied LLM Workflows · Python Backends · Data Pipelines`,
+    default: `${SITE_NAME} · Production RAG & Agentic LLM Systems · Python · AWS`,
     template: "%s · Mike Ncube",
   },
   description: SITE_DESCRIPTION,
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: `${SITE_NAME} · Agentic AI & Applied LLM Workflows · Python Backends · Data Pipelines`,
+    title: `${SITE_NAME} · Production RAG & Agentic LLM Systems · Python · AWS`,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
     images: [{ url: "/Mike_Org.jpeg", width: 1024, height: 1024, alt: "Mike S Ncube" }],

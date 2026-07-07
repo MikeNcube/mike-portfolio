@@ -1,9 +1,7 @@
-import Hero from "@/components/Hero";
-import Flagship from "@/components/Flagship";
-import Agentic from "@/components/Agentic";
-import Backend from "@/components/Backend";
-import Pipelines from "@/components/Pipelines";
-import Additional from "@/components/Additional";
+﻿import Hero from "@/components/Hero";
+import Work from "@/components/Work";
+import Assistant from "@/components/Assistant";
+import Labs from "@/components/Labs";
 import Approach from "@/components/Approach";
 import About from "@/components/About";
 import Contact from "@/components/Contact";
@@ -11,31 +9,25 @@ import Contact from "@/components/Contact";
 export default function Page() {
   return (
     <>
-      {/* 1. Hero — positioning */}
+      {/* 1. Hero — role-led positioning, three CTAs */}
       <Hero />
 
-      {/* 2. Flagship AI systems — top 2–3 strongest, recruiter-first */}
-      <Flagship />
+      {/* 2. Selected work — production systems with repo links */}
+      <Work />
 
-      {/* 3. Agentic AI / LLM orchestration showcase */}
-      <Agentic />
+      {/* 3. Live RAG assistant — the differentiator, usable in place */}
+      <Assistant />
 
-      {/* 4. Backend engineering (FastAPI / Flask) */}
-      <Backend />
+      {/* 4. Reference architectures & AWS labs, honestly labelled */}
+      <Labs />
 
-      {/* 5. Data pipelines / automation */}
-      <Pipelines />
-
-      {/* 6. Additional projects (low priority) */}
-      <Additional />
-
-      {/* 7. How I build systems — engineering mindset */}
+      {/* 5. Engineering approach */}
       <Approach />
 
-      {/* 8. About — minimal, non-generic */}
+      {/* 6. About */}
       <About />
 
-      {/* 9. Contact */}
+      {/* 7. Contact — working form + direct links */}
       <Contact />
     </>
   );

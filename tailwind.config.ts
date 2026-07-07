@@ -9,9 +9,11 @@ const config: Config = {
           DEFAULT: "#0a0a0b",
           50: "#f6f6f7",
           100: "#e8e8ea",
-          200: "#c9c9cd",
-          300: "#9a9aa1",
-          400: "#6a6a72",
+          // 200/300/400 tuned for WCAG AA on the #0a0d14 background:
+          // 200 ≈ 12.6:1, 300 ≈ 7.9:1, 400 ≈ 4.9:1
+          200: "#cfcfd4",
+          300: "#a8a8b0",
+          400: "#84848d",
           500: "#45454c",
           600: "#2d2d33",
           700: "#1e1e23",
@@ -20,12 +22,13 @@ const config: Config = {
         },
         accent: {
           DEFAULT: "#0066FF",
-          glow: "#3b82f6",
+          // AA-safe accent for text on the dark background (≈ 5.4:1)
+          glow: "#66a3ff",
           subtle: "#1d4ed8",
         },
         signal: {
+          // ≈ 7.4:1 on #0a0d14
           DEFAULT: "#00C896",
-          glow: "#10b981",
         },
       },
       fontFamily: {
@@ -52,37 +55,30 @@ const config: Config = {
         ],
       },
       fontSize: {
-        "display-xl": ["clamp(3rem, 8vw, 6.5rem)", { lineHeight: "0.95", letterSpacing: "-0.035em", fontWeight: "600" }],
-        "display-lg": ["clamp(2.25rem, 5vw, 4rem)", { lineHeight: "1.02", letterSpacing: "-0.03em", fontWeight: "600" }],
-        "display-md": ["clamp(1.75rem, 3.5vw, 2.5rem)", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600" }],
+        "display-xl": [
+          "clamp(2.5rem, 6vw, 4.75rem)",
+          { lineHeight: "1.02", letterSpacing: "-0.03em", fontWeight: "600" },
+        ],
+        "display-lg": [
+          "clamp(2.25rem, 5vw, 4rem)",
+          { lineHeight: "1.02", letterSpacing: "-0.03em", fontWeight: "600" },
+        ],
+        "display-md": [
+          "clamp(1.75rem, 3.5vw, 2.5rem)",
+          { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600" },
+        ],
       },
       letterSpacing: {
         tightest: "-0.04em",
-      },
-      backgroundImage: {
-        "grid-faint":
-          "linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)",
-        "radial-soft":
-          "radial-gradient(ellipse at top, rgba(125,211,252,0.08), transparent 60%)",
       },
       keyframes: {
         "fade-up": {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        pulseSoft: {
-          "0%, 100%": { opacity: "0.6" },
-          "50%": { opacity: "1" },
-        },
       },
       animation: {
         "fade-up": "fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both",
-        shimmer: "shimmer 6s linear infinite",
-        "pulse-soft": "pulseSoft 2.8s ease-in-out infinite",
       },
     },
   },

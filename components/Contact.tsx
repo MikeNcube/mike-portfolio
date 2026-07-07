@@ -1,69 +1,64 @@
 import { profile } from "@/lib/content";
+import ContactForm from "./ContactForm";
 
 export default function Contact() {
   return (
     <section id="contact" className="border-t border-white/5 py-24 sm:py-32">
       <div className="container-edge">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent p-8 sm:p-14">
-          <div className="pointer-events-none absolute inset-0 bg-grid-dim opacity-40" />
-          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-10 h-52 w-52 rounded-full bg-signal/10 blur-3xl" />
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+          <div className="flex flex-col gap-6">
+            <span className="eyebrow">
+              <span className="eyebrow-dot" />
+              Contact
+            </span>
+            <h2 className="section-heading text-balance">
+              Have an AI system worth building properly?
+            </h2>
+            <p className="max-w-md text-[15.5px] leading-relaxed text-ink-200">
+              I take on AI engineering roles and focused contracts —
+              especially where the system has to survive audits, regulators,
+              or real operational load.
+            </p>
 
-          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <span className="eyebrow">
-                <span className="eyebrow-dot" />
-                Contact
-              </span>
-              <h2 className="mt-4 font-display text-display-lg tracking-tightest text-white text-balance">
-                Have an AI system worth building properly?
-              </h2>
-              <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-ink-200">
-                I take on AI engineering roles, focused contracts, and
-                platform-level engagements where systems thinking actually
-                matters. If that sounds like your team, let&rsquo;s talk.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <a
-                href={`mailto:${profile.email}`}
-                className="btn-primary justify-center"
-              >
-                {profile.email}
-                <span aria-hidden>→</span>
-              </a>
-              <a
-                href="https://www.linkedin.com/in/mike-ncube"
-                target="_blank"
-                rel="noreferrer noopener"
-                className="btn-ghost justify-center"
-              >
-                LinkedIn
-                <span aria-hidden>↗</span>
-              </a>
-              <a
-                href="https://github.com/MikeNcube"
-                target="_blank"
-                rel="noreferrer noopener"
-                className="btn-ghost justify-center"
-              >
-                GitHub
-                <span aria-hidden>↗</span>
-              </a>
-            </div>
+            <dl className="flex flex-col gap-4 border-t border-white/10 pt-6">
+              <InfoRow label="Email">
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+                >
+                  {profile.email}
+                </a>
+              </InfoRow>
+              <InfoRow label="GitHub">
+                <a
+                  href={profile.github}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+                >
+                  github.com/MikeNcube ↗
+                </a>
+              </InfoRow>
+              <InfoRow label="LinkedIn">
+                <a
+                  href={profile.linkedin}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+                >
+                  Mike Ncube ↗
+                </a>
+              </InfoRow>
+              <InfoRow label="Availability">
+                <span className="text-white">
+                  Full-time / contract · remote-first · {profile.location}
+                </span>
+              </InfoRow>
+            </dl>
           </div>
 
-          <div className="relative mt-10 grid gap-4 border-t border-white/10 pt-8 sm:grid-cols-3">
-            <InfoRow
-              label="Availability"
-              value="Full-time / contract · remote-first"
-            />
-            <InfoRow
-              label="Focus"
-              value="Agentic AI · Applied LLM workflows · Python backends · Data pipelines"
-            />
-            <InfoRow label="Based" value={profile.location} />
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+            <ContactForm />
           </div>
         </div>
       </div>
@@ -71,11 +66,19 @@ export default function Contact() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <div className="mono uppercase tracking-[0.18em]">{label}</div>
-      <div className="mt-1.5 text-[14.5px] text-white">{value}</div>
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
+      <dt className="mono w-28 shrink-0 uppercase tracking-[0.18em]">
+        {label}
+      </dt>
+      <dd className="text-[14.5px]">{children}</dd>
     </div>
   );
 }

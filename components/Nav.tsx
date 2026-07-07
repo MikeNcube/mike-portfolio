@@ -18,18 +18,21 @@ export default function Nav() {
   return (
     <header
       className={[
-        "fixed inset-x-0 top-0 z-40 transition-all duration-300",
-        scrolled
-          ? "border-b border-white/10 bg-[rgba(10,13,20,0.78)] backdrop-blur-xl"
+        "fixed inset-x-0 top-0 z-40 transition-colors duration-300",
+        scrolled || open
+          ? "border-b border-white/10 bg-[rgba(10,13,20,0.85)] backdrop-blur-xl"
           : "border-b border-transparent bg-transparent",
       ].join(" ")}
     >
       <div className="container-edge flex h-16 items-center justify-between">
-        <a href="#top" className="group flex items-center gap-3">
-          <span className="relative inline-flex h-8 w-8 overflow-hidden rounded-full border-2 border-accent/50 ring-1 ring-white/10">
+        <a
+          href="#top"
+          className="flex items-center gap-3 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+        >
+          <span className="relative inline-flex h-8 w-8 overflow-hidden rounded-full border border-white/20">
             <Image
               src={profile.avatar}
-              alt={profile.name}
+              alt=""
               width={64}
               height={64}
               className="h-full w-full object-cover object-top"
@@ -37,43 +40,40 @@ export default function Nav() {
             />
           </span>
           <span className="font-display text-[15px] font-semibold tracking-tight text-white">
-            Mike<span className="text-accent">.</span>Ncube
-            <span className="ml-2 hidden font-mono text-[11px] font-normal text-ink-400 sm:inline">
+            Mike Ncube
+            <span className="ml-2 hidden font-mono text-[11px] font-normal text-ink-300 sm:inline">
               · AI Engineer
             </span>
           </span>
         </a>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
           {navSections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="rounded-full px-3 py-1.5 text-[13px] text-ink-200 transition hover:bg-white/[0.04] hover:text-white"
+              className="rounded-full px-3 py-1.5 text-[13px] text-ink-200 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               {s.label}
             </a>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="hidden items-center gap-2 text-[12px] text-signal lg:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-signal animate-pulse-soft" />
-            Available
-          </span>
+        <div className="hidden md:block">
           <a href={`mailto:${profile.email}`} className="btn-primary">
-            Hire Me
-            <span aria-hidden>→</span>
+            Contact
           </a>
         </div>
 
         <button
+          type="button"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle navigation"
+          aria-label={open ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={open}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] md:hidden"
+          aria-controls="mobile-nav"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:hidden"
         >
-          <span className="relative block h-3 w-4">
+          <span aria-hidden className="relative block h-3 w-4">
             <span
               className={[
                 "absolute left-0 top-0 h-px w-4 bg-white transition",
@@ -97,14 +97,18 @@ export default function Nav() {
       </div>
 
       {open && (
-        <div className="border-t border-white/10 bg-[rgba(10,13,20,0.94)] backdrop-blur-xl md:hidden">
+        <nav
+          id="mobile-nav"
+          aria-label="Primary mobile"
+          className="border-t border-white/10 bg-[rgba(10,13,20,0.96)] backdrop-blur-xl md:hidden"
+        >
           <div className="container-edge flex flex-col gap-1 py-4">
             {navSections.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm text-ink-100 hover:bg-white/[0.04]"
+                className="rounded-lg px-3 py-2.5 text-sm text-ink-100 hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 {s.label}
               </a>
@@ -114,10 +118,10 @@ export default function Nav() {
               onClick={() => setOpen(false)}
               className="btn-primary mt-2 w-full justify-center"
             >
-              Hire Me →
+              Contact
             </a>
           </div>
-        </div>
+        </nav>
       )}
     </header>
   );
