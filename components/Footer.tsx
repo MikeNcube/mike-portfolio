@@ -16,12 +16,15 @@ export default function Footer() {
             />
           </span>
           <p className="text-sm text-ink-300">
-            {profile.name} · {profile.headline} · Systems-first.
+            {profile.name} · {profile.headline} · {profile.location}
           </p>
         </div>
-        <p className="font-mono text-[11px] text-ink-400">
-          © {new Date().getFullYear()} · Built with intent, not templates.
-        </p>
+        <a
+          href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
+          className="font-mono text-[12px] text-ink-200 underline-offset-4 transition hover:text-signal hover:underline"
+        >
+          {profile.email}
+        </a>
       </div>
     </footer>
   );

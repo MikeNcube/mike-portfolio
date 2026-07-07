@@ -60,8 +60,11 @@ export default function Nav() {
         </nav>
 
         <div className="hidden md:block">
-          <a href={`mailto:${profile.email}`} className="btn-primary">
-            Contact
+          <a
+            href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
+            className="btn-primary"
+          >
+            Interview
           </a>
         </div>
 
@@ -114,11 +117,11 @@ export default function Nav() {
               </a>
             ))}
             <a
-              href={`mailto:${profile.email}`}
+              href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
               onClick={() => setOpen(false)}
               className="btn-primary mt-2 w-full justify-center"
             >
-              Contact
+              Request interview
             </a>
           </div>
         </nav>

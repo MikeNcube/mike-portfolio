@@ -42,6 +42,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
           <h1 className="font-display text-display-lg tracking-tightest text-white text-balance">
             {project.name}
           </h1>
+          <p className="font-mono text-[13px] text-signal">{project.role}</p>
           <p className="max-w-3xl text-[17px] leading-relaxed text-ink-200 text-pretty">
             {project.tagline}
           </p>
@@ -52,6 +53,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="card-lg flex flex-col gap-5">
             <MetaRow label="Status" value={project.status} />
+            <MetaRow label="Role" value={project.role} />
             <MetaRow label="Domain" value={project.domain} />
             <MetaRow label="Year" value={project.year} />
 

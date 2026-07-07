@@ -2,7 +2,7 @@
   "name": "mike-portfolio",
   "version": "1.0.0",
   "private": true,
-  "description": "Enterprise-grade AI Engineer portfolio — agentic systems, LLM workflows, Python backend engineering.",
+  "description": "Mike S Ncube — AI Engineer portfolio with live RAG demo, production Python backends, and honest project labels.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

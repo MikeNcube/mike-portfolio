@@ -11,7 +11,8 @@ export default function NotFound() {
         Route not found.
       </h1>
       <p className="max-w-md text-[15px] text-ink-300">
-        That path isn&rsquo;t wired up. Head back to the systems.
+        That page doesn&rsquo;t exist. Return to the homepage or try the live RAG
+        demo.
       </p>
       <Link href="/" className="btn-primary">
         Back to portfolio <span aria-hidden>→</span>

@@ -18,30 +18,28 @@ const jetbrains = JetBrains_Mono({
 
 const SITE_NAME = "Mike Ncube — AI Engineer";
 const SITE_DESCRIPTION =
-  "AI Engineer building production RAG and agentic LLM systems in Python — for insurance, claims, and regulated financial workflows. Ask the on-site RAG assistant about my work.";
+  "AI Engineer building full-stack RAG systems and Python backends for insurance, claims, and regulated financial workflows. Live RAG assistant with citations on this site. Remote-first · Zimbabwe & South Africa.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mike-portfolio-tawny.vercel.app"),
   title: {
-    default: `${SITE_NAME} · Production RAG & Agentic LLM Systems · Python · AWS`,
+    default: `${SITE_NAME} · Full-stack RAG & Python Backends`,
     template: "%s · Mike Ncube",
   },
   description: SITE_DESCRIPTION,
   keywords: [
     "AI Engineer",
-    "Agentic AI",
-    "Applied LLM Workflows",
+    "Full-stack AI",
     "RAG",
-    "LangChain",
-    "LLM workflows",
-    "LLM orchestration",
+    "Applied AI Engineer",
+    "Full-stack AI Engineer",
     "Python backend engineer",
-    "FastAPI",
     "Flask",
+    "Next.js",
+    "Data pipelines",
+    "Railway",
     "AWS",
-    "data pipelines",
-    "workflow automation",
-    "systems engineering",
+    "regulated financial services",
     "Mike Ncube",
   ],
   authors: [{ name: "Mike S Ncube" }],
@@ -51,7 +49,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: `${SITE_NAME} · Production RAG & Agentic LLM Systems · Python · AWS`,
+    title: `${SITE_NAME} · Full-stack RAG & Python Backends`,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
     images: [{ url: "/Mike_Org.jpeg", width: 1024, height: 1024, alt: "Mike S Ncube" }],
@@ -63,6 +61,9 @@ export const metadata: Metadata = {
     images: ["/Mike_Org.jpeg"],
   },
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: "https://mike-portfolio-tawny.vercel.app",
+  },
 };
 
 export const viewport: Viewport = {

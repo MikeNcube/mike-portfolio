@@ -1,12 +1,11 @@
 import Image from "next/image";
-import { capabilities, profile } from "@/lib/content";
+import { profile } from "@/lib/content";
 
 export default function Hero() {
   return (
     <section id="top" className="relative pt-32 sm:pt-40">
       <div className="container-edge">
         <div className="grid gap-14 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-          {/* Left: positioning */}
           <div className="flex flex-col gap-7">
             <p className="animate-fade-up">
               <span className="chip-accent">
@@ -20,54 +19,37 @@ export default function Hero() {
               style={{ animationDelay: "60ms" }}
             >
               AI Engineer —<br />
-              production RAG &amp; agentic LLM systems.
+              full-stack RAG &amp; Python backends.
             </h1>
 
             <p
               className="max-w-xl text-pretty text-[17px] leading-relaxed text-ink-200 animate-fade-up"
               style={{ animationDelay: "120ms" }}
             >
-              {profile.oneLiner} Python backends, retrieval pipelines, and
-              agent workflows — shipped on AWS and battle-tested against
-              compliance audits, not just demos.
+              {profile.oneLiner} Public proof: a live RAG assistant on this
+              page, plus production Python platforms in regulated insurance and
+              security.
             </p>
 
             <div
               className="flex flex-wrap items-center gap-3 pt-1 animate-fade-up"
               style={{ animationDelay: "180ms" }}
             >
-              <a href="#work" className="btn-primary">
+              <a href="#assistant" className="btn-primary">
+                Try live RAG demo
+              </a>
+              <a href="#work" className="btn-ghost">
                 View work
               </a>
-              <a href="#assistant" className="btn-ghost">
-                Ask my AI
-              </a>
-              <a href="#contact" className="btn-ghost">
-                Contact
+              <a
+                href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
+                className="btn-ghost"
+              >
+                Email for interview
               </a>
             </div>
-
-            <ul
-              className="mt-6 grid gap-3 sm:grid-cols-2 animate-fade-up"
-              style={{ animationDelay: "240ms" }}
-            >
-              {capabilities.map((c) => (
-                <li
-                  key={c.label}
-                  className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5"
-                >
-                  <h2 className="font-display text-[15px] font-semibold tracking-tight text-white">
-                    {c.label}
-                  </h2>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-300">
-                    {c.body}
-                  </p>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          {/* Right: portrait */}
           <div
             className="relative mx-auto w-full max-w-sm animate-fade-up lg:mx-0"
             style={{ animationDelay: "140ms" }}
@@ -106,15 +88,14 @@ export default function Hero() {
           <span className="h-px flex-1 bg-white/10" aria-hidden />
           {[
             "Python",
-            "FastAPI",
+            "Next.js",
             "Flask",
-            "LangChain / LangGraph",
             "RAG",
-            "AWS",
             "PostgreSQL",
             "Redis",
             "Docker",
-            "TypeScript",
+            "Railway",
+            "AWS (labs)",
           ].map((t) => (
             <span key={t} className="text-ink-200">
               {t}

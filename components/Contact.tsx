@@ -12,18 +12,18 @@ export default function Contact() {
               Contact
             </span>
             <h2 className="section-heading text-balance">
-              Have an AI system worth building properly?
+              Ready to schedule a technical conversation?
             </h2>
             <p className="max-w-md text-[15.5px] leading-relaxed text-ink-200">
-              I take on AI engineering roles and focused contracts —
-              especially where the system has to survive audits, regulators,
-              or real operational load.
+              Typical path: a 30-minute intro, then a take-home or live system
+              design focused on RAG, Python backends, or regulated workflows.
+              I respond within 24 hours.
             </p>
 
             <dl className="flex flex-col gap-4 border-t border-white/10 pt-6">
               <InfoRow label="Email">
                 <a
-                  href={`mailto:${profile.email}`}
+                  href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
                   className="text-white underline-offset-4 transition hover:text-signal hover:underline"
                 >
                   {profile.email}

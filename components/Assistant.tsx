@@ -8,10 +8,32 @@ type Source = { title: string; url: string };
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
 
 const SUGGESTIONS = [
+  "How does the RAG pipeline work technically?",
   "What production systems has Mike shipped?",
-  "How does this chat actually work?",
-  "What's his experience with AWS?",
+  "Walk me through Proactive Sentinel's architecture.",
   "Is he available for hire?",
+];
+
+const TECH_SPEC = [
+  { label: "Embed", value: "Gemini embedding-001 · batch KB · query per request" },
+  { label: "Retrieve", value: "Cosine similarity · top-4 chunks · min score 0.35" },
+  { label: "Generate", value: "Gemini 2.5 Flash · grounded prompt · server-side only" },
+  { label: "Guardrails", value: "Rate limit 20/10min · 500 char cap · honest 503/429" },
+];
+
+const CODE_LINKS = [
+  {
+    label: "lib/rag.ts",
+    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/lib/rag.ts",
+  },
+  {
+    label: "app/api/chat/route.ts",
+    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/app/api/chat/route.ts",
+  },
+  {
+    label: "lib/knowledge.ts",
+    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/lib/knowledge.ts",
+  },
 ];
 
 export default function Assistant() {
@@ -21,7 +43,6 @@ export default function Assistant() {
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Keep the latest message visible without scrolling the whole page.
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
   }, [messages, loading]);
@@ -57,15 +78,15 @@ export default function Assistant() {
       <div className="container-edge">
         <SectionHeader
           eyebrow="Live RAG demo"
-          title="Don't take my word for it. Ask."
-          description="This is a working retrieval-augmented pipeline — your question is embedded, matched against a knowledge base built from my real project documentation, and answered with citations. If it doesn't know, it says so."
+          title="Verify my AI engineering in 3 minutes."
+          description="Your question is embedded, matched against a curated knowledge base from my real repos, and answered with citations. Out-of-scope questions get an honest refusal — not a hallucination."
         />
 
         <div className="mx-auto mt-12 max-w-2xl">
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
               <span className="font-mono text-[12px] text-ink-300">
-                embed → retrieve → generate → cite
+                embed → retrieve → gate → generate → cite
               </span>
               <a
                 href="https://github.com/MikeNcube/mike-portfolio"
@@ -87,8 +108,9 @@ export default function Assistant() {
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-start justify-center gap-3">
                   <p className="text-[14px] leading-relaxed text-ink-300">
-                    Ask about my projects, stack, or availability — answers are
-                    grounded in my actual repos and cite their sources.
+                    Ask about my projects, stack, or availability — answers cite
+                    their sources. Hiring managers: try &ldquo;How does the RAG
+                    pipeline work technically?&rdquo;
                   </p>
                   <ul className="flex flex-wrap gap-2">
                     {SUGGESTIONS.map((s) => (
@@ -169,7 +191,7 @@ export default function Assistant() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="e.g. What did he build for financial services?"
+                placeholder="e.g. How does similarity gating work?"
                 maxLength={500}
                 className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               />
@@ -183,13 +205,43 @@ export default function Assistant() {
             </form>
           </div>
 
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+            <p className="mono mb-4 uppercase tracking-[0.18em] text-ink-400">
+              Technical spec (for engineers)
+            </p>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {TECH_SPEC.map((row) => (
+                <div key={row.label}>
+                  <dt className="font-mono text-[11px] text-signal">{row.label}</dt>
+                  <dd className="mt-1 text-[13px] leading-relaxed text-ink-300">
+                    {row.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+              {CODE_LINKS.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="font-mono text-[12px] text-ink-200 underline-offset-4 transition hover:text-signal hover:underline"
+                  >
+                    {link.label} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <p className="mt-4 text-center text-[12.5px] text-ink-400">
             Grounded in my GitHub READMEs and portfolio copy · rate-limited ·{" "}
             <a
-              href={`mailto:${profile.email}`}
+              href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
               className="underline underline-offset-4 transition hover:text-ink-200"
             >
-              or just email me
+              request an interview
             </a>
           </p>
         </div>

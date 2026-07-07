@@ -38,24 +38,40 @@ export default function About() {
           <div className="flex flex-col gap-5 text-[15.5px] leading-relaxed text-ink-200">
             <p>
               I&rsquo;m Mike — an AI Engineer working across Zimbabwe and South
-              Africa, remote-first. I build AI systems end-to-end: the agent
-              logic, the retrieval layer, the Python backend, the data pipeline
-              feeding it, and the observability wrapped around it.
+              Africa, remote-first. I build full-stack AI systems: the Next.js
+              surface, the Python API, the retrieval layer, and the observability
+              around it. Production backends in regulated insurance taught me to
+              treat every model call as a fallible dependency.
             </p>
             <p>
-              My background is regulated funeral-assurance and
-              financial-services engineering — multi-step digital application
-              flows, claims-workflow automation, and compliance-aware backends.
-              That shaped how I build AI:{" "}
-              <span className="text-white">
-                every model call is a fallible dependency, every run is
-                auditable, every pipeline is a contract.
-              </span>
+              My strongest public proof is the RAG assistant on this page — open
+              devtools and read the citations. Alongside that: shipped Flask web
+              apps, a multi-tenant SOC platform on Railway (not an LLM product,
+              but the kind of backend AI features need), and AWS/data work in
+              clearly labelled reference and lab repos.
             </p>
             <p className="text-ink-300">
-              Looking for Applied / Agentic AI Engineer, AI Platform Engineer,
-              or Data Engineer (AI systems) roles — on a team putting AI into
-              high-stakes, regulated, or operationally serious products.
+              Targeting {profile.targetRoles.join(", ")} — teams putting AI
+              into high-stakes, regulated, or operationally serious products.
+              Same positioning as my{" "}
+              <a
+                href={profile.github}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+              >
+                GitHub profile
+              </a>{" "}
+              and{" "}
+              <a
+                href={profile.linkedin}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+              >
+                LinkedIn
+              </a>
+              .
             </p>
           </div>
         </div>
