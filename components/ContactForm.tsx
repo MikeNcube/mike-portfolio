@@ -43,7 +43,7 @@ export default function ContactForm() {
   };
 
   const inputClasses =
-    "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+    "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-body-sm text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate={false}>
@@ -121,7 +121,7 @@ export default function ContactForm() {
           {status === "sending" ? "Sending…" : "Send message"}
         </button>
 
-        <p aria-live="polite" className="text-[13.5px]">
+        <p aria-live="polite" className="text-body-sm">
           {status === "success" && (
             <span className="text-signal">
               Sent — I&rsquo;ll reply from {profile.email}.
