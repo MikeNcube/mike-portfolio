@@ -74,7 +74,7 @@ export default function Assistant() {
   };
 
   return (
-    <section id="assistant" className="border-t border-white/5 py-24 sm:py-32">
+    <section id="assistant" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="Live RAG demo"
@@ -85,14 +85,14 @@ export default function Assistant() {
         <div className="mx-auto mt-12 max-w-2xl">
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-              <span className="font-mono text-[12px] text-ink-300">
+              <span className="font-mono text-micro text-ink-300">
                 embed → retrieve → gate → generate → cite
               </span>
               <a
                 href="https://github.com/MikeNcube/mike-portfolio"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="font-mono text-[12px] text-ink-300 underline-offset-4 transition hover:text-white hover:underline"
+                className="font-mono text-micro text-ink-300 underline-offset-4 transition hover:text-white hover:underline"
               >
                 source ↗
               </a>
@@ -107,7 +107,7 @@ export default function Assistant() {
             >
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-start justify-center gap-3">
-                  <p className="text-[14px] leading-relaxed text-ink-300">
+                  <p className="text-body-sm text-ink-300">
                     Ask about my projects, stack, or availability — answers cite
                     their sources. Hiring managers: try &ldquo;How does the RAG
                     pipeline work technically?&rdquo;
@@ -118,7 +118,7 @@ export default function Assistant() {
                         <button
                           type="button"
                           onClick={() => send(s)}
-                          className="rounded-full border border-white/15 bg-white/[0.02] px-3.5 py-1.5 text-[13px] text-ink-100 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                          className="rounded-full border border-white/15 bg-white/[0.02] px-3.5 py-1.5 text-caption text-ink-100 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
                           {s}
                         </button>
@@ -135,7 +135,7 @@ export default function Assistant() {
                 >
                   <div
                     className={[
-                      "max-w-[85%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed sm:max-w-md",
+                      "max-w-[85%] rounded-2xl px-4 py-3 text-body-sm sm:max-w-md",
                       m.role === "user"
                         ? "ml-auto bg-white text-ink-900"
                         : "border border-white/10 bg-white/[0.03] text-ink-100",
@@ -147,7 +147,7 @@ export default function Assistant() {
                     {m.content}
                     {m.sources && m.sources.length > 0 && (
                       <span className="mt-3 block border-t border-white/10 pt-2.5">
-                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-400">
+                        <span className="font-mono text-micro uppercase tracking-[0.14em] text-ink-400">
                           Sources
                         </span>
                         <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
@@ -157,7 +157,7 @@ export default function Assistant() {
                               href={s.url}
                               target="_blank"
                               rel="noreferrer noopener"
-                              className="text-[12px] text-signal underline underline-offset-4 transition hover:text-white"
+                              className="text-micro text-accent-glow underline underline-offset-4 transition hover:text-white"
                             >
                               {s.title} ↗
                             </a>
@@ -170,7 +170,7 @@ export default function Assistant() {
               ))}
 
               {loading && (
-                <p className="font-mono text-[12px] text-ink-400" aria-label="Assistant is thinking">
+                <p className="font-mono text-micro text-ink-400" aria-label="Assistant is thinking">
                   retrieving…
                 </p>
               )}
@@ -193,12 +193,12 @@ export default function Assistant() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="e.g. How does similarity gating work?"
                 maxLength={500}
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[14px] text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-body-sm text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="rounded-xl bg-white px-5 py-2.5 text-[14px] font-medium text-ink-900 transition enabled:hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="rounded-xl bg-white px-5 py-2.5 text-body-sm font-medium text-ink-900 transition enabled:hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 Ask
               </button>
@@ -212,8 +212,8 @@ export default function Assistant() {
             <dl className="grid gap-3 sm:grid-cols-2">
               {TECH_SPEC.map((row) => (
                 <div key={row.label}>
-                  <dt className="font-mono text-[11px] text-signal">{row.label}</dt>
-                  <dd className="mt-1 text-[13px] leading-relaxed text-ink-300">
+                  <dt className="font-mono text-micro uppercase tracking-[0.14em] text-ink-400">{row.label}</dt>
+                  <dd className="mt-1 text-caption text-ink-300">
                     {row.value}
                   </dd>
                 </div>
@@ -226,7 +226,7 @@ export default function Assistant() {
                     href={link.href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="font-mono text-[12px] text-ink-200 underline-offset-4 transition hover:text-signal hover:underline"
+                    className="font-mono text-micro text-ink-200 underline-offset-4 transition hover:text-accent-glow hover:underline"
                   >
                     {link.label} ↗
                   </a>
@@ -235,7 +235,7 @@ export default function Assistant() {
             </ul>
           </div>
 
-          <p className="mt-4 text-center text-[12.5px] text-ink-400">
+          <p className="mt-4 text-center text-caption text-ink-400">
             Grounded in my GitHub READMEs and portfolio copy · rate-limited ·{" "}
             <a
               href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}

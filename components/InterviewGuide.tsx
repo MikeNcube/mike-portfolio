@@ -3,7 +3,7 @@ import { interviewGuide } from "@/lib/content";
 
 export default function InterviewGuide() {
   return (
-    <section id="interview" className="border-t border-white/5 py-24 sm:py-28">
+    <section id="interview" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="For hiring managers"
@@ -15,15 +15,15 @@ export default function InterviewGuide() {
           {interviewGuide.map((step, i) => (
             <li key={step.title} className="card-lg flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-[12px] text-ink-400">
+                <span className="font-mono text-micro text-ink-400">
                   Step {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="chip text-[11px]">{step.time}</span>
+                <span className="chip text-micro">{step.time}</span>
               </div>
-              <h3 className="font-display text-[17px] font-semibold tracking-tight text-white">
+              <h3 className="font-display text-body-lg font-semibold leading-snug tracking-tight text-white">
                 {step.title}
               </h3>
-              <p className="flex-1 text-[14px] leading-relaxed text-ink-300">
+              <p className="flex-1 text-body-sm text-ink-300">
                 {step.body}
               </p>
               <a
@@ -34,7 +34,7 @@ export default function InterviewGuide() {
                     ? "noreferrer noopener"
                     : undefined
                 }
-                className="btn-ghost w-fit text-[13px]"
+                className="btn-ghost w-fit text-caption"
               >
                 {step.label}
               </a>

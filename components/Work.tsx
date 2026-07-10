@@ -18,7 +18,7 @@ export default function Work() {
   let index = 0;
 
   return (
-    <section id="work" className="border-t border-white/5 py-24 sm:py-32">
+    <section id="work" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="Selected work"
@@ -38,7 +38,7 @@ export default function Work() {
                   <h3 className="font-display text-xl font-semibold tracking-tight text-white">
                     {meta.title}
                   </h3>
-                  <p className="max-w-3xl text-[14.5px] leading-relaxed text-ink-300">
+                  <p className="max-w-3xl text-body text-ink-300">
                     {meta.description}
                   </p>
                 </div>

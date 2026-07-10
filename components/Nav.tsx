@@ -39,9 +39,9 @@ export default function Nav() {
               priority
             />
           </span>
-          <span className="font-display text-[15px] font-semibold tracking-tight text-white">
+          <span className="font-display text-body font-semibold tracking-tight text-white">
             Mike Ncube
-            <span className="ml-2 hidden font-mono text-[11px] font-normal text-ink-300 sm:inline">
+            <span className="ml-2 hidden font-mono text-micro font-normal text-ink-300 sm:inline">
               · AI Engineer
             </span>
           </span>
@@ -52,7 +52,7 @@ export default function Nav() {
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="rounded-full px-3 py-1.5 text-[13px] text-ink-200 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="rounded-full px-3 py-1.5 text-caption text-ink-200 transition hover:bg-white/[0.04] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               {s.label}
             </a>
@@ -111,7 +111,7 @@ export default function Nav() {
                 key={s.id}
                 href={`#${s.id}`}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm text-ink-100 hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="rounded-lg px-3 py-2.5 text-body-sm text-ink-100 hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 {s.label}
               </a>

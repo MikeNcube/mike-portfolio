@@ -23,7 +23,7 @@ export default function Hero() {
             </h1>
 
             <p
-              className="max-w-xl text-pretty text-[17px] leading-relaxed text-ink-200 animate-fade-up"
+              className="max-w-xl text-pretty text-body-lg text-ink-200 animate-fade-up"
               style={{ animationDelay: "120ms" }}
             >
               {profile.oneLiner} Public proof: a live RAG assistant on this
@@ -36,7 +36,7 @@ export default function Hero() {
               style={{ animationDelay: "180ms" }}
             >
               <a href="#assistant" className="btn-primary">
-                Try live RAG demo
+                Ask my AI about my work
               </a>
               <a href="#work" className="btn-ghost">
                 View work
@@ -67,13 +67,13 @@ export default function Hero() {
                 />
               </div>
               <div className="flex flex-col gap-1.5 px-1 pb-1 pt-4">
-                <p className="font-display text-[19px] font-semibold tracking-tight text-white">
+                <p className="font-display text-title tracking-tight text-white">
                   {profile.name}
                 </p>
-                <p className="text-[13.5px] leading-snug text-ink-200">
+                <p className="text-body-sm leading-snug text-ink-200">
                   {profile.subHeadline}
                 </p>
-                <p className="font-mono text-[11.5px] text-ink-400">
+                <p className="font-mono text-micro text-ink-400">
                   {profile.location}
                 </p>
               </div>
@@ -81,7 +81,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px]">
+        <div className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 text-caption">
           <span className="font-mono uppercase tracking-[0.2em] text-ink-400">
             Stack
           </span>

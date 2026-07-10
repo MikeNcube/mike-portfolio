@@ -3,7 +3,7 @@ import { profile } from "@/lib/content";
 
 export default function About() {
   return (
-    <section id="about" className="border-t border-white/5 py-24 sm:py-28">
+    <section id="about" className="section">
       <div className="container-edge">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
           <div className="flex flex-col gap-5">
@@ -25,17 +25,17 @@ export default function About() {
                 />
               </span>
               <div className="flex flex-col">
-                <span className="font-display text-[15px] font-semibold text-white">
+                <span className="font-display text-body font-semibold text-white">
                   {profile.name}
                 </span>
-                <span className="font-mono text-[11.5px] text-ink-300">
+                <span className="font-mono text-micro text-ink-300">
                   {profile.location}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-5 text-[15.5px] leading-relaxed text-ink-200">
+          <div className="flex flex-col gap-5 text-body text-ink-200">
             <p>
               I&rsquo;m Mike — an AI Engineer working across Zimbabwe and South
               Africa, remote-first. I build full-stack AI systems: the Next.js
@@ -58,7 +58,7 @@ export default function About() {
                 href={profile.github}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+                className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
               >
                 GitHub profile
               </a>{" "}
@@ -67,7 +67,7 @@ export default function About() {
                 href={profile.linkedin}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-white underline-offset-4 transition hover:text-signal hover:underline"
+                className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
               >
                 LinkedIn
               </a>

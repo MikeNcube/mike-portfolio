@@ -12,7 +12,7 @@ const STYLES: Record<ProjectStatus, string> = {
 export default function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] ${STYLES[status]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-micro uppercase tracking-[0.12em] ${STYLES[status]}`}
     >
       {status}
     </span>

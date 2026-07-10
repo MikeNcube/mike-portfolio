@@ -27,7 +27,7 @@ export default function SectionHeader({
       </span>
       <h2 className="section-heading text-balance">{title}</h2>
       {description && (
-        <p className="text-pretty text-[15.5px] leading-relaxed text-ink-300">
+        <p className="text-pretty text-body text-ink-300">
           {description}
         </p>
       )}

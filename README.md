@@ -2,7 +2,7 @@
 
 Live at [mike-portfolio-tawny.vercel.app](https://mike-portfolio-tawny.vercel.app) — the single canonical deployment.
 
-Next.js 14 (App Router) · TypeScript (strict) · Tailwind CSS. Two typefaces (Inter + JetBrains Mono, self-hosted via `next/font`), a dark, restrained design system, and a working RAG assistant as the centrepiece.
+Next.js 14 (App Router) · TypeScript (strict) · Tailwind CSS. Two typefaces (Inter + JetBrains Mono, self-hosted via `next/font`), a dark, restrained design system (tokens and rules in [DESIGN.md](./DESIGN.md)), and a working RAG assistant as the centrepiece.
 
 ## The RAG assistant
 

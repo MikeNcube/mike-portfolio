@@ -14,7 +14,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
   return (
     <article className="pt-28 sm:pt-32">
       <div className="container-edge">
-        <div className="mb-10 flex items-center justify-between gap-3 text-[12px] text-ink-400">
+        <div className="mb-10 flex items-center justify-between gap-3 text-micro text-ink-400">
           <Link
             href="/#work"
             className="group inline-flex items-center gap-2 text-ink-300 transition hover:text-white"
@@ -42,8 +42,8 @@ export default function ProjectDetail({ project, prev, next }: Props) {
           <h1 className="font-display text-display-lg tracking-tightest text-white text-balance">
             {project.name}
           </h1>
-          <p className="font-mono text-[13px] text-signal">{project.role}</p>
-          <p className="max-w-3xl text-[17px] leading-relaxed text-ink-200 text-pretty">
+          <p className="font-mono text-caption text-ink-300">{project.role}</p>
+          <p className="max-w-3xl text-body-lg text-ink-200 text-pretty">
             {project.tagline}
           </p>
         </header>
@@ -66,7 +66,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                   href={project.repoUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="group inline-flex items-center gap-2 text-[14px] text-white transition hover:text-signal"
+                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
                 >
                   Open on GitHub
                   <span aria-hidden className="transition group-hover:translate-x-0.5">
@@ -74,7 +74,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                   </span>
                 </a>
               ) : (
-                <span className="text-[14px] text-ink-300">
+                <span className="text-body-sm text-ink-300">
                   Private client work — happy to walk through it in interview.
                 </span>
               )}
@@ -85,7 +85,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                 <span className="mono uppercase tracking-[0.18em]">Demo</span>
                 <a
                   href={project.demoUrl}
-                  className="group inline-flex items-center gap-2 text-[14px] text-white transition hover:text-signal"
+                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
                 >
                   {project.demoLabel ?? "Open demo"}
                   <span aria-hidden className="transition group-hover:translate-x-0.5">
@@ -130,11 +130,11 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                     >
                       <span
                         aria-hidden
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] font-mono text-[12px] text-ink-200"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] font-mono text-micro text-ink-200"
                       >
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <p className="text-[14.5px] leading-relaxed text-ink-100">
+                      <p className="text-body text-ink-100">
                         {d}
                       </p>
                     </li>
@@ -144,10 +144,10 @@ export default function ProjectDetail({ project, prev, next }: Props) {
             )}
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-            <div className="mono mb-2 uppercase tracking-[0.18em] text-signal">
+            <div className="mono mb-2 uppercase tracking-[0.18em]">
               Outcome
             </div>
-            <p className="text-[15.5px] leading-relaxed text-ink-100">
+            <p className="text-body text-ink-100">
               {project.outcome}
             </p>
           </div>
@@ -176,7 +176,7 @@ function Section({
       <h2 className="font-display text-display-md tracking-tightest text-white">
         {title}
       </h2>
-      <div className="max-w-none text-[15.5px] leading-relaxed text-ink-200 text-pretty">
+      <div className="max-w-none text-body text-ink-200 text-pretty">
         {children}
       </div>
     </section>
@@ -187,7 +187,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="mono uppercase tracking-[0.18em]">{label}</span>
-      <span className="text-[14px] text-white">{value}</span>
+      <span className="text-body-sm text-white">{value}</span>
     </div>
   );
 }
@@ -211,11 +211,11 @@ function NeighbourLink({
       <span className="mono uppercase tracking-[0.18em]">
         {isNext ? "Next" : "Previous"}
       </span>
-      <span className="font-display text-[16.5px] font-semibold tracking-tight text-white transition group-hover:text-signal">
+      <span className="font-display text-body-lg font-semibold tracking-tight text-white transition group-hover:text-accent-glow">
         {isNext ? "→ " : "← "}
         {project.name}
       </span>
-      <span className="line-clamp-2 text-[13px] text-ink-300">
+      <span className="line-clamp-2 text-caption text-ink-300">
         {project.tagline}
       </span>
     </Link>

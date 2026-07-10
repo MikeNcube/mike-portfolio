@@ -15,13 +15,13 @@ export default function Footer() {
               className="h-full w-full object-cover object-top"
             />
           </span>
-          <p className="text-sm text-ink-300">
+          <p className="text-body-sm text-ink-300">
             {profile.name} · {profile.headline} · {profile.location}
           </p>
         </div>
         <a
           href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
-          className="font-mono text-[12px] text-ink-200 underline-offset-4 transition hover:text-signal hover:underline"
+          className="font-mono text-micro text-ink-200 underline-offset-4 transition hover:text-accent-glow hover:underline"
         >
           {profile.email}
         </a>

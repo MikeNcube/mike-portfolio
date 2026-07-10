@@ -54,6 +54,8 @@ const config: Config = {
           "sans-serif",
         ],
       },
+      // Design-foundation type scale (approved 2026-07). 12px floor — no
+      // arbitrary text-[Npx] values in components; use these tokens.
       fontSize: {
         "display-xl": [
           "clamp(2.5rem, 6vw, 4.75rem)",
@@ -67,6 +69,21 @@ const config: Config = {
           "clamp(1.75rem, 3.5vw, 2.5rem)",
           { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "600" },
         ],
+        // Card / feature headings.
+        "title-lg": [
+          "1.75rem",
+          { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" },
+        ],
+        title: [
+          "1.1875rem",
+          { lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "600" },
+        ],
+        // Prose.
+        "body-lg": ["1.0625rem", { lineHeight: "1.65" }], // 17px — standfirsts
+        body: ["0.96875rem", { lineHeight: "1.6" }], // 15.5px — default prose
+        "body-sm": ["0.875rem", { lineHeight: "1.55" }], // 14px — dense UI
+        caption: ["0.8125rem", { lineHeight: "1.5" }], // 13px — meta, chips
+        micro: ["0.75rem", { lineHeight: "1.4" }], // 12px — labels; hard floor
       },
       letterSpacing: {
         tightest: "-0.04em",

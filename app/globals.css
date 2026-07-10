@@ -47,8 +47,13 @@ body {
     @apply mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12;
   }
 
+  /* Section rhythm token: 96px mobile / 128px desktop, hairline top rule. */
+  .section {
+    @apply border-t border-white/5 py-24 sm:py-32;
+  }
+
   .eyebrow {
-    @apply inline-flex items-center gap-2 text-[11.5px] font-medium uppercase tracking-[0.18em] text-ink-300;
+    @apply inline-flex items-center gap-2 text-micro font-medium uppercase tracking-[0.18em] text-ink-300;
   }
 
   .eyebrow-dot {
@@ -56,11 +61,11 @@ body {
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-medium text-ink-200;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-caption font-medium text-ink-200;
   }
 
   .chip-accent {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-xs font-medium text-accent-glow;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-caption font-medium text-accent-glow;
   }
 
   .card {
@@ -72,11 +77,11 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-ink-100 active:scale-[0.98];
+    @apply inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-body-sm font-medium text-ink-900 transition hover:bg-ink-100 active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.02] px-5 py-2.5 text-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.06];
+    @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.02] px-5 py-2.5 text-body-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.06];
   }
 
   .section-heading {
@@ -84,7 +89,7 @@ body {
   }
 
   .mono {
-    @apply font-mono text-[12px] tracking-tight text-ink-300;
+    @apply font-mono text-micro tracking-tight text-ink-300;
   }
 }
 

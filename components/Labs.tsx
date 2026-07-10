@@ -4,7 +4,7 @@ import { labProjects } from "@/lib/content";
 
 export default function Labs() {
   return (
-    <section id="labs" className="border-t border-white/5 py-24 sm:py-28">
+    <section id="labs" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="Reference work & labs"

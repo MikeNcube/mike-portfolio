@@ -3,7 +3,7 @@ import { engineeringApproach } from "@/lib/content";
 
 export default function Approach() {
   return (
-    <section id="approach" className="border-t border-white/5 py-24 sm:py-28">
+    <section id="approach" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="How I build"
@@ -16,15 +16,15 @@ export default function Approach() {
             <div key={item.title} className="card flex gap-4">
               <span
                 aria-hidden
-                className="font-mono text-[12px] text-ink-400"
+                className="font-mono text-micro text-ink-400"
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
-                <h3 className="font-display text-[16px] font-semibold tracking-tight text-white">
+                <h3 className="font-display text-body-lg font-semibold leading-snug tracking-tight text-white">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-ink-300">
+                <p className="mt-2 text-body-sm text-ink-300">
                   {item.body}
                 </p>
               </div>

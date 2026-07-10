@@ -14,12 +14,12 @@ export default function RecruiterStrip() {
             </p>
             <ul className="flex flex-wrap gap-2">
               {profile.targetRoles.map((role) => (
-                <li key={role} className="chip-accent text-[13px]">
+                <li key={role} className="chip-accent">
                   {role}
                 </li>
               ))}
             </ul>
-            <p className="text-[13.5px] leading-relaxed text-ink-300">
+            <p className="text-body-sm text-ink-300">
               Full-time or contract · {profile.location}
             </p>
           </div>
@@ -32,7 +32,7 @@ export default function RecruiterStrip() {
               {profile.proofPoints.map((point) => (
                 <li
                   key={point.lead}
-                  className="flex gap-3 text-[14px] leading-relaxed"
+                  className="flex gap-3 text-body-sm"
                 >
                   <span
                     aria-hidden
@@ -49,7 +49,7 @@ export default function RecruiterStrip() {
             <div className="flex flex-wrap gap-3 pt-1">
               <a
                 href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
-                className="btn-primary text-[13px]"
+                className="btn-primary text-caption"
               >
                 Request interview
               </a>
@@ -57,7 +57,7 @@ export default function RecruiterStrip() {
                 href={profile.linkedin}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="btn-ghost text-[13px]"
+                className="btn-ghost text-caption"
               >
                 LinkedIn ↗
               </a>
@@ -65,7 +65,7 @@ export default function RecruiterStrip() {
                 href={profile.github}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="btn-ghost text-[13px]"
+                className="btn-ghost text-caption"
               >
                 GitHub ↗
               </a>

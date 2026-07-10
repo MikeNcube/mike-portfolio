@@ -10,7 +10,7 @@ export default function NotFound() {
       <h1 className="font-display text-display-md tracking-tightest text-white">
         Route not found.
       </h1>
-      <p className="max-w-md text-[15px] text-ink-300">
+      <p className="max-w-md text-body text-ink-300">
         That page doesn&rsquo;t exist. Return to the homepage or try the live RAG
         demo.
       </p>

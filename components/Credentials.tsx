@@ -6,7 +6,7 @@ export default function Credentials() {
   const supporting = certifications.filter((c) => c.tier === "supporting");
 
   return (
-    <section id="credentials" className="border-t border-white/5 py-24 sm:py-28">
+    <section id="credentials" className="section">
       <div className="container-edge">
         <SectionHeader
           eyebrow="Credentials"
@@ -20,10 +20,10 @@ export default function Credentials() {
               key={cert.name}
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
             >
-              <p className="font-display text-[14.5px] font-semibold leading-snug tracking-tight text-white">
+              <p className="font-display text-body font-semibold leading-snug tracking-tight text-white">
                 {cert.name}
               </p>
-              <p className="mt-1.5 font-mono text-[11.5px] text-ink-400">
+              <p className="mt-1.5 font-mono text-micro text-ink-400">
                 {cert.provider}
               </p>
             </li>
@@ -37,7 +37,7 @@ export default function Credentials() {
             </p>
             <ul className="flex flex-wrap gap-2">
               {supporting.map((cert) => (
-                <li key={cert.name} className="chip text-[12px]">
+                <li key={cert.name} className="chip">
                   {cert.name} · {cert.provider}
                 </li>
               ))}
@@ -51,10 +51,10 @@ export default function Credentials() {
               key={c.label}
               className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
             >
-              <h3 className="font-display text-[15px] font-semibold tracking-tight text-white">
+              <h3 className="font-display text-body font-semibold leading-snug tracking-tight text-white">
                 {c.label}
               </h3>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-300">
+              <p className="mt-1.5 text-body-sm text-ink-300">
                 {c.body}
               </p>
             </li>
