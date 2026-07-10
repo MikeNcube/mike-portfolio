@@ -82,6 +82,24 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     text: 'AWS lab: EC2 to RDS PostgreSQL troubleshooting — VPC, security groups, boto3.',
   },
   {
+    id: 'zororo-crm-platform',
+    title: 'Zororo CRM: call centre lead-management platform (private client)',
+    sourceUrl: 'internal project — details on request',
+    text: 'Mike is the sole builder of a lead-management CRM for a funeral-assurance call centre: FastAPI backend, PostgreSQL for lead and agent records. Covers lead intake, assignment, and follow-up tracking for call centre agents. Private codebase — Mike offers an architecture walk-through in interview.',
+  },
+  {
+    id: 'document-intelligence-claims-rag',
+    title: 'Document intelligence for claims: RAG-based routing (private client)',
+    sourceUrl: 'internal project — details on request',
+    text: 'Mike built a document-intelligence pipeline that reads policy documents, classifies them, and routes each to the correct handling path, with a human reviewer in the loop before any decision is finalised. Same RAG-and-retrieval pattern as this site\'s assistant, applied to structured insurance documents rather than a knowledge base. Private codebase — Mike offers an architecture walk-through in interview.',
+  },
+  {
+    id: 'production-engineering-compliance',
+    title: 'Production engineering under regulation',
+    sourceUrl: 'internal project — details on request',
+    text: 'Mike\'s production work sits inside a regulated financial services provider, so builds default to POPIA-aligned data handling, audit logging on key actions, and CI/CD pipelines rather than manual deploys. This posture — not just a personal preference — runs through Proactive Sentinel, the Zororo platform, and the claims RAG pipeline alike.',
+  },
+  {
     id: 'certifications',
     title: 'Certifications',
     sourceUrl: 'https://mikencube.github.io/#skills',
