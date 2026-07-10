@@ -7,6 +7,7 @@ const GENERATION_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 const MAX_MESSAGE_LENGTH = 500;
 const MIN_RELEVANCE_SCORE = 0.35;
+const RETRY_DELAY_MS = 400;
 
 // Very small in-memory rate limiter: 20 requests per IP per 10 minutes.
 const RATE_LIMIT = 20;
@@ -46,6 +47,24 @@ function buildPrompt(message: string, chunks: RetrievedChunk[], audience: string
     '',
     `VISITOR QUESTION: ${message}`,
   ].join('\n');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Calls the Gemini generation API, retrying once after a fixed delay on
+// transient failures (network error or non-200 response).
+async function callGeminiWithRetry(url: string, init: RequestInit): Promise<Response> {
+  try {
+    const res = await fetch(url, init);
+    if (res.ok) return res;
+    throw new Error(`Generation API returned ${res.status}`);
+  } catch (err) {
+    console.error('chat route: generation call failed, retrying once:', err);
+    await sleep(RETRY_DELAY_MS);
+    return fetch(url, init);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -93,7 +112,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const res = await fetch(GENERATION_URL, {
+    const res = await callGeminiWithRetry(GENERATION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -117,7 +136,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('chat route failed:', err);
     return NextResponse.json(
-      { error: 'The assistant hit a snag. Please try again, or email mikencube03@gmail.com.' },
+      { error: 'The assistant is having trouble responding right now. Please try again in a moment, or email mikencube03@gmail.com.' },
       { status: 502 },
     );
   }
