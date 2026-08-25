@@ -11,7 +11,7 @@ export default function Credentials() {
         <SectionHeader
           eyebrow="Credentials"
           title="Coursework that backs the work."
-          description="Core AI certifications listed first. Agentic AI is trained coursework — my public shipped proof is the RAG demo and production Python backends."
+          description="Verified AI, cloud and data-engineering course completions. Agentic AI is trained coursework — my public shipped proof is the RAG demo and shipped Python backends."
         />
 
         <ul className="mt-10 grid gap-3 sm:grid-cols-3">

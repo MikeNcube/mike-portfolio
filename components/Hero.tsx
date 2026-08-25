@@ -18,8 +18,8 @@ export default function Hero() {
               className="font-display text-display-xl tracking-tightest text-white text-balance animate-fade-up"
               style={{ animationDelay: "60ms" }}
             >
-              AI Engineer —<br />
-              full-stack RAG &amp; Python backends.
+              Applied AI Engineer —<br />
+              RAG, Python and auditable business automation.
             </h1>
 
             <p
@@ -27,7 +27,7 @@ export default function Hero() {
               style={{ animationDelay: "120ms" }}
             >
               {profile.oneLiner} Public proof: a live RAG assistant on this
-              page, plus production Python platforms in regulated insurance and
+              page, plus shipped Python platforms in regulated insurance and
               security.
             </p>
 
@@ -62,6 +62,7 @@ export default function Hero() {
                   width={640}
                   height={720}
                   priority
+                  unoptimized
                   className="aspect-[4/5] w-full object-cover object-top"
                   sizes="(min-width: 1024px) 400px, (min-width: 640px) 384px, 100vw"
                 />

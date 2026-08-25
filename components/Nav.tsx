@@ -35,6 +35,7 @@ export default function Nav() {
               alt=""
               width={64}
               height={64}
+              unoptimized
               className="h-full w-full object-cover object-top"
               priority
             />
@@ -42,7 +43,7 @@ export default function Nav() {
           <span className="font-display text-body font-semibold tracking-tight text-white">
             Mike Ncube
             <span className="ml-2 hidden font-mono text-micro font-normal text-ink-300 sm:inline">
-              · AI Engineer
+              · Applied AI Engineer
             </span>
           </span>
         </a>

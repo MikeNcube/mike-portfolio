@@ -21,6 +21,7 @@ export default function About() {
                   alt={`Portrait of ${profile.name}`}
                   width={128}
                   height={128}
+                  unoptimized
                   className="h-full w-full object-cover object-top"
                 />
               </span>
@@ -37,18 +38,22 @@ export default function About() {
 
           <div className="flex flex-col gap-5 text-body text-ink-200">
             <p>
-              I&rsquo;m Mike — an AI Engineer working across Zimbabwe and South
-              Africa, remote-first. I build full-stack AI systems: the Next.js
-              surface, the Python API, the retrieval layer, and the observability
-              around it. Production backends in regulated insurance taught me to
-              treat every model call as a fallible dependency.
+              I&rsquo;m Mike — an Applied AI Engineer based in South Africa,
+              remote-first. 4+ years across software development, AWS cloud
+              architecture, data engineering and applied AI, including 2+ years
+              working as an AI Engineer since June 2024. I build full-stack AI
+              systems: the Next.js surface, the Python API, the retrieval
+              layer, and the observability around it. Shipped backends in
+              regulated insurance taught me to treat every model call as a
+              fallible dependency.
             </p>
             <p>
               My strongest public proof is the RAG assistant on this page — open
               devtools and read the citations. Alongside that: shipped Flask web
-              apps, a multi-tenant SOC platform on Railway (not an LLM product,
-              but the kind of backend AI features need), and AWS/data work in
-              clearly labelled reference and lab repos.
+              apps, a multi-tenant SOC platform deployed to Railway for
+              evaluation (not an LLM product, but the kind of backend AI
+              features need — currently paused), and AWS/data work in clearly
+              labelled reference and lab repos.
             </p>
             <p className="text-ink-300">
               Targeting {profile.targetRoles.join(", ")} — teams putting AI

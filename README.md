@@ -1,4 +1,4 @@
-# Mike S Ncube — AI Engineer Portfolio
+# Mike S Ncube — Applied AI Engineer Portfolio
 
 Live at [mike-portfolio-tawny.vercel.app](https://mike-portfolio-tawny.vercel.app) — the single canonical deployment.
 
@@ -45,4 +45,4 @@ npm run build      # must succeed
 
 ## Content rules
 
-All portfolio content lives in `lib/content.ts` and the assistant's knowledge in `lib/knowledge.ts`. House rule: **every project, metric, and claim must trace to verifiable material** — a public repo, this site itself, or explicitly-labelled private client work. Status labels (`Production` / `Shipped` / `Live demo` / `Reference` / `Lab`) are honest by design.
+All portfolio content lives in `lib/content.ts` and the assistant's knowledge in `lib/knowledge.ts`. House rule: **every project, metric, and claim must trace to verifiable material** — a public repo, this site itself, or explicitly-labelled private client work. Status labels (`Paused` / `Shipped` / `Live demo` / `Reference` / `Lab` / `Confidential`) are honest by design.

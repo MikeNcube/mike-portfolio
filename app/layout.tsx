@@ -16,9 +16,9 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_NAME = "Mike Ncube — AI Engineer";
+const SITE_NAME = "Mike Ncube — Applied AI Engineer";
 const SITE_DESCRIPTION =
-  "AI Engineer building full-stack RAG systems and Python backends for insurance, claims, and regulated financial workflows. Live RAG assistant with citations on this site. Remote-first · Zimbabwe & South Africa.";
+  "Applied AI Engineer building full-stack RAG systems and Python backends for insurance, claims, and regulated financial workflows. Live RAG assistant with citations on this site. Remote-first · South Africa.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mike-portfolio-tawny.vercel.app"),
@@ -28,11 +28,11 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   keywords: [
-    "AI Engineer",
+    "Applied AI Engineer",
     "Full-stack AI",
     "RAG",
-    "Applied AI Engineer",
-    "Full-stack AI Engineer",
+    "Generative AI Engineer",
+    "AI Solutions Engineer",
     "Python backend engineer",
     "Flask",
     "Next.js",

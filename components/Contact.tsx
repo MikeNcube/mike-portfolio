@@ -51,7 +51,7 @@ export default function Contact() {
               </InfoRow>
               <InfoRow label="Availability">
                 <span className="text-white">
-                  Full-time / contract · remote-first · {profile.location}
+                  Full-time / contract · {profile.location}
                 </span>
               </InfoRow>
             </dl>

@@ -1,4 +1,4 @@
-export type ProjectStatus = "Production" | "Shipped" | "Live demo" | "Reference" | "Lab";
+export type ProjectStatus = "Paused" | "Shipped" | "Live demo" | "Reference" | "Lab" | "Confidential";
 
 export type WorkSection = "ai-proof" | "platform" | "client";
 
@@ -74,7 +74,7 @@ export const flagshipProjects: Project[] = [
     built:
       "A multi-step web application flow with server-side validation before anything is persisted, durable submission storage, automated policy-PDF generation, supporting-document upload handling, an admin dashboard for staff review, and a scheduled backup routine for the datastore.",
     outcome:
-      "Shipped and in use for a regulated funeral-assurance workflow: clean data captured once, validated server-side, and turned into an issued policy document without manual re-keying.",
+      "Shipped for a regulated funeral-assurance workflow, supporting validated intake and automated document generation. Current live-traffic volume [VERIFY].",
     engineeringDecisions: [
       "Server-side validation is the gate — nothing reaches the datastore until the record is clean, because in a regulated product a bad record is an audit finding.",
       "Policy PDF generation is automated from the accepted application, removing the manual document-prep step entirely.",
@@ -91,15 +91,15 @@ export const flagshipProjects: Project[] = [
     slug: "proactive-sentinel",
     name: "Proactive Sentinel — Multi-Tenant SOC Platform",
     tagline:
-      "Production backend platform (not an LLM product): event ingestion, MITRE ATT&CK correlation, automated response, and POPIA-aware data handling for financial-services providers.",
+      "Backend platform (not an LLM product): event ingestion, MITRE ATT&CK correlation, automated response, and POPIA-aware data handling for financial-services providers. Deployed to Railway for evaluation; currently paused.",
     workSection: "platform",
-    role: "Sole builder — backend platform (Flask API, PostgreSQL, Redis, observability)",
+    role: "Primary contributor to a multi-tenant security platform. Deployed to Railway for evaluation; currently paused.",
     problem:
       "Financial-services providers need security monitoring that catches multi-stage attacks (recon → lateral movement → exfiltration) and business-signal anomalies — without a heavyweight enterprise SIEM or a pre-registered token for every event source.",
     built:
       "A multi-tenant Flask backend that ingests events from agents and log shippers, deduplicates them in Redis by SHA-256 fingerprint, correlates MITRE ATT&CK techniques across events into chain alerts, and dispatches automated responses by severity — IP blocking, audit entries, alert routing. POPIA compliance is designed in: PII masking at ingest, AES-256-GCM encrypted columns, immutable audit log, per-request tenant isolation.",
     outcome:
-      "v1.0.0, production-ready and deployed on Railway with PostgreSQL 15 and Redis 7. CI suite of 44 passing tests. Dispatcher failures are non-fatal by design — a Redis outage cannot drop alerts.",
+      "v1.0.0. Deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused, not taking live traffic. CI suite of 44 passing tests. Dispatcher failures are non-fatal by design — a Redis outage cannot drop alerts.",
     systemOverview:
       "Events route through a DetectionEngine (Redis dedup + MITRE correlation) or a UXObserver for business signals (claims latency, WhatsApp frustration, web errors). After an alert is persisted, an Action Dispatcher fires by severity: critical alerts flag, block the attacker IP in Redis with a 24h TTL, and write an audit entry; lower severities degrade gracefully. All API access is JWT-authenticated and rate-limited; observability is OpenTelemetry plus structured JSON logs.",
     engineeringDecisions: [
@@ -110,7 +110,7 @@ export const flagshipProjects: Project[] = [
       "Tenant isolation enforced per request — ingest rejects tenant IDs that do not match the authenticated JWT.",
     ],
     stack: ["Python 3.11", "Flask", "PostgreSQL 15", "Redis 7", "SQLAlchemy 2.0", "Alembic", "OpenTelemetry", "Docker", "Railway"],
-    status: "Production",
+    status: "Paused",
     domain: "Security · Backend platform",
     year: "2026",
     repoUrl: "https://github.com/MikeNcube/proactive-sentinel",
@@ -122,17 +122,17 @@ export const clientProjects: Project[] = [
     slug: "zororo-digital-applications",
     name: "Zororo Phumulani — Digital Application Platform",
     tagline:
-      "Private client platform: compliant insurance onboarding with identity verification, consent capture, payments, and automated policy issue — deployed on Railway.",
+      "Private client platform: a compliant insurance-onboarding workflow for a regulated funeral-assurance provider. Confidential — architecture discussed in interview.",
     workSection: "client",
-    role: "Lead engineer — client platform (private repo; walk-through in interview)",
+    role: "Primary contributor — private client platform (confidential; walk-through in interview)",
     problem:
       "A funeral-assurance provider needed fully digital, compliant onboarding — enforcing 18+ age validation, FIC-compliant ID upload, and POPIA/FAIS consent capture — without manual intervention.",
     built:
-      "A 7-step workflow engine with dependency enforcement: identity verification → consent capture → payment integration → automated PDF policy generation → multi-recipient SMTP dispatch → audit logging. Deployed on Railway with zero-downtime CI/CD.",
+      "A private, multi-step onboarding workflow for a regulated funeral-assurance provider. Implementation details are confidential; happy to walk through the architecture in an interview.",
     outcome:
-      "In production for regulated insurance onboarding. Code is private — treat this as my account of the system; the public repos above are the verifiable evidence of how I build.",
-    stack: ["Python", "Workflow engine", "PDF generation", "SMTP", "Payments", "Railway"],
-    status: "Production",
+      "Confidential client platform for regulated insurance onboarding. Code is private — the public repos above are the verifiable evidence of how I build.",
+    stack: ["Python", "Workflow engine", "Railway"],
+    status: "Confidential",
     domain: "Insurance · Client work (private)",
     year: "2025–2026",
   },
@@ -238,14 +238,17 @@ export type Certification = {
   tier: "core" | "supporting";
 };
 
-/** Coursework from Mike's published portfolio — core certs lead; supporting listed without padding. */
+/**
+ * Course completions verified against the private credentials evidence
+ * register. Unverified items (LangChain for LLM Applications, AWS
+ * Generative AI Introduction, AWS Machine Learning Foundations, Prompt
+ * Engineering Foundations) are withheld until a matching certificate is
+ * confirmed — see 07_stage3b_live_implementation_report.md.
+ */
 export const certifications: Certification[] = [
   { name: "Retrieval-Augmented Generation (RAG)", provider: "DeepLearning.AI", tier: "core" },
   { name: "Generative AI with LLMs", provider: "DeepLearning.AI", tier: "core" },
   { name: "Agentic AI", provider: "DeepLearning.AI", tier: "core" },
-  { name: "LangChain for LLM Applications", provider: "DeepLearning.AI", tier: "supporting" },
-  { name: "AWS Generative AI Introduction", provider: "AWS", tier: "supporting" },
-  { name: "AWS Machine Learning Foundations", provider: "AWS", tier: "supporting" },
 ];
 
 /** Steps for hiring managers evaluating whether to schedule a technical interview. */
@@ -265,9 +268,9 @@ export const interviewGuide = [
     label: "View source ↗",
   },
   {
-    title: "Skim a production backend",
+    title: "Skim a backend platform",
     time: "~15 min",
-    body: "Proactive Sentinel README + tests: multi-tenant Flask, Redis dedup, MITRE correlation, 44 CI tests.",
+    body: "Proactive Sentinel README + tests: multi-tenant Flask, Redis dedup, MITRE correlation, 44 CI tests. Deployed for evaluation; currently paused.",
     href: "https://github.com/MikeNcube/proactive-sentinel",
     label: "Open repo ↗",
   },
@@ -280,27 +283,27 @@ export const workSections = {
       "The fastest way to verify my AI engineering: a working RAG pipeline with public source code.",
   },
   platform: {
-    title: "Production platforms",
+    title: "Shipped & evaluated platforms",
     description:
-      "Shipped Python backends in regulated domains. These are not LLM demos — they show the platform discipline AI products need.",
+      "Python backends in regulated domains — Digi App Form is shipped; Proactive Sentinel was deployed to Railway for evaluation and is currently paused. Not LLM demos — they show the platform discipline AI products need.",
   },
   client: {
     title: "Client work (private code)",
     description:
-      "Production insurance onboarding — code is private; I walk through architecture in interview.",
+      "Confidential insurance-onboarding client work — code is private; I walk through architecture in interview.",
   },
 } as const;
 
 export const profile = {
   name: "Mike S Ncube",
   shortName: "Mike",
-  location: "Zimbabwe · South Africa · Remote-first",
+  location: "South Africa · Remote-first",
   email: "mikencube03@gmail.com",
   github: "https://github.com/MikeNcube",
   linkedin: "https://www.linkedin.com/in/mike-ncube-669563a7/",
   avatar: "/Mike_Org.jpeg",
   portrait: "/Mike_Org.jpeg",
-  headline: "AI Engineer",
+  headline: "Applied AI Engineer",
   subHeadline:
     "Full-stack RAG & Python backends · regulated financial workflows · remote-first",
   oneLiner:
@@ -309,9 +312,10 @@ export const profile = {
   tags: ["RAG", "Full-stack AI", "Python", "PostgreSQL", "Docker"],
   targetRoles: [
     "Applied AI Engineer",
-    "AI Platform Engineer",
-    "Full-stack AI Engineer",
-    "Data Engineer (AI systems)",
+    "Generative AI Engineer",
+    "AI Solutions Engineer",
+    "Software Engineer — AI Systems",
+    "AI Automation Engineer",
   ],
   proofPoints: [
     {
@@ -320,7 +324,7 @@ export const profile = {
     },
     {
       lead: "44 CI tests · public repo",
-      detail: "Proactive Sentinel — multi-tenant Flask on Railway, production-ready v1.0.0.",
+      detail: "Proactive Sentinel — multi-tenant Flask on Railway, deployed for evaluation; currently paused.",
     },
     {
       lead: "4 public systems",

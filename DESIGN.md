@@ -35,7 +35,7 @@ Approved 2026-07-10. This is the floor for all UI work: every component uses the
 - Background `#0a0d14`, elevated `#0f1320` (CSS vars in `globals.css`).
 - `ink` 50–900 grey scale; 200 ≈ 12.6:1, 300 ≈ 7.9:1, 400 ≈ 4.9:1 on the background.
 - **Blue `accent` `#0066FF` is the sole interactive accent** — links, hover, focus, active states. Use `accent-glow` `#66a3ff` (≈5.4:1) for accent-coloured text.
-- **Green `signal` `#00C896` (≈7.4:1) is semantic only** — status (Production/Shipped), verified proof points, availability, success messages. Never decorative, never for links or hover states.
+- **Green `signal` `#00C896` (≈7.4:1) is semantic only** — status (Shipped), verified proof points, availability, success messages. Never decorative, never for links or hover states.
 - Borders: `white/8` default, `white/14` strong. No gradients anywhere.
 
 ## Spacing & radii

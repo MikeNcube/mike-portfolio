@@ -12,6 +12,7 @@ export default function Footer() {
               alt={profile.name}
               width={56}
               height={56}
+              unoptimized
               className="h-full w-full object-cover object-top"
             />
           </span>
