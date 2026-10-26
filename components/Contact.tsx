@@ -5,80 +5,41 @@ export default function Contact() {
   return (
     <section id="contact" className="section">
       <div className="container-edge">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
-          <div className="flex flex-col gap-6">
-            <span className="eyebrow">
-              <span className="eyebrow-dot" />
-              Contact
-            </span>
-            <h2 className="section-heading text-balance">
-              Ready to schedule a technical conversation?
-            </h2>
-            <p className="max-w-md text-body text-ink-200">
-              Typical path: a 30-minute intro, then a take-home or live system
-              design focused on RAG, Python backends, or regulated workflows.
-              I respond within 24 hours.
-            </p>
+        <div className="mb-10">
+          <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-3">Contact</p>
+          <h2
+            className="font-display-section font-medium text-ink mb-3"
+            style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", letterSpacing: "-0.025em" }}
+          >
+            Get in touch.
+          </h2>
+          <p className="text-base text-ink-muted max-w-[480px]">
+            Available for full-time or contract roles, remote from Johannesburg.
+            I respond within 24 hours.
+          </p>
+        </div>
 
-            <dl className="flex flex-col gap-4 border-t border-white/10 pt-6">
-              <InfoRow label="Email">
-                <a
-                  href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
-                  className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
-                >
-                  {profile.email}
-                </a>
-              </InfoRow>
-              <InfoRow label="GitHub">
-                <a
-                  href={profile.github}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
-                >
-                  github.com/MikeNcube ↗
-                </a>
-              </InfoRow>
-              <InfoRow label="LinkedIn">
-                <a
-                  href={profile.linkedin}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
-                >
-                  Mike Ncube ↗
-                </a>
-              </InfoRow>
-              <InfoRow label="Availability">
-                <span className="text-white">
-                  Full-time / contract · {profile.location}
-                </span>
-              </InfoRow>
-            </dl>
+        <div className="grid gap-10 lg:grid-cols-[260px_1fr] lg:gap-16">
+          {/* Links column */}
+          <div className="flex flex-col gap-3 text-sm">
+            <a href={`mailto:${profile.email}?subject=Hi%20Mike`} className="text-base link">
+              {profile.email}
+            </a>
+            <a href={profile.github} target="_blank" rel="noreferrer noopener" className="link">
+              github.com/MikeNcube
+            </a>
+            <a href={profile.linkedin} target="_blank" rel="noreferrer noopener" className="link">
+              linkedin.com/in/mike-ncube-669563a7
+            </a>
+            <p className="text-ink-muted mt-2">Johannesburg · Remote-first</p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+          {/* Form */}
+          <div className="rounded-2xl border border-ink/[0.08] bg-surface/40 p-6 sm:p-8">
             <ContactForm />
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function InfoRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="mono w-28 shrink-0 uppercase tracking-[0.18em]">
-        {label}
-      </dt>
-      <dd className="text-body">{children}</dd>
-    </div>
   );
 }

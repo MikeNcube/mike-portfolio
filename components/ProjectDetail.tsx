@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Project } from "@/lib/content";
-import StatusBadge from "./StatusBadge";
 
 type Props = {
   project: Project;
@@ -8,216 +7,178 @@ type Props = {
   next: Project;
 };
 
+function statusColor(status: Project["status"]): string {
+  switch (status) {
+    case "Live demo": return "text-signal";
+    case "Shipped":   return "text-signal";
+    case "Prototype": return "text-accent";
+    case "Built":     return "text-accent";
+    case "Paused":    return "text-ink/50";
+    case "Reference": return "text-ink/50";
+    case "Lab":       return "text-ink/50";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
 export default function ProjectDetail({ project, prev, next }: Props) {
   const systemOverview = project.systemOverview ?? project.built;
 
   return (
-    <article className="pt-28 sm:pt-32">
+    <article className="pt-24 sm:pt-32 pb-20">
       <div className="container-edge">
-        <div className="mb-10 flex items-center justify-between gap-3 text-micro text-ink-400">
+        {/* Breadcrumb */}
+        <div className="mb-10 flex items-center justify-between text-sm text-ink/40">
           <Link
             href="/#work"
-            className="group inline-flex items-center gap-2 text-ink-300 transition hover:text-white"
+            className="group inline-flex items-center gap-1.5 transition hover:text-ink"
           >
-            <span aria-hidden className="transition group-hover:-translate-x-0.5">
-              ←
-            </span>
-            Back to portfolio
+            <span aria-hidden className="transition group-hover:-translate-x-0.5">←</span>
+            Back to work
           </Link>
-          <div className="flex items-center gap-3 font-mono">
-            <span className="text-ink-300">{project.domain}</span>
-            <span className="h-3 w-px bg-white/15" aria-hidden />
-            <span>{project.year}</span>
-          </div>
+          <span className="font-mono text-micro">{project.year}</span>
         </div>
 
-        <header className="flex flex-col gap-5">
-          <div className="flex items-center gap-3">
-            <span className="eyebrow">
-              <span className="eyebrow-dot" />
-              Case study
+        {/* Header */}
+        <header className="mb-12 max-w-3xl">
+          <div className="mb-4 flex items-center gap-3">
+            <span className={`font-mono text-sm ${statusColor(project.status)}`}>
+              {project.status}
             </span>
-            <StatusBadge status={project.status} />
+            <span className="text-ink/20">·</span>
+            <span className="text-sm text-ink/40">{project.domain}</span>
           </div>
-          <h1 className="font-display text-display-lg tracking-tightest text-white text-balance">
+          <h1
+            className="font-display-hero font-medium text-ink text-balance mb-4"
+            style={{ fontSize: "clamp(2rem, 4vw, 3.25rem)", lineHeight: 1.07, letterSpacing: "-0.03em" }}
+          >
             {project.name}
           </h1>
-          <p className="font-mono text-caption text-ink-300">{project.role}</p>
-          <p className="max-w-3xl text-body-lg text-ink-200 text-pretty">
-            {project.tagline}
-          </p>
+          <p className="text-base text-ink/55">{project.role}</p>
+          <p className="mt-3 text-lg text-ink/70 max-w-2xl text-pretty leading-[1.55]">{project.tagline}</p>
         </header>
-      </div>
 
-      <div className="container-edge mt-14 grid gap-10 lg:grid-cols-[280px_1fr]">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
-          <div className="card-lg flex flex-col gap-5">
-            <MetaRow label="Status" value={project.status} />
-            <MetaRow label="Role" value={project.role} />
-            <MetaRow label="Domain" value={project.domain} />
-            <MetaRow label="Year" value={project.year} />
+        {/* Main content */}
+        <div className="grid gap-10 lg:grid-cols-[220px_1fr] lg:items-start">
 
-            <div className="h-px w-full bg-white/10" aria-hidden />
+          {/* Sidebar metadata */}
+          <aside className="lg:sticky lg:top-24">
+            <div className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
+              <Row label="Status" value={project.status} />
+              <Row label="Domain" value={project.domain} />
+              <Row label="Year" value={project.year} />
 
-            <div className="flex flex-col gap-1">
-              <span className="mono uppercase tracking-[0.18em]">Repo</span>
-              {project.repoUrl ? (
-                <a
-                  href={project.repoUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
-                >
-                  Open on GitHub
-                  <span aria-hidden className="transition group-hover:translate-x-0.5">
-                    ↗
-                  </span>
-                </a>
-              ) : (
-                <span className="text-body-sm text-ink-300">
-                  Private client work — happy to walk through it in interview.
-                </span>
-              )}
-            </div>
-
-            {project.demoUrl && (
-              <div className="flex flex-col gap-1">
-                <span className="mono uppercase tracking-[0.18em]">Demo</span>
-                <a
-                  href={project.demoUrl}
-                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
-                >
-                  {project.demoLabel ?? "Open demo"}
-                  <span aria-hidden className="transition group-hover:translate-x-0.5">
-                    →
-                  </span>
-                </a>
+              <div className="pt-3 border-t border-ink/[0.07]">
+                {project.repoUrl ? (
+                  <a
+                    href={project.repoUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="link text-sm"
+                  >
+                    View on GitHub
+                  </a>
+                ) : (
+                  <p className="text-ink/40">Private codebase — architecture walk-through in interview.</p>
+                )}
               </div>
-            )}
 
-            <div className="h-px w-full bg-white/10" aria-hidden />
+              {project.demoUrl && (
+                <div className="pt-2">
+                  <a href={project.demoUrl} className="link text-sm">
+                    {project.demoLabel ?? "Live demo"}
+                  </a>
+                </div>
+              )}
 
-            <div>
-              <div className="mono mb-2 uppercase tracking-[0.18em]">Stack</div>
-              <ul className="flex flex-wrap gap-1.5">
-                {project.stack.map((s) => (
-                  <li key={s} className="chip">
-                    {s}
-                  </li>
-                ))}
-              </ul>
+              <div className="pt-3 border-t border-ink/[0.07]">
+                <p className="text-xs text-ink/35 mb-2 uppercase tracking-wider font-mono">Stack</p>
+                <p className="text-ink/60 text-sm leading-relaxed">{project.stack.join(" · ")}</p>
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
 
-        <div className="flex flex-col gap-14">
-          <Section title="Problem">
-            <p>{project.problem}</p>
-          </Section>
+          {/* Body */}
+          <div className="space-y-10 max-w-2xl">
+            <ContentSection title="Problem">
+              <p>{project.problem}</p>
+            </ContentSection>
 
-          <Section title="What I built">
-            <p>{systemOverview}</p>
-          </Section>
+            <ContentSection title="What I built">
+              <p>{systemOverview}</p>
+            </ContentSection>
 
-          {project.engineeringDecisions &&
-            project.engineeringDecisions.length > 0 && (
-              <Section title="Key engineering decisions">
-                <ol className="flex flex-col gap-3">
+            {project.engineeringDecisions && project.engineeringDecisions.length > 0 && (
+              <ContentSection title="Engineering decisions">
+                <ol className="space-y-3">
                   {project.engineeringDecisions.map((d, i) => (
-                    <li
-                      key={i}
-                      className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4"
-                    >
-                      <span
-                        aria-hidden
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] font-mono text-micro text-ink-200"
-                      >
+                    <li key={i} className="flex gap-3 text-sm text-ink/65 leading-relaxed">
+                      <span className="font-mono text-micro text-ink/30 mt-1 shrink-0">
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <p className="text-body text-ink-100">
-                        {d}
-                      </p>
+                      <p>{d}</p>
                     </li>
                   ))}
                 </ol>
-              </Section>
+              </ContentSection>
             )}
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-            <div className="mono mb-2 uppercase tracking-[0.18em]">
-              Outcome
+            <div className="rounded-xl border border-ink/[0.08] bg-surface/40 p-5">
+              <p className="text-xs text-ink/35 mb-2 uppercase tracking-wider font-mono">Outcome</p>
+              <p className="text-base text-ink/75">{project.outcome}</p>
             </div>
-            <p className="text-body text-ink-100">
-              {project.outcome}
-            </p>
           </div>
         </div>
-      </div>
 
-      <div className="container-edge mt-20 border-t border-white/10 pt-10">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <NeighbourLink direction="prev" project={prev} />
-          <NeighbourLink direction="next" project={next} />
-        </div>
+        {/* Navigation */}
+        <nav
+          aria-label="Case study navigation"
+          className="mt-16 border-t border-ink/[0.07] pt-8 grid gap-4 sm:grid-cols-2"
+        >
+          <Link
+            href={`/projects/${prev.slug}`}
+            className="group rounded-xl border border-ink/[0.08] p-5 transition hover:border-ink/[0.15]"
+          >
+            <p className="text-xs text-ink/35 mb-1 font-mono uppercase tracking-wider">Previous</p>
+            <p className="text-base font-medium text-ink group-hover:text-accent transition-colors">
+              ← {prev.name}
+            </p>
+          </Link>
+          <Link
+            href={`/projects/${next.slug}`}
+            className="group rounded-xl border border-ink/[0.08] p-5 transition hover:border-ink/[0.15] sm:text-right"
+          >
+            <p className="text-xs text-ink/35 mb-1 font-mono uppercase tracking-wider">Next</p>
+            <p className="text-base font-medium text-ink group-hover:text-accent transition-colors">
+              {next.name} →
+            </p>
+          </Link>
+        </nav>
       </div>
     </article>
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <section className="flex flex-col gap-5">
-      <h2 className="font-display text-display-md tracking-tightest text-white">
-        {title}
-      </h2>
-      <div className="max-w-none text-body text-ink-200 text-pretty">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="mono uppercase tracking-[0.18em]">{label}</span>
-      <span className="text-body-sm text-white">{value}</span>
+    <div>
+      <p className="text-xs text-ink/35 mb-0.5 font-mono uppercase tracking-wider">{label}</p>
+      <p className="text-ink/70">{value}</p>
     </div>
   );
 }
 
-function NeighbourLink({
-  direction,
-  project,
-}: {
-  direction: "prev" | "next";
-  project: Project;
-}) {
-  const isNext = direction === "next";
+function ContentSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={`/projects/${project.slug}`}
-      className={[
-        "group card flex flex-col gap-2",
-        isNext ? "sm:col-start-2 sm:text-right" : "",
-      ].join(" ")}
-    >
-      <span className="mono uppercase tracking-[0.18em]">
-        {isNext ? "Next" : "Previous"}
-      </span>
-      <span className="font-display text-body-lg font-semibold tracking-tight text-white transition group-hover:text-accent-glow">
-        {isNext ? "→ " : "← "}
-        {project.name}
-      </span>
-      <span className="line-clamp-2 text-caption text-ink-300">
-        {project.tagline}
-      </span>
-    </Link>
+    <section>
+      <h2 className="font-display-section font-medium text-ink mb-4"
+        style={{ fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", letterSpacing: "-0.02em" }}
+      >
+        {title}
+      </h2>
+      <div className="text-base text-ink/65 leading-relaxed text-pretty">{children}</div>
+    </section>
   );
 }

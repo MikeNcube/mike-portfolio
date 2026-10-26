@@ -1,19 +1,20 @@
-// Minimal retrieval layer for the portfolio assistant.
-// Embeds the knowledge base once per server instance with the Gemini
-// embedding API, then answers queries via cosine-similarity retrieval.
+// Retrieval layer for the portfolio RAG assistant.
+// Embeds the knowledge base once per server instance (cached) then answers
+// queries via cosine-similarity retrieval.
 
 import { KNOWLEDGE_CHUNKS, type KnowledgeChunk } from './knowledge';
 
 const EMBED_MODEL = 'gemini-embedding-001';
-const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
 const BATCH_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:batchEmbedContents`;
+const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
 const EMBED_DIMENSIONS = 768;
 
 export type RetrievedChunk = KnowledgeChunk & { score: number };
 
+// Cached promise — computed once per cold start. Reset on error so the next
+// request can retry from scratch.
 let kbEmbeddingsPromise: Promise<number[][]> | null = null;
 
-// Embeds all knowledge-base chunks in one batch call (cached per instance).
 function getKnowledgeBaseEmbeddings(apiKey: string): Promise<number[][]> {
   if (!kbEmbeddingsPromise) {
     kbEmbeddingsPromise = embedBatch(
@@ -28,30 +29,45 @@ function getKnowledgeBaseEmbeddings(apiKey: string): Promise<number[][]> {
   return kbEmbeddingsPromise;
 }
 
-// Calls the Gemini batch embedding endpoint for a list of texts.
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Embeds texts in one batch call with one retry on failure.
 async function embedBatch(texts: string[], apiKey: string, taskType: string): Promise<number[][]> {
-  const res = await fetch(BATCH_EMBED_URL, {
+  const body = JSON.stringify({
+    requests: texts.map(text => ({
+      model: `models/${EMBED_MODEL}`,
+      content: { parts: [{ text }] },
+      taskType,
+      outputDimensionality: EMBED_DIMENSIONS,
+    })),
+  });
+
+  const init: RequestInit = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      requests: texts.map(text => ({
-        model: `models/${EMBED_MODEL}`,
-        content: { parts: [{ text }] },
-        taskType,
-        outputDimensionality: EMBED_DIMENSIONS,
-      })),
-    }),
-  });
-  if (!res.ok) throw new Error(`Embedding API returned ${res.status}: ${await res.text()}`);
+    body,
+  };
+
+  let res = await fetch(BATCH_EMBED_URL, init);
+  if (!res.ok) {
+    if (res.status === 429 || res.status >= 500) {
+      await sleep(1200);
+      res = await fetch(BATCH_EMBED_URL, init);
+    }
+    if (!res.ok) throw new Error(`Embedding API returned ${res.status}: ${await res.text()}`);
+  }
+
   const data = await res.json();
   const vectors = (data.embeddings ?? []).map((e: { values: number[] }) => e.values);
-  if (vectors.length !== texts.length) throw new Error('Embedding API returned an unexpected count');
+  if (vectors.length !== texts.length) throw new Error('Embedding API returned unexpected count');
   return vectors;
 }
 
-// Embeds a single query string for retrieval.
+// Embeds a single query string.
 async function embedQuery(text: string, apiKey: string): Promise<number[]> {
-  const res = await fetch(EMBED_URL, {
+  const init: RequestInit = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
@@ -60,27 +76,32 @@ async function embedQuery(text: string, apiKey: string): Promise<number[]> {
       taskType: 'RETRIEVAL_QUERY',
       outputDimensionality: EMBED_DIMENSIONS,
     }),
-  });
-  if (!res.ok) throw new Error(`Embedding API returned ${res.status}: ${await res.text()}`);
+  };
+
+  let res = await fetch(EMBED_URL, init);
+  if (!res.ok) {
+    if (res.status === 429 || res.status >= 500) {
+      await sleep(800);
+      res = await fetch(EMBED_URL, init);
+    }
+    if (!res.ok) throw new Error(`Embedding API returned ${res.status}: ${await res.text()}`);
+  }
+
   const data = await res.json();
   return data.embedding.values as number[];
 }
 
-// Cosine similarity between two equal-length vectors.
 function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
+  let dot = 0, normA = 0, normB = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
   }
-  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
-  return denominator === 0 ? 0 : dot / denominator;
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom === 0 ? 0 : dot / denom;
 }
 
-// Retrieves the top-k most relevant knowledge chunks for a query.
 export async function retrieve(query: string, apiKey: string, k = 4): Promise<RetrievedChunk[]> {
   const [kbVectors, queryVector] = await Promise.all([
     getKnowledgeBaseEmbeddings(apiKey),

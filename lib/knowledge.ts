@@ -1,5 +1,6 @@
 // Knowledge base for the portfolio RAG assistant.
-// Every chunk is sourced from Mike's real, public material.
+// All facts sourced from Mike's CV (Mike-Ncube-CV-revised) and public repos.
+// Never invent metrics, users, clients, or dates.
 
 export type KnowledgeChunk = {
   id: string;
@@ -13,55 +14,97 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'positioning',
     title: 'Who Mike is',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike S Ncube is an Applied AI Engineer focused on full-stack RAG and Python backends in regulated financial workflows — insurance, claims, and compliance-aware products. He is based in South Africa, remote-first. 4+ years across software development, AWS cloud architecture, data engineering and applied AI, including 2+ years working as an AI Engineer since June 2024. Engineering defaults: every model call is a fallible dependency, every run is auditable, every pipeline is a contract.',
+    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. Remote-first. Contact: mikencube03@gmail.com.',
+  },
+  {
+    id: 'employer',
+    title: 'Zororo-Phumulani — employer and work context',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: 'Mike\'s employer is Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider. Title: Applied AI Engineer and Systems Architect, 2022 to present. Sole AI engineer in a four-person IT team. Built the lead-management CRM, claims extraction pipeline, and Digi App Form while there. POPIA-aware design throughout. Works directly with non-technical staff, compliance, and executive stakeholders.',
   },
   {
     id: 'stack',
     title: "Mike's tech stack",
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'AI/LLM: RAG with Gemini embeddings, cosine retrieval, similarity gating (min score 0.35), grounded generation with citations. Agentic AI and LangChain are trained coursework — public proof is the live portfolio RAG assistant. Full-stack: Next.js, TypeScript, Python API routes, Flask. Backend: JWT auth, PostgreSQL, Redis, OpenTelemetry, Docker, Railway. Data: Airflow, Great Expectations, contract-first ETL (reference repo). Cloud: AWS via labelled labs (ALB, EC2, RDS, VPC, Terraform).',
+    text: 'AI/LLM: RAG with Gemini embeddings, cosine retrieval, similarity gating, grounded generation with citations. LangGraph (prototype: state graphs with human approval gates). Anthropic Claude API, OpenAI API. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask, JWT auth, server-side session revocation. Data: PostgreSQL, pgvector hybrid search, Redis, Celery, SQLAlchemy, Alembic. Cloud: AWS (S3, EC2, IAM, CloudWatch, Bedrock). Infra: Docker, GitHub Actions, pytest, Railway.',
   },
   {
     id: 'availability',
     title: 'Availability and target roles',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike is available for full-time or contract, remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer — AI Systems, AI Automation Engineer. Contact: mikencube03@gmail.com, github.com/MikeNcube, linkedin.com/in/mike-ncube-669563a7.',
-  },
-  {
-    id: 'proof-points',
-    title: 'Verifiable proof for recruiters',
-    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: '30-second proof: (1) Live RAG demo on this site with citations and honest refusals. (2) Proactive Sentinel — 44 CI tests, v1.0.0, multi-tenant Flask, deployed to Railway for evaluation and currently paused, public repo. (3) Four public systems: RAG portfolio, SOC platform, insurance intake app, plus data/cloud reference and labs. Digi App Form is shipped; deployments use Railway and Docker; AWS is demonstrated in labelled labs only.',
+    text: 'Mike is available for full-time or contract, remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), AI Automation Engineer. Contact: mikencube03@gmail.com, github.com/MikeNcube, linkedin.com/in/mike-ncube-669563a7.',
   },
   {
     id: 'portfolio-rag-assistant',
-    title: 'This site RAG assistant (live demo)',
+    title: 'Portfolio RAG assistant (live demo)',
     sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: 'The portfolio RAG assistant is Mike\'s primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance; each query is embedded separately; cosine similarity retrieves top-4 chunks; chunks below 0.35 similarity are discarded; Gemini 2.5 Flash generates grounded answers with source citations. Guardrails: 20 requests per IP per 10 minutes, 500 character input cap, server-side grounding prompt (no client system prompt), honest 503 when unconfigured. Code: lib/rag.ts, app/api/chat/route.ts, lib/knowledge.ts.',
+    text: "The portfolio RAG assistant is Mike's primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance. Each query is embedded separately. Cosine similarity retrieves top-4 chunks. Chunks below 0.35 similarity are discarded. Gemini 2.5 Flash generates grounded answers with thinking tokens disabled (thinkingBudget:0) to prevent token budget exhaustion on free tier. Rate-limited to 20 req/IP/10min. Grounding prompt is server-side only. Source code: lib/rag.ts, app/api/chat/route.ts, lib/knowledge.ts.",
+  },
+  {
+    id: 'zororo-crm',
+    title: 'Lead-management CRM (production, Zororo-Phumulani)',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: "Production CRM at Zororo-Phumulani Funeral Assurance. Used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
+  },
+  {
+    id: 'claims-pipeline',
+    title: 'Claims document extraction pipeline (Zororo-Phumulani)',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: 'Claims tool and document extraction pipeline built at Zororo-Phumulani. Claude vision extraction validated through Pydantic schemas, with per-field confidence scoring and a needs-review flag for human verification. Built and ready for production, pending management approval. Private codebase.',
+  },
+  {
+    id: 'digi-app-form',
+    title: 'Digi App Form — regulated insurance intake (Zororo-Phumulani)',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: 'Digi App Form: full-stack Flask web application for regulated funeral-assurance intake at Zororo-Phumulani. Multi-step intake form, server-side validation before anything is persisted, automated policy-PDF generation, supporting-document upload handling, staff admin dashboard, and a scheduled backup routine. Stack: Python, Flask, SQLite, Docker. Status: shipped.',
+  },
+  {
+    id: 'sitewarden',
+    title: 'Sitewarden — governed AI operations platform (prototype)',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: 'Sitewarden is a governed AI operations platform prototype. FastAPI backend. LangGraph state graph with plan, analyse, self-check, write-report, await-approval, and revise steps. Role-scoped steps, human interrupt approval before consequential actions, Postgres checkpoints. Risk-tiered tool gateway, MCP-style JSON-RPC endpoint. pgvector hybrid keyword and vector search with citations. 89 tests, retrieval and trajectory evals, CI with import rules. Prototype, not deployed.',
+  },
+  {
+    id: 'cube-agent',
+    title: 'Cube — coding agent (prototype)',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: "Cube is a coding agent prototype. Own tool-calling loop, provider-agnostic adapters (swap model without changing business logic), approval prompts before writes, and a sandboxed eval harness with a trusted verifier to check agent outputs. Prototype, not deployed.",
   },
   {
     id: 'proactive-sentinel-overview',
-    title: 'Proactive Sentinel: multi-tenant SOC platform',
+    title: 'Proactive Sentinel — multi-tenant SOC platform',
     sourceUrl: 'https://github.com/MikeNcube/proactive-sentinel',
-    text: 'Proactive Sentinel is a Python backend (not an LLM product): multi-tenant SOC for financial services. Mike is a primary contributor. v1.0.0, deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused and not taking live traffic. Ingests events, SHA-256 dedup in Redis, MITRE ATT&CK chain correlation, automated IP blocking and audit entries. 44 passing CI tests.',
+    text: 'Proactive Sentinel is a Python backend (not an LLM product): multi-tenant SOC for financial services. v1.0.0, deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused. Ingests events, SHA-256 dedup in Redis, MITRE ATT&CK chain correlation, automated IP blocking and audit entries. 44 passing tests.',
   },
   {
     id: 'proactive-sentinel-tech',
-    title: 'Proactive Sentinel: engineering details',
+    title: 'Proactive Sentinel — engineering details',
     sourceUrl: 'https://github.com/MikeNcube/proactive-sentinel',
     text: 'Stack: Python 3.11, Flask, JWT, AES-256-GCM PII encryption, PostgreSQL 15 + SQLAlchemy 2.0 + Alembic, Redis 7 dedup, OpenTelemetry, Railway + Docker + Gunicorn. POPIA: PII masking at ingest, immutable audit log, tenant isolation per request.',
   },
   {
-    id: 'digi-app-form',
-    title: 'Digi App Form: regulated insurance intake',
-    sourceUrl: 'https://github.com/MikeNcube/digi-app-form',
-    text: 'Digi App Form: full-stack Flask web app for regulated funeral-assurance intake — multi-step form, server-side validation, policy PDF generation, admin dashboard, file uploads, backups. Status: shipped. Stack: Python, Flask, SQLite, Docker.',
+    id: 'certifications',
+    title: 'Training and certifications',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: 'AWS Training and Certification, AWS Skills Center, Becoming an AI Practitioner Series, Sep 2026: Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models. DeepLearning.AI: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, LangChain for LLM Application Development. No formal degree — capability evidenced by shipped systems and public GitHub portfolio.',
   },
   {
-    id: 'zororo-wwf-platform',
-    title: 'Zororo Phumulani platform (private client)',
-    sourceUrl: 'https://mikencube.github.io/#projects',
-    text: 'Private client insurance-onboarding platform for a regulated funeral-assurance provider. Mike is a primary contributor. Implementation details are confidential — code is private and Mike offers an architecture walk-through in interview.',
+    id: 'engineering-approach',
+    title: 'Engineering approach and philosophy',
+    sourceUrl: 'https://github.com/MikeNcube',
+    text: "Mike's engineering defaults: models are fallible dependencies (every LLM call gets validation, retries, and a fallback); every run is auditable (structured JSON logs, trace IDs, audit entries for state changes); pipelines are contracts (Pydantic schemas at system boundaries, validation before persistence); labels are honest (each repo is labelled production, prototype, or lab). Background in regulated financial services shaped a default-to-compliance approach.",
+  },
+  {
+    id: 'interview-guide',
+    title: 'How to evaluate Mike',
+    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
+    text: 'Hiring managers can evaluate in about 30 minutes: (1) Try the live RAG assistant on his portfolio site — check that answers cite sources and refuse out-of-scope questions. (2) Read lib/rag.ts and app/api/chat/route.ts for retrieval and guardrails. (3) Skim the Proactive Sentinel README and 44 passing tests for backend platform depth. Mike is available for technical interviews and architecture walk-throughs of private-codebase work.',
+  },
+  {
+    id: 'this-assistant',
+    title: 'About this AI assistant',
+    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
+    text: "This assistant is a RAG pipeline on Mike's Next.js portfolio. It answers questions grounded in a curated knowledge base, cites its sources, and refuses questions outside that scope. The grounding prompt is server-side, so the assistant cannot be instructed to ignore it via the chat input. Email: mikencube03@gmail.com.",
   },
   {
     id: 'recommender-pipeline',
@@ -74,53 +117,5 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     title: 'Resilient web tier on AWS (lab)',
     sourceUrl: 'https://github.com/MikeNcube/Resilient-Web-Tier-on-AWS-ALB-Auto-Scaling',
     text: 'AWS lab: ALB, EC2 Auto Scaling, multi-AZ Flask, CloudWatch. Labelled lab, not production.',
-  },
-  {
-    id: 'rds-lab',
-    title: 'RDS connectivity lab',
-    sourceUrl: 'https://github.com/MikeNcube/cloud-project-board-rds-connectivity-lab',
-    text: 'AWS lab: EC2 to RDS PostgreSQL troubleshooting — VPC, security groups, boto3.',
-  },
-  {
-    id: 'zororo-crm-platform',
-    title: 'Zororo CRM: call centre lead-management platform (private client)',
-    sourceUrl: 'internal project — details on request',
-    text: 'Mike is a primary contributor to a private lead-management CRM for a funeral-assurance call centre, built using AI-assisted engineering workflows: FastAPI backend, PostgreSQL for lead and agent records. Covers lead intake, assignment, and follow-up tracking for call centre agents. Private codebase — Mike offers an architecture walk-through in interview.',
-  },
-  {
-    id: 'document-intelligence-claims-rag',
-    title: 'Document intelligence for claims: RAG-based routing (private client)',
-    sourceUrl: 'internal project — details on request',
-    text: 'Mike built a document-intelligence pipeline that reads policy documents, classifies them, and routes each to the correct handling path. Low-confidence or ambiguous extractions are routed to a human review workflow before approval, while higher-confidence cases continue according to configured business rules. Same RAG-and-retrieval pattern as this site\'s assistant, applied to structured insurance documents rather than a knowledge base. Private codebase — Mike offers an architecture walk-through in interview.',
-  },
-  {
-    id: 'production-engineering-compliance',
-    title: 'Production engineering under regulation',
-    sourceUrl: 'internal project — details on request',
-    text: 'Mike\'s production work sits inside a regulated financial services provider, so builds default to POPIA-aligned data handling and audit logging on key actions. Production deployment and CI/CD practices are implemented where appropriate, with automated pipelines on supported platforms and manual deployment workflows where still under active development.',
-  },
-  {
-    id: 'certifications',
-    title: 'Certifications',
-    sourceUrl: 'https://mikencube.github.io/#skills',
-    text: 'Verified course completions: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI — all DeepLearning.AI. These are course-completion certificates, not professional certifications. Agentic AI is coursework — public shipped proof is the RAG demo and shipped Python backends.',
-  },
-  {
-    id: 'engineering-philosophy',
-    title: 'Engineering approach',
-    sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Models are fallible dependencies. Runs are auditable. Pipelines are contracts. Every repo is labelled production, reference, or lab.',
-  },
-  {
-    id: 'interview-guide',
-    title: 'How to evaluate Mike before interviewing',
-    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: 'Hiring managers can evaluate in ~30 minutes: (1) Try the live RAG demo — check citations and refusals. (2) Read lib/rag.ts and app/api/chat/route.ts for retrieval and guardrails. (3) Skim proactive-sentinel README and CI tests for backend platform depth (deployed for evaluation; currently paused).',
-  },
-  {
-    id: 'this-assistant',
-    title: 'About this AI assistant',
-    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: 'This assistant is a RAG pipeline on Mike\'s Next.js portfolio. It cites sources and refuses when the knowledge base does not cover a question. Email: mikencube03@gmail.com.',
   },
 ];
