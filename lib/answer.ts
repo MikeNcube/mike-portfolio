@@ -9,6 +9,7 @@ import {
   type RetrievedChunk,
 } from "./rag";
 import { isRefusal } from "./refusal";
+import { normaliseModelText } from "./normalise-answer";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 import {
@@ -90,7 +91,8 @@ export function citedIndexes(text: string): number[] {
   const found = new Set<number>();
   const re = /\[(\d+)\]/g;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
+  const body = normaliseModelText(text);
+  while ((match = re.exec(body)) !== null) {
     const n = Number(match[1]);
     if (Number.isInteger(n) && n >= 1) found.add(n);
   }
@@ -111,8 +113,9 @@ export function selectCitedSources(
   text: string,
   chunks: RetrievedChunk[],
 ): Array<{ title: string; url: string }> {
-  const body = stripSourceFooter(text);
-  if (isRefusal(text) || isRefusal(body)) return [];
+  const normalised = normaliseModelText(text);
+  const body = stripSourceFooter(normalised);
+  if (isRefusal(normalised) || isRefusal(body)) return [];
 
   const seen = new Set<string>();
   const picked: Array<{ title: string; url: string }> = [];
@@ -140,12 +143,13 @@ export function remapCitations(
   chunks: RetrievedChunk[],
   sources: Array<{ title: string; url: string }>,
 ): string {
+  const body = normaliseModelText(text);
   if (sources.length === 0) {
-    return text.replace(/\[(\d+)\]/g, "").replace(/ {2,}/g, " ").trim();
+    return body.replace(/\[(\d+)\]/g, "").replace(/\s+([.,;:!?])/g, "$1").replace(/ {2,}/g, " ").trim();
   }
 
   const map = new Map<number, number>();
-  for (const n of citedIndexes(text)) {
+  for (const n of citedIndexes(body)) {
     const chunk = chunks[n - 1];
     if (!chunk) continue;
     const key = `${chunk.title}|${chunk.sourceUrl}`;
@@ -153,11 +157,12 @@ export function remapCitations(
     if (idx >= 0) map.set(n, idx + 1);
   }
 
-  return text
+  return body
     .replace(/\[(\d+)\]/g, (_, raw: string) => {
       const mapped = map.get(Number(raw));
       return mapped === undefined ? "" : `[${mapped}]`;
     })
+    .replace(/\s+([.,;:!?])/g, "$1")
     .replace(/ {2,}/g, " ")
     .trim();
 }
@@ -174,8 +179,9 @@ function finaliseModelText(raw: string, chunks: RetrievedChunk[]): {
   response: string;
   sources: Array<{ title: string; url: string }>;
 } {
-  const stripped = stripSourceFooter(raw);
-  const sources = selectCitedSources(raw, chunks);
+  const normalised = normaliseModelText(raw);
+  const stripped = stripSourceFooter(normalised);
+  const sources = selectCitedSources(normalised, chunks);
   const response = remapCitations(stripped, chunks, sources);
   return { response, sources };
 }

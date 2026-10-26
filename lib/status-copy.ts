@@ -1,6 +1,6 @@
 // Canonical production-system, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r18";
+export const ANSWER_CACHE_VERSION = "r19";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -71,11 +71,21 @@ function productionAnswerIsCanonical(text: string): boolean {
   );
 }
 
+// Pull trailing [n] markers off so a status sentence can sit before them.
+function peelTrailingCitations(text: string): { body: string; cites: string } {
+  const m = text.match(/^(.*?)((?:\s*\[\d+\])+)\s*[.!?]?$/s);
+  if (!m || !m[1].trim()) return { body: text, cites: "" };
+  return { body: m[1].trim(), cites: m[2].trim().replace(/\s+/g, " ") };
+}
+
 function appendStatusSentence(text: string, sentence: string): string {
   const trimmed = text.trim();
   if (!trimmed) return sentence;
-  const sep = /[.!?]$/.test(trimmed) ? " " : ". ";
-  return `${trimmed}${sep}${sentence}`;
+  const { body, cites } = peelTrailingCitations(trimmed);
+  const sep = /[.!?]$/.test(body) ? " " : ". ";
+  const core = `${body}${sep}${sentence}`;
+  if (!cites) return core;
+  return /[.!?]$/.test(core) ? `${core} ${cites}` : `${core}. ${cites}`;
 }
 
 // Force the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.

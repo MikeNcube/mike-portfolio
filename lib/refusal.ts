@@ -1,6 +1,8 @@
 // A refusal is a decline to answer. An email address next to real content
 // is not a refusal — bios and availability answers include the contact.
 
+import { normaliseModelText } from "./normalise-answer";
+
 const DECLINE_PHRASES = [
   "i don't have",
   "i do not have",
@@ -20,6 +22,8 @@ const DECLINE_PHRASES = [
   "can't answer that",
   "can't comply",
   "cannot comply",
+  "can't provide",
+  "cannot provide",
   "won't comply",
   "will not comply",
   "unable to comply",
@@ -43,6 +47,6 @@ const DECLINE_PHRASES = [
 ] as const;
 
 export function isRefusal(text: string): boolean {
-  const t = text.toLowerCase();
+  const t = normaliseModelText(text).toLowerCase();
   return DECLINE_PHRASES.some((p) => t.includes(p));
 }
