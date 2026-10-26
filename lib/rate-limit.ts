@@ -1,5 +1,6 @@
-// Per-IP rate limit. Uses Upstash Redis when configured (Production),
-// otherwise an in-memory map (local / Preview without Redis).
+// Per-IP rate limit. Upstash Redis is the distributed limiter (Production
+// and Preview when configured). Without it, allowMemory is per-instance
+// only and does not cap traffic across serverless isolates.
 
 export const RATE_LIMIT = 20;
 export const RATE_WINDOW_SEC = 10 * 60;
@@ -52,6 +53,12 @@ async function allowUpstash(ip: string): Promise<RateLimitResult> {
 
 export function upstashConfigured(): boolean {
   return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+export type LimiterKind = "upstash" | "instance";
+
+export function limiterKind(): LimiterKind {
+  return upstashConfigured() ? "upstash" : "instance";
 }
 
 export async function allowRequest(ip: string): Promise<RateLimitResult> {

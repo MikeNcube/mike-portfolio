@@ -179,5 +179,11 @@ describe("static CV copy", () => {
     assert.ok(site);
     assert.match(site.answer, /before consequential actions/);
     assert.doesNotMatch(site.answer, /before writes/);
+
+    const cube = matchStaticAnswer("What is Cube?");
+    assert.ok(cube);
+    assert.match(cube.answer, /coding agent/);
+    assert.match(cube.answer, /prototype/i);
+    assert.doesNotMatch(cube.answer, /deployed to production/i);
   });
 });

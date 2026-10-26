@@ -54,15 +54,45 @@ export default function Assistant() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [lastSources, setLastSources] = useState<Source[]>([]);
+  const [limiterLabel, setLimiterLabel] = useState("Per-instance cap");
   const logRef = useRef<HTMLDivElement>(null);
+  const lastAnswerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { step: pipelineStep, complete: pipelineComplete } = usePipelineSteps(loading);
   const hasMessages = messages.length > 0 || loading;
 
   useEffect(() => {
+    let cancelled = false;
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((data: { limiter?: { distributed?: boolean } }) => {
+        if (cancelled) return;
+        setLimiterLabel(data.limiter?.distributed ? "Rate-limited (Redis)" : "Per-instance cap");
+      })
+      .catch(() => {
+        if (!cancelled) setLimiterLabel("Per-instance cap");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const log = logRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
+    if (!log) return;
+    if (loading) {
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const answer = lastAnswerRef.current;
+    if (!answer) {
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const logRect = log.getBoundingClientRect();
+    const ansRect = answer.getBoundingClientRect();
+    log.scrollTop += ansRect.top - logRect.top;
   }, [messages, loading]);
 
   const send = async (text?: string) => {
@@ -181,6 +211,11 @@ export default function Assistant() {
                 {messages.map((m, i) => (
                   <div
                     key={i}
+                    ref={
+                      m.role === "assistant" && i === messages.length - 1 && !loading
+                        ? lastAnswerRef
+                        : undefined
+                    }
                     className={m.role === "user" ? "self-end max-w-[85%]" : "self-start max-w-[92%] sm:max-w-lg"}
                   >
                     <div
@@ -264,7 +299,7 @@ export default function Assistant() {
           </div>
 
           <p className="mt-4 text-center font-mono text-micro text-ink-muted">
-            Rate-limited · grounded · refuses out-of-scope ·{" "}
+            {limiterLabel} · grounded · refuses out-of-scope ·{" "}
             <a href={`mailto:${profile.email}`} className="link">email Mike</a>
           </p>
         </div>

@@ -11,7 +11,7 @@ export default function RagDiagram() {
       <FlowRow>
         <Node label="Embed" sub="Gemini embedding-001" accent />
         <ArrowH /><ArrowV />
-        <Node label="Retrieve" sub="cosine similarity, top 4" />
+        <Node label="Retrieve" sub="cosine similarity, top 6" />
         <ArrowH /><ArrowV />
         <Node label="Gate" sub="drop below 0.35" />
         <ArrowH /><ArrowV />

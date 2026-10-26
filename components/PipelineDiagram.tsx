@@ -4,7 +4,7 @@ export type PipelineStep = 0 | 1 | 2 | 3 | 4 | null;
 
 const STEPS = [
   { id: "embed",    label: "Embed",    sub: "query to vector" },
-  { id: "retrieve", label: "Retrieve", sub: "cosine top 4" },
+  { id: "retrieve", label: "Retrieve", sub: "cosine top 6" },
   { id: "gate",     label: "Gate",     sub: "score ≥ 0.35" },
   { id: "generate", label: "Generate", sub: "grounded" },
   { id: "cite",     label: "Cite",     sub: "sources" },

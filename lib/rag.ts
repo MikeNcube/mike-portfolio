@@ -11,7 +11,7 @@ const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMB
 const EMBED_DIMENSIONS = 768;
 
 export const MIN_RELEVANCE_SCORE = 0.35;
-const DEFAULT_K = 6;
+export const DEFAULT_K = 6;
 
 export function chunkIndexText(chunk: KnowledgeChunk): string {
   const keywords = chunk.keywords?.join(" ") ?? "";

@@ -43,7 +43,7 @@ export const flagshipProjects: Project[] = [
     problem:
       "Most portfolios claim RAG experience. Almost none let a hiring manager verify it live. A working retrieval pipeline that cites sources and refuses out-of-scope questions is the honest proof.",
     built:
-      "A RAG pipeline inside this Next.js site: a knowledge base curated from my real repos and CV, embedded with Gemini embeddings, retrieved by cosine similarity, and answered by Gemini grounded only in the retrieved chunks. Thinking tokens disabled to prevent budget exhaustion on free tier. Rate-limited, input-validated, and answers refuse gracefully when nothing relevant is found.",
+      "A RAG pipeline inside this Next.js site: a knowledge base curated from my real repos and CV, embedded with Gemini embeddings, retrieved by cosine similarity (top 6), and answered by Gemini grounded only in the retrieved chunks. Thinking tokens disabled to prevent budget exhaustion on free tier. Input-validated, with a distributed per-IP limit when Redis is configured, and answers refuse gracefully when nothing relevant is found.",
     outcome:
       "A live, inspectable RAG demo. Open devtools, read the network calls, click the citations. Knowledge base and retrieval code are public in this repo.",
     engineeringDecisions: [
@@ -288,7 +288,7 @@ export const interviewGuide = [
   {
     title: "Read the retrieval code",
     time: "10 min",
-    body: "lib/rag.ts (embed + cosine top-4), app/api/chat/route.ts (similarity gate, rate limits, grounded prompt).",
+    body: "lib/rag.ts (embed + cosine top-6), app/api/chat/route.ts (similarity gate, rate limits, grounded prompt).",
     href: "https://github.com/MikeNcube/mike-portfolio/tree/main/lib",
     label: "View source",
   },

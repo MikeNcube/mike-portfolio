@@ -27,6 +27,12 @@ describe("keyword retrieval fallback", () => {
     assert.match(crm!.text, /10 roles/);
   });
 
+  it("retrieves Cube for What is Cube", () => {
+    const hits = retrieveKeyword("What is Cube?");
+    const ids = hits.map((h) => h.id);
+    assert.ok(ids.includes("cube-agent"), `expected cube-agent in ${ids.join(", ")}`);
+  });
+
   it("falls back to BM25 when embeddings throw", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => {

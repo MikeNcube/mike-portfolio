@@ -39,7 +39,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'portfolio-rag-assistant',
     title: 'Portfolio RAG assistant (live demo)',
     sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: "The portfolio RAG assistant is Mike's primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance. Each query is embedded separately. Cosine similarity retrieves top-4 chunks. Chunks below 0.35 similarity are discarded. If embeddings fail, BM25 keyword search over the same chunks is used. Gemini 2.5 Flash generates grounded answers with thinking tokens disabled (thinkingBudget:0); if Gemini errors or is rate-limited, Groq llama-3.3-70b-versatile is used with the same prompt and citations; if both fail, a static CV answer for the closest suggested question is served. Rate-limited to 20 req/IP/10min via Upstash Redis when configured. Grounding prompt is server-side only. Source code: lib/rag.ts, lib/answer.ts, app/api/chat/route.ts, lib/knowledge.ts.",
+    text: "The portfolio RAG assistant is Mike's primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance. Each query is embedded separately. Cosine similarity retrieves top-6 chunks. Chunks below 0.35 similarity are discarded. If embeddings fail, BM25 keyword search over the same chunks is used. Gemini 2.5 Flash generates grounded answers with thinking tokens disabled (thinkingBudget:0); if Gemini errors or is rate-limited, Groq openai/gpt-oss-120b is used (fallback openai/gpt-oss-20b) with the same prompt and citations; if both fail, a static CV answer for the closest suggested question is served. Distributed per-IP limit (20 req/10min) via Upstash Redis when configured; otherwise a per-instance cap. Grounding prompt is server-side only. Source code: lib/rag.ts, lib/answer.ts, app/api/chat/route.ts, lib/knowledge.ts.",
   },
   {
     id: 'zororo-crm',
@@ -86,6 +86,13 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'cube-agent',
     title: 'Cube — coding agent (prototype)',
     sourceUrl: 'https://github.com/MikeNcube',
+    keywords: [
+      'Cube',
+      'coding agent',
+      'tool-calling loop',
+      'provider-agnostic',
+      'sandboxed eval',
+    ],
     text: "Cube is a coding agent prototype. Own tool-calling loop, provider-agnostic adapters (swap model without changing business logic), approval prompts before writes, and a sandboxed eval harness with a trusted verifier to check agent outputs. Prototype, not deployed.",
   },
   {

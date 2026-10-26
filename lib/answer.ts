@@ -3,6 +3,7 @@
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
 import {
+  DEFAULT_K,
   filterToLinkSources,
   MIN_RELEVANCE_SCORE,
   retrieve,
@@ -101,7 +102,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
 
   let chunks: RetrievedChunk[] = [];
   try {
-    chunks = await retrieveFn(question, input.geminiKey, 6);
+    chunks = await retrieveFn(question, input.geminiKey, DEFAULT_K);
   } catch (err) {
     console.error("retrieve failed:", err);
   }

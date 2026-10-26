@@ -32,7 +32,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does retrieval work",
     ],
     answer:
-      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq llama-3.3-70b-versatile, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts.",
+      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts.",
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
   },
   {
@@ -68,6 +68,18 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     answer:
       "Yes, Mike is available. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
+  },
+  {
+    question: "What is Cube?",
+    aliases: [
+      "tell me about cube",
+      "cube architecture",
+      "explain cube",
+      "what is the cube agent",
+    ],
+    answer:
+      "Cube is a coding agent prototype. Own tool-calling loop, provider-agnostic adapters so the model can be swapped without changing business logic, approval prompts before writes, and a sandboxed eval harness with a trusted verifier. Prototype, not deployed.",
+    sourceIds: ["cube-agent"],
   },
   {
     question: "What is Sitewarden?",

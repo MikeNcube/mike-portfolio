@@ -281,11 +281,11 @@ The chat route no longer returns 502 when a model is down. The answer chain is:
 
 1. **Retrieve** — Gemini embeddings + cosine, gate 0.35. If the embedding call errors, **BM25 keyword search** over the same `KNOWLEDGE_CHUNKS`.
 2. **Gemini 2.5 Flash** (`GEMINI_API_KEY`) — same grounded prompt, 12s provider budget. 5xx retries stay; 429 opens a 60s circuit (Round 5).
-3. **Groq `llama-3.3-70b-versatile`** (`GROQ_API_KEY`) — OpenAI-compatible `https://api.groq.com/openai/v1/chat/completions`, same prompt, gate, and citations, 12s budget.
+3. **Groq** (`GROQ_API_KEY`) — OpenAI-compatible `https://api.groq.com/openai/v1/chat/completions`. Default model `openai/gpt-oss-120b` (Round 6; `llama-3.3-70b-versatile` was shut down 16 Aug 2026).
 4. **Static CV answers** — closest suggested question from `lib/static-answers.ts` (facts only from the CV and knowledge base). Used when neither key is set or both providers fail.
 5. **Email fallback** — `EMAIL_FALLBACK` in `lib/answer.ts`, last resort only.
 
-Abuse guards: 20 requests / IP / 10 minutes (Upstash Redis when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise in-memory). Questions over 500 characters are rejected with a clear 400. `/api/health` reports `{ gemini, groq, upstash }` booleans and `knowledgeBaseChunks` — never key values.
+Abuse guards: 20 requests / IP / 10 minutes **only when Upstash is configured** (distributed). Without Redis the in-memory map is per-instance and does not span serverless isolates. Questions over 500 characters are rejected with a clear 400. `/api/health` reports provider booleans, `limiter.kind` (`upstash` \| `instance`), and `knowledgeBaseChunks` — never key values.
 
 Tests: `npm test` (`tests/fallback.test.ts`, `tests/retrieve.test.ts`, `tests/providers.test.ts`). CI: `.github/workflows/ci.yml` runs lint, typecheck, tests, and build on pull requests.
 
@@ -306,11 +306,24 @@ Live preview (`331f593`) showed static matching, caching, retrieval, and eval bu
 
 ---
 
+## Round 6 — models, circuits, Cube, honest limiter
+
+Live preview at `84cc0b6` answered every question from static or email — no model path. Groq `llama-3.3-70b-versatile` was shut down on 16 Aug 2026 ([deprecations](https://console.groq.com/docs/deprecations)).
+
+1. Groq default `openai/gpt-oss-120b`, second model `openai/gpt-oss-20b`, both overridable via `GROQ_MODEL` / `GROQ_FALLBACK_MODEL`. Gemini stays `gemini-2.5-flash` ([model card](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash)).
+2. Retry only 5xx and network/timeouts. 400/401/403/404 fail fast, log `status` + `model`, open a 10-minute circuit. Gemini/Groq 429 still use a 60s circuit.
+3. Footer and docs no longer claim “Rate-limited” unless `/api/health` reports `limiter.distributed`. Health exposes `{ distributed, instance, kind }` only.
+4. Cube is a first-class KB + static answer using CV facts already in `lib/content.ts` (no CV PDF in the repo; nothing invented). Sentinel eval keeps `MITRE` because the [project README](https://github.com/MikeNcube/proactive-sentinel) documents MITRE ATT&CK correlation.
+5. Pipeline diagrams say cosine top 6, matching `DEFAULT_K`. The assistant log scrolls to the start of the new answer.
+6. `/api/chat` wraps generation in try/catch: provider failure → static or email, HTTP 200, `via` set.
+
+---
+
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.
-2. **Replace the Preview `GROQ_API_KEY`**. Live preview returned 401 (invalid key); Groq is skipped for 10 minutes after that. Production may already be fine. No paid Groq plan is required; `llama-3.3-70b-versatile` is on the free tier.
-3. **Upstash Redis** is used for the per-IP rate limit when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` exist (already configured in Production). Preview falls back to in-memory.
+2. **Replace the Preview `GROQ_API_KEY`** if it still 401s. Groq default is now `openai/gpt-oss-120b` (override with `GROQ_MODEL`). No paid Groq plan is required.
+3. **Enable Upstash on Preview** for a real distributed per-IP limit. Without it, only a per-instance cap applies; the footer will not claim “Rate-limited”.
 4. **Replace `/public/Mike_Org.jpeg`** with a 1200×630 export for correct OG image on Twitter/LinkedIn previews.
 5. **Run evals against the preview URL** (after re-linking Vercel) and commit the generated `evals/results.json`:
    ```bash

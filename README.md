@@ -10,8 +10,8 @@ Next.js 14 (App Router) · TypeScript (strict) · Tailwind CSS. Two typefaces (I
 
 1. **Knowledge base** — `lib/knowledge.ts`, curated exclusively from verifiable material (GitHub profile + repo READMEs, this site's copy). Every chunk carries a `sourceUrl`.
 2. **Retrieval** — `lib/rag.ts` embeds the KB once per server instance (`gemini-embedding-001`, batched, cached) and each visitor query per request, ranking by cosine similarity.
-3. **Generation** — `gemini-2.5-flash`, grounded only in the retrieved chunks; answers return their sources for the UI to cite.
-4. **Honesty** — below a similarity threshold the assistant refuses and points to email. No API key → 503 with an honest message. Per-IP rate limiting (20 req / 10 min) and input validation throughout.
+3. **Generation** — `gemini-2.5-flash`, then Groq `openai/gpt-oss-120b` (fallback `openai/gpt-oss-20b`), grounded only in the retrieved chunks; answers return their sources for the UI to cite.
+4. **Honesty** — below a similarity threshold the assistant refuses and points to email. Provider failures degrade to a static CV answer or email (HTTP 200), never 5xx. Distributed per-IP limiting (20 req / 10 min) when Upstash Redis is configured; otherwise a per-instance cap only. Input validation throughout.
 
 ## Contact form
 
@@ -22,11 +22,15 @@ Next.js 14 (App Router) · TypeScript (strict) · Tailwind CSS. Two typefaces (I
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | For the assistant | Embeddings + generation ([create](https://aistudio.google.com/apikey)) |
+| `GROQ_API_KEY` | For Groq fallback | Chat completions ([create](https://console.groq.com/keys)) |
+| `GROQ_MODEL` | Optional | Override Groq model (default `openai/gpt-oss-120b`) |
+| `GROQ_FALLBACK_MODEL` | Optional | Second Groq model (default `openai/gpt-oss-20b`) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | For distributed rate limit | 20 req/IP/10 min across instances |
 | `RESEND_API_KEY` | For the contact form | Email delivery ([create](https://resend.com/api-keys)) |
 | `CONTACT_TO_EMAIL` | Optional | Recipient override (defaults to Mike's email) |
 | `CONTACT_FROM_EMAIL` | Optional | Sender identity (defaults to Resend onboarding sender) |
 
-Without keys both endpoints fail with a 503 and direct visitors to email — nothing on the site pretends to work.
+Without LLM keys the assistant still answers from static CV copy or the email fallback (HTTP 200). `/api/health` reports limiter `kind` as `upstash` or `instance` — never secrets.
 
 ## Develop
 
