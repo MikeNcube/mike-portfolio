@@ -38,7 +38,7 @@ export default function Nav() {
         {/* Logo / name */}
         <a
           href="#top"
-          className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          className="flex h-full min-h-12 items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-ink/15">
             <Image
@@ -55,13 +55,13 @@ export default function Nav() {
           </span>
         </a>
 
-        {/* Desktop nav */}
-        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
+        {/* Desktop nav — h-full so each link is the 48px header height */}
+        <nav aria-label="Primary" className="hidden h-full items-stretch gap-1 md:flex">
           {navSections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="inline-flex items-center rounded-lg px-3.5 text-sm text-ink-muted transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+              className="inline-flex h-full min-h-12 items-center rounded-lg px-3.5 text-sm text-ink-muted transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
               {s.label}
             </a>
@@ -69,7 +69,7 @@ export default function Nav() {
         </nav>
 
         {/* Right side actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex h-full items-center gap-1">
           <ThemeToggle />
 
           <a

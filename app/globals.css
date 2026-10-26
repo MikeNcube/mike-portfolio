@@ -142,12 +142,33 @@ body {
   .text-balance { text-wrap: balance; }
   .text-pretty  { text-wrap: pretty; }
 
+  /* Diagram labels stay 14px at every viewport — never scale with a viewBox. */
+  .diagram-label {
+    font-size: 14px !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   /* Safe area padding for iPhone notch/home indicator */
   .pt-safe  { padding-top: max(env(safe-area-inset-top), 0px); }
   .pb-safe  { padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
   .px-safe  {
     padding-left:  max(env(safe-area-inset-left), 0px);
     padding-right: max(env(safe-area-inset-right), 0px);
+  }
+}
+
+/* Equal-width flow nodes on md+; arrows keep intrinsic size and never wrap. */
+@media (min-width: 768px) {
+  .diagram-flow > * {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+  .diagram-flow > .diagram-arrow {
+    flex: 0 0 auto;
+    width: auto;
   }
 }
 

@@ -20,7 +20,7 @@ export default function CubeDiagram() {
         Approval prompts fire before writes. Rejected writes return to Plan.
       </Note>
 
-      <div className="mt-2 rounded-[10px] border border-dashed border-ink/[0.12] p-3 sm:p-4">
+      <div className="mt-2 rounded-[10px] border border-dashed border-ink/[0.12] p-3 md:p-4">
         <p className="diagram-label text-ink-muted mb-2" style={{ fontSize: 14 }}>
           Sandboxed eval harness (not on the live path)
         </p>

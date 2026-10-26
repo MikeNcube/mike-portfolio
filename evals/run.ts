@@ -11,6 +11,16 @@
 import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, type EvalResult } from "./eval";
 
+function computesTwoPlusTwo(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    /(?:2\s*\+\s*2|two plus two).{0,32}\b(?:4|four)\b/.test(t) ||
+    /\b(?:4|four)\b.{0,32}(?:2\s*\+\s*2|two plus two)/.test(t) ||
+    /\b(?:equals|is|are|makes)\s+(?:4|four)\b/.test(t) ||
+    /(?:2\s*\+\s*2|two plus two)\s*(?:=|equals)/.test(t)
+  );
+}
+
 const DEFAULT_URL = "http://localhost:3000";
 const urlArg = process.argv.indexOf("--url");
 const BASE_URL = urlArg >= 0 ? process.argv[urlArg + 1] : DEFAULT_URL;
@@ -62,6 +72,16 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
   for (const phrase of q.mustNotContain ?? []) {
     const pass = !lowerResp.includes(phrase.toLowerCase());
     checks.push({ label: `not_contains:${phrase}`, pass, detail: pass ? undefined : `Found forbidden phrase: "${phrase}"` });
+  }
+
+  // 4b. Math eval: fail if the model computes 2+2 instead of refusing
+  if (q.id === "out-of-scope-math") {
+    const computed = computesTwoPlusTwo(response);
+    checks.push({
+      label: "does_not_compute_2plus2",
+      pass: !computed,
+      detail: computed ? "Response computes 2+2 instead of refusing" : undefined,
+    });
   }
 
   // 5. Source presence

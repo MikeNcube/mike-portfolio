@@ -83,7 +83,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
         {/* Main content */}
         <div className="grid gap-10 lg:grid-cols-[200px_1fr] lg:items-start">
 
-          {/* Sidebar — dl/dt/dd structure */}
+          {/* Sidebar — dl contains only dt/dd groups; links sit outside */}
           <aside className="lg:sticky lg:top-20">
             <div className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
               <dl className="space-y-4">
@@ -124,9 +124,8 @@ export default function ProjectDetail({ project, prev, next }: Props) {
             </div>
           </aside>
 
-          {/* Body */}
-          <div className="space-y-10 max-w-2xl">
-            {/* Architecture diagram */}
+          {/* Body — diagrams use the full 1fr column so 14px labels never scale down */}
+          <div className="min-w-0 space-y-10">
             {DIAGRAMS[project.slug] && (
               <section>
                 <h2
@@ -135,38 +134,40 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                 >
                   Architecture
                 </h2>
-                <div className="rounded-xl border border-ink/[0.07] bg-surface/40 p-4 sm:p-6">
+                <div className="overflow-visible rounded-xl border border-ink/[0.07] bg-surface/40 p-4 sm:p-6">
                   {DIAGRAMS[project.slug]}
                 </div>
               </section>
             )}
 
-            <ContentSection title="Problem">
-              <p>{project.problem}</p>
-            </ContentSection>
-
-            <ContentSection title="What I built">
-              <p>{systemOverview}</p>
-            </ContentSection>
-
-            {project.engineeringDecisions && project.engineeringDecisions.length > 0 && (
-              <ContentSection title="Engineering decisions">
-                <ol className="space-y-3">
-                  {project.engineeringDecisions.map((d, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-ink-muted leading-relaxed">
-                      <span className="font-mono text-micro text-ink-faint mt-1 shrink-0">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <p>{d}</p>
-                    </li>
-                  ))}
-                </ol>
+            <div className="max-w-2xl space-y-10">
+              <ContentSection title="Problem">
+                <p>{project.problem}</p>
               </ContentSection>
-            )}
 
-            <div className="rounded-xl border border-ink/[0.07] bg-surface/40 p-5">
-              <p className="text-xs text-ink-muted mb-2 uppercase tracking-wider">Outcome</p>
-              <p className="text-base text-ink">{project.outcome}</p>
+              <ContentSection title="What I built">
+                <p>{systemOverview}</p>
+              </ContentSection>
+
+              {project.engineeringDecisions && project.engineeringDecisions.length > 0 && (
+                <ContentSection title="Engineering decisions">
+                  <ol className="space-y-3">
+                    {project.engineeringDecisions.map((d, i) => (
+                      <li key={i} className="flex gap-3 text-sm text-ink-muted leading-relaxed">
+                        <span className="font-mono text-micro text-ink-faint mt-1 shrink-0">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <p>{d}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </ContentSection>
+              )}
+
+              <div className="rounded-xl border border-ink/[0.07] bg-surface/40 p-5">
+                <p className="text-xs text-ink-muted mb-2 uppercase tracking-wider">Outcome</p>
+                <p className="text-base text-ink">{project.outcome}</p>
+              </div>
             </div>
           </div>
         </div>

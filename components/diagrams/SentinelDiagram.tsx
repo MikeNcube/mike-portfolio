@@ -19,7 +19,7 @@ export default function SentinelDiagram() {
 
       <Node label="Action dispatcher" sub="severity-tiered" accent />
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-3">
         <Node label="Flag" sub="lower severity" muted />
         <Node label="Block IP" sub="Redis, 24-hour TTL" accent />
         <Node label="Audit log" sub="immutable" />

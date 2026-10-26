@@ -88,11 +88,14 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     // Must refuse, not compute. Guards against answering 4 / four in common phrasings.
     mustNotContain: [
       "equals 4",
-      "is 4",
-      "is four",
+      "equals four",
+      "makes 4",
+      "makes four",
+      "that's 4",
+      "that's four",
       "2 + 2 =",
       "2+2=",
-      "two plus two is",
+      "two plus two equals",
       "the sum is",
       "result is 4",
       "answer is 4",

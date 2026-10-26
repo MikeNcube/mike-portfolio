@@ -13,7 +13,7 @@ export default function SitewardenDiagram() {
         <Node label="Write report" sub="draft the output" />
       </FlowRow>
 
-      <div className="flex justify-center sm:justify-end sm:pr-8">
+      <div className="flex justify-center md:justify-end md:pr-8">
         <ArrowDown />
       </div>
 
@@ -27,7 +27,7 @@ export default function SitewardenDiagram() {
         If the human rejects the report, Revise loops back to Analyse. Postgres checkpoints keep state across restarts.
       </Note>
 
-      <div className="mt-1 grid gap-2 sm:grid-cols-3">
+      <div className="mt-1 grid gap-2 md:grid-cols-3">
         <Node label="Postgres checkpoints" sub="durable graph state" muted />
         <Node label="Risk-tiered gateway" sub="writes need approval" muted />
         <Node label="pgvector hybrid search" sub="89 tests, cited retrieval" muted />

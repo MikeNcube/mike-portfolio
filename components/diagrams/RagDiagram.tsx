@@ -3,7 +3,7 @@ import { Diagram, FlowRow, Node, ArrowH, ArrowV, Caption } from "./shared";
 export default function RagDiagram() {
   return (
     <Diagram label="RAG pipeline: knowledge base and query go into Embed, then Retrieve, Gate, Generate, Cite sources">
-      <div className="flex flex-col sm:flex-row gap-2 sm:items-stretch">
+      <div className="flex flex-col md:flex-row gap-2 md:items-stretch">
         <Node label="Knowledge base" sub="curated chunks" muted />
         <Node label="Visitor question" sub="capped at 500 chars" muted />
       </div>

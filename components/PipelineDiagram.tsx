@@ -25,17 +25,17 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
           : "RAG pipeline: embed, retrieve, gate, generate, cite"
       }
     >
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch gap-1.5">
+      <div className="diagram-flow flex flex-col md:flex-row md:flex-nowrap items-stretch gap-1.5">
         {STEPS.map((step, i) => {
           const isActive    = activeStep === i;
           const isCompleted = activeStep !== null && i < activeStep;
           const isPending   = activeStep !== null && i > activeStep;
 
           return (
-            <div key={step.id} className="flex items-center sm:flex-1 min-w-0">
+            <div key={step.id} className="flex min-w-0 w-full items-center md:flex-1">
               <div
                 className={[
-                  "flex-1 rounded-[10px] border px-3 py-2.5 text-center transition-colors duration-300",
+                  "min-w-0 flex-1 rounded-[10px] border px-3 py-2.5 text-center transition-colors duration-300",
                   isActive
                     ? "border-accent bg-accent text-page shadow-sm"
                     : isCompleted
@@ -62,7 +62,7 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
               {i < STEPS.length - 1 && (
                 <span
                   aria-hidden
-                  className="hidden sm:inline-flex px-1 text-ink-faint select-none"
+                  className="diagram-arrow hidden md:inline-flex px-1 text-ink-faint select-none"
                   style={{ fontSize: 16 }}
                 >
                   →

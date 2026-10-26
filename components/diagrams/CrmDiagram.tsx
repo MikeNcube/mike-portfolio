@@ -23,7 +23,7 @@ export default function CrmDiagram() {
         <Node label="Policy adapter" sub="one file per live integration change" accent />
       </FlowRow>
 
-      <div className="mt-1 grid gap-2 sm:grid-cols-2">
+      <div className="mt-1 grid gap-2 md:grid-cols-2">
         <Node label="Session revocation" sub="server-side" muted />
         <Node label="Migrations" sub="reversible and additive" muted />
       </div>

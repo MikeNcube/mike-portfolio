@@ -35,17 +35,27 @@ Secondary cause: free-tier `gemini-2.5-flash` is rate-limited to 10 RPM. The pre
 
 ### Eval suite (no fabricated results)
 
-`evals/results.json` is **not** in the repo. The `/evals` page lists methodology and the 10 questions, and shows a placeholder until a real runner output is committed.
+`evals/results.json` is **not** in the repo. The `/evals` page lists the 10 questions and a placeholder until a real runner output is committed. The homepage does **not** link to `/evals`.
+
+### Eval runbook
+
+Do not invent scores. Run against a live deployment, then commit the generated file.
 
 ```bash
 GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
 ```
 
-Then commit `evals/results.json`. Do not invent scores.
+Per-question checks:
 
-The `2 + 2` eval now requires a refusal plus contact email, and forbids common numeric-answer phrasings (`equals 4`, `is four`, `2 + 2 =`, etc.).
+| Check | What it asserts |
+|-------|-----------------|
+| `api_ok` | `/api/chat` returned HTTP success |
+| `is_refusal` / `not_refusal` | Out-of-scope and injection prompts refuse; factual prompts answer |
+| `contains:…` / `not_contains:…` | Required phrases present; hallucinations and numeric 2+2 answers absent |
+| `does_not_compute_2plus2` | Math prompt must not compute 4 / four in any common phrasing |
+| `has_sources` / `no_sources_on_refusal` | Citations on factual answers; none on refusals |
 
-The homepage does **not** link to `/evals` until real results exist.
+Rate limit: 1.2 s pause between questions (Gemini free tier, 10 RPM). Exit code 0 = all pass, 1 = one or more fail. Output: `evals/results.json`.
 
 ---
 
@@ -225,7 +235,7 @@ Artifacts: screenshots saved to `/opt/cursor/artifacts/screenshots/`.
 
 ## Round 3 — diagrams, contrast, evals page
 
-Architecture diagrams are HTML/CSS boxes with real 14px text (class `diagram-label`), stacked vertically below `sm` so they do not scale down on a 390px screen.
+Architecture diagrams are HTML/CSS boxes with real 14px text (class `diagram-label`, CSS-locked). Below `md` they stack vertically so they do not scale down on a 390px screen. On `md+` they are a nowrap flex row of equal-width nodes, so arrows cannot wrap onto a stray line. The diagram sits in the full case-study column, not inside `max-w-2xl`.
 
 Truth fixes vs CV:
 - Claims: no “Scanned PDF”, no “auto-approved”. Flow is document → Claude vision → Pydantic → per-field confidence → needs-review flag. Caption states pending management approval.
