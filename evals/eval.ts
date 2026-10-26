@@ -205,6 +205,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
       { label: "approved", anyOf: ["approved"] },
       { label: "standby_or_failover", anyOf: ["standby", "failover", "fail-over"] },
       { label: "production_ready", anyOf: ["production-ready", "production ready"] },
+      { label: "not_live_system", anyOf: ["not the live system", "not the current live system"] },
     ],
     mustNotContain: ["is the live system"],
     expectRefusal: false,

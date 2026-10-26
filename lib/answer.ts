@@ -77,7 +77,11 @@ const CITATION_PROJECTS: Array<{
     source: /\bzdi\b|document intelligence/i,
   },
   { id: "zororo-crm", mention: /\bcrm\b/i, source: /\bcrm\b/i },
-  { id: "zororo-claims", mention: /\bclaims\b/i, source: /\bclaims\b/i },
+  {
+    id: "zororo-claims",
+    mention: /\bzororo[\s-]claims\b|\bclaims operations(?:\s+platform)?\b|\bclaims platform\b/i,
+    source: /\bclaims\b/i,
+  },
 ];
 
 function sourceMatchesProject(

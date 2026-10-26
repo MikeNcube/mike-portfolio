@@ -1,6 +1,6 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r27";
+export const ANSWER_CACHE_VERSION = "r28";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [4].";
@@ -164,7 +164,7 @@ function hasNotLive(text: string): boolean {
 }
 
 function hasNotTheLiveSystem(text: string): boolean {
-  return /\bnot the live system\b/.test(foldStatusText(text));
+  return /\bnot the(?: current)? live system\b/.test(foldStatusText(text));
 }
 
 // True when ZDI status covers approved, rolling out, and not (yet) live.
@@ -177,9 +177,14 @@ export function hasAiOsStatus(text: string): boolean {
   return hasBuilt(text) && hasEarlyStage(text) && hasNotDeployed(text);
 }
 
-// True when claims ops is approved, production-ready, and standby/failover.
+// True when claims ops is the approved standby/failover and not the live system.
 export function hasClaimsStatus(text: string): boolean {
-  return hasApproved(text) && hasProductionReady(text) && hasFailoverOrStandby(text);
+  return (
+    hasApproved(text)
+    && hasProductionReady(text)
+    && hasFailoverOrStandby(text)
+    && hasNotTheLiveSystem(text)
+  );
 }
 
 // True when an answer repeats a status word back-to-back (built/built, prototype/Status: Prototype).
@@ -253,13 +258,13 @@ function joinStatusBits(bits: string[]): string {
   return `${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}`;
 }
 
-// Full sentence covering only the status facts the mention sentence is missing.
-function statusSentenceFor(kind: StatusKind, mention: string): string | null {
+// Full sentence covering only the status facts the whole answer is missing.
+function statusSentenceFor(kind: StatusKind, text: string): string | null {
   switch (kind) {
     case "zdi": {
-      const approved = hasApproved(mention);
-      const rolling = hasRollingOut(mention);
-      const notLive = hasNotLive(mention);
+      const approved = hasApproved(text);
+      const rolling = hasRollingOut(text);
+      const notLive = hasNotLive(text);
       if (approved && rolling && notLive) return null;
       if (!approved && !rolling && !notLive) return ZDI_STATUS_SENTENCE;
       const bits: string[] = [];
@@ -277,9 +282,9 @@ function statusSentenceFor(kind: StatusKind, mention: string): string | null {
       return `It is ${joinStatusBits(bits)}.`;
     }
     case "ai-os": {
-      const built = hasBuilt(mention);
-      const early = hasEarlyStage(mention);
-      const notDeployed = hasNotDeployed(mention);
+      const built = hasBuilt(text);
+      const early = hasEarlyStage(text);
+      const notDeployed = hasNotDeployed(text);
       if (built && early && notDeployed) return null;
       if (!built && !early && !notDeployed) return AI_OS_STATUS_SENTENCE;
       const bits: string[] = [];
@@ -290,12 +295,12 @@ function statusSentenceFor(kind: StatusKind, mention: string): string | null {
       return `It is ${joinStatusBits(bits)}.`;
     }
     case "claims": {
-      const approved = hasApproved(mention);
-      const ready = hasProductionReady(mention);
-      const standby = hasFailoverOrStandby(mention);
-      const notLiveSystem = hasNotTheLiveSystem(mention);
-      if (approved && ready && standby) return null;
-      if (!approved && !ready && !standby) return CLAIMS_STATUS_SENTENCE;
+      const approved = hasApproved(text);
+      const ready = hasProductionReady(text);
+      const standby = hasFailoverOrStandby(text);
+      const notLiveSystem = hasNotTheLiveSystem(text);
+      if (approved && ready && standby && notLiveSystem) return null;
+      if (!approved && !ready && !standby && !notLiveSystem) return CLAIMS_STATUS_SENTENCE;
       const bits: string[] = [];
       if (!approved) bits.push("approved");
       if (!ready) bits.push("production-ready");
@@ -345,13 +350,12 @@ function mentionRe(kind: StatusKind): RegExp {
   }
 }
 
-// Insert a full status sentence right after the sentence that names the project.
+// Insert only the missing status parts after the sentence that names the project.
 function insertStatusAfterMention(text: string, kind: StatusKind): string {
   const re = mentionRe(kind);
   const parts = splitSentences(text);
   const idx = parts.findIndex((part) => re.test(part));
-  const mention = idx >= 0 ? parts[idx] : text;
-  const sentence = statusSentenceFor(kind, mention);
+  const sentence = statusSentenceFor(kind, text);
   if (!sentence) return text;
 
   if (idx < 0) {

@@ -875,7 +875,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(
       claimsHyphen,
-      "The claims operations platform is approved, production ready, and a fail-over.",
+      "The claims operations platform is approved, production ready, and a fail-over. It is not the live system.",
     );
   });
 
@@ -952,15 +952,83 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(out, /\[1\]\.\s*It is approved/);
   });
 
-  it("skips claims status when approved, production-ready, and standby are all present", () => {
+  it("adds not-the-live-system when claims is otherwise an approved production-ready standby", () => {
     const out = ensureProjectStatusCopy(
       "What is the claims operations platform?",
       "The claims operations platform is an approved, production-ready standby.",
     );
     assert.equal(
       out,
-      "The claims operations platform is an approved, production-ready standby.",
+      "The claims operations platform is an approved, production-ready standby. It is not the live system.",
     );
+  });
+
+  it("skips claims status when approved, production-ready, standby, and not the live system are all present", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform is an approved, production-ready standby (failover), not the live system.",
+    );
+    assert.equal(
+      out,
+      "The claims operations platform is an approved, production-ready standby (failover), not the live system.",
+    );
+  });
+
+  it("treats 'not the current live system' as the claims not-live-system fact", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform is an approved, production-ready standby, not the current live system.",
+    );
+    assert.equal(
+      out,
+      "The claims operations platform is an approved, production-ready standby, not the current live system.",
+    );
+  });
+
+  it("adds only missing AI OS status from a later sentence, never a second full status sentence", () => {
+    const out = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is a governed AI control plane. It is early-stage and not yet deployed [1].",
+    );
+    assert.equal(
+      out,
+      "Zororo AI OS is a governed AI control plane. It is built. It is early-stage and not yet deployed [1].",
+    );
+    assert.doesNotMatch(out, /It is built, early stage, and not deployed/);
+    assert.equal(hasRepeatedStatus(out), false);
+  });
+
+  it("adds only missing ZDI status from a later sentence, never a second full status sentence", () => {
+    const out = ensureProjectStatusCopy(
+      "What is ZDI?",
+      "ZDI is a signature workflow. It is rolling out soon and not yet live [1].",
+    );
+    assert.equal(
+      out,
+      "ZDI is a signature workflow. It is approved for production rollout at Zororo-Phumulani. It is rolling out soon and not yet live [1].",
+    );
+    assert.doesNotMatch(
+      out,
+      /It is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live/,
+    );
+    assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
+    assert.equal((out.match(/not yet live/gi) ?? []).length, 1);
+  });
+
+  it("adds only the missing claims not-live-system fact from a later sentence", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform handles funeral cases. It is an approved, production-ready standby (failover) [1].",
+    );
+    assert.equal(
+      out,
+      "The claims operations platform handles funeral cases. It is not the live system. It is an approved, production-ready standby (failover) [1].",
+    );
+    assert.doesNotMatch(
+      out,
+      /It is an approved, production-ready standby \(failover\), not the live system/,
+    );
+    assert.equal((out.match(/not the live system/gi) ?? []).length, 1);
   });
 
   it("ZDI and claims eval meaning checks pass on model wording or the canonical sentence", () => {
@@ -996,7 +1064,7 @@ describe("production-system and ZDI status copy", () => {
     );
     meaningPass(
       "zororo-claims",
-      "Approved production-ready failover for the current claims system.",
+      "Approved production-ready failover for the current claims system, not the live system.",
     );
 
     assert.match(AI_OS_STATUS_SENTENCE, /built/i);
@@ -1205,6 +1273,20 @@ describe("production-system and ZDI status copy", () => {
     assert.match(remapped, /not the live system \[4\]/);
     const aligned = citationsMatchNamedProjects(remapped, to);
     assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("does not treat AI OS 'every event - claims, policy changes' as naming the claims platform", () => {
+    const sources = [
+      { id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" },
+    ];
+    const dashed =
+      "Zororo AI OS is a governed AI control plane. Every event - claims, policy changes, LLM queries, tool calls - passes one pipeline [1].";
+    const parens =
+      "Zororo AI OS is a governed AI control plane. Every event (claims, policy changes, LLM queries, tool calls) passes one pipeline [1].";
+    assert.equal(citationsMatchNamedProjects(dashed, sources).pass, true);
+    assert.equal(citationsMatchNamedProjects(parens, sources).pass, true);
+    const named = citationsMatchNamedProjects("The claims platform is a standby [1].", sources);
+    assert.equal(named.pass, false);
   });
 
   it("retargets ZDI and claims cites when production sources are swapped", async () => {
