@@ -1,8 +1,9 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
+import { splitIntoSentences } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r38";
+export const ANSWER_CACHE_VERSION = "r39";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -856,13 +857,7 @@ function sentenceProjectHits(sentence: string): number {
 }
 
 function splitSentences(text: string): string[] {
-  const parts: string[] = [];
-  const re = /[^.!?]+(?:[.!?]+(?:\s*\[\d+\])*)\s*|[^.!?]+$/g;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    if (match[0]) parts.push(match[0]);
-  }
-  return parts.length > 0 ? parts : [text];
+  return splitIntoSentences(text);
 }
 
 function mentionRe(kind: StatusKind): RegExp {
@@ -978,6 +973,8 @@ export function sanitisePunctuation(text: string): string {
     .replace(/;(?=[A-Za-z])/g, "; ")
     .replace(/(^|[.!?]\s+),+\s*/g, "$1")
     .replace(/([.!?])\s*\[(\d+)\](?:\s*\.)?(?=\s|$)/g, " [$2].")
+    .replace(/\]\.(?=[A-Z])/g, "]. ")
+    .replace(/([a-z0-9)])\.(?=[A-Z])/g, "$1. ")
     .replace(/ {2,}/g, " ");
   return out.trim();
 }
@@ -1000,14 +997,71 @@ function stripUncitedEvaluativeConclusions(text: string): string {
   return kept.join("").replace(/ {2,}/g, " ").trim();
 }
 
-function workAnswerListsAllProjects(text: string): boolean {
+function stripKnownNegations(sentence: string): string {
+  return sentence
+    .replace(/zororo ai os/gi, " ")
+    .replace(/\bai os\b/gi, " ")
+    .replace(/\bno ai\b/gi, " ")
+    .replace(/not(?: yet)? (?:the )?live/gi, " ")
+    .replace(/rather than the(?: current)? live/gi, " ")
+    .replace(/not(?: yet)? deployed/gi, " ")
+    .replace(/not production/gi, " ");
+}
+
+function contradictsZdiAsAi(sentence: string): boolean {
+  if (!ZDI_RE.test(sentence)) return false;
+  const hay = stripKnownNegations(sentence);
   return (
-    /digi/i.test(text)
-    && /\bcrm\b/i.test(text)
-    && /\bzdi\b/i.test(text)
-    && /claims operations/i.test(text)
-    && /zororo ai os/i.test(text)
+    /\bai[ -]?driven\b/i.test(hay)
+    || /\bdecision[ -]?support\b/i.test(hay)
+    || /\bmachine learning\b|\bml\b/i.test(hay)
+    || /\ban ai\b/i.test(hay)
+    || /\bis ai\b/i.test(hay)
+    || /\bas ai\b/i.test(hay)
+    || /\bai (?:tool|system|platform|product|assistant|model|workflow)\b/i.test(hay)
   );
+}
+
+function contradictsShippedAsEarly(sentence: string): boolean {
+  const mentionsDigi = /\bdigi\b/i.test(sentence);
+  const mentionsCrm = /\bcrm\b/i.test(sentence);
+  if (!mentionsDigi && !mentionsCrm) return false;
+  if (AI_OS_RE.test(sentence)) return false;
+  return /\bearly[ -]?stage\b/i.test(sentence) || /\bnot(?: yet)? deployed\b/i.test(sentence);
+}
+
+function contradictsClaimsAsLive(sentence: string): boolean {
+  if (!/\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b/i.test(sentence)) {
+    return false;
+  }
+  const hay = stripKnownNegations(sentence);
+  return /\bis live\b|\blive (?:system|production|platform)\b|\bcurrently live\b|\bnow live\b/i.test(
+    hay,
+  );
+}
+
+function contradictsAiOsAsDeployed(sentence: string): boolean {
+  if (!AI_OS_RE.test(sentence)) return false;
+  const hay = stripKnownNegations(sentence);
+  return (
+    /\bdeployed\b/i.test(hay)
+    || /\bin production\b/i.test(hay)
+    || /\bproduction systems?\b/i.test(hay)
+    || /\bis live\b/i.test(hay)
+  );
+}
+
+function sentenceHasProjectFactContradiction(sentence: string): boolean {
+  return (
+    contradictsZdiAsAi(sentence)
+    || contradictsShippedAsEarly(sentence)
+    || contradictsClaimsAsLive(sentence)
+    || contradictsAiOsAsDeployed(sentence)
+  );
+}
+
+export function hasProjectFactContradiction(text: string): boolean {
+  return splitIntoSentences(text).some(sentenceHasProjectFactContradiction);
 }
 
 function applyCanonicalGuards(question: string, text: string): string {
@@ -1024,10 +1078,7 @@ function applyCanonicalGuards(question: string, text: string): string {
   if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
-  if (isWorkQuestion(question) && !workAnswerListsAllProjects(out)) {
-    out = CANONICAL_WORK_ANSWER;
-  }
-  if (isWorkQuestion(question) && falselyLabelsNonProductionAsProduction(out)) {
+  if (isWorkQuestion(question)) {
     out = CANONICAL_WORK_ANSWER;
   }
   return out;

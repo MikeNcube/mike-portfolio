@@ -9,7 +9,7 @@ import {
   type RetrievedChunk,
 } from "./rag";
 import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
-import { normaliseModelText } from "./normalise-answer";
+import { normaliseModelText, splitIntoSentences } from "./normalise-answer";
 import { tokenize } from "./bm25";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
@@ -20,6 +20,7 @@ import {
   CANONICAL_WORK_ANSWER,
   CANONICAL_ZDI_LIVE_ANSWER,
   ensureProjectStatusCopy,
+  hasProjectFactContradiction,
   hasRepeatedStatus,
   isAwsQuestion,
   isProductionSystemsQuestion,
@@ -357,16 +358,70 @@ function groundGroqAnswer(raw: string, chunks: RetrievedChunk[]): AnswerResult |
 function firstSentence(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return "";
-  const m = trimmed.match(/^[^.!?]+[.!?]/);
-  const sentence = (m ? m[0] : trimmed).trim();
+  const sentence = (splitIntoSentences(trimmed)[0] ?? trimmed).trim();
   if (sentence.length <= 220) return sentence;
   return `${sentence.slice(0, 217).trim()}.`;
 }
 
-function sentenceMatching(text: string, re: RegExp): string {
-  const parts = text.match(/[^.!?]+[.!?]+(?:\s*\[\d+\])*\s*|[^.!?]+$/g) ?? [text];
-  const hit = parts.find((part) => re.test(part));
-  return firstSentence((hit ?? parts[0]).trim());
+const TECH_LABEL_RE =
+  /^(Stack|Backend|Frontend|Full-stack|Full stack|AI\/LLM|Data|Cloud|Infra)\s*:\s*/i;
+const DROP_LABEL_RE = /^(Status|POPIA|Pipeline)\s*:\s*/i;
+
+function projectNameFromTitle(title: string): string {
+  const head = title.split(/\s+[—–]\s+/)[0] ?? title;
+  return head.replace(/\s*\([^)]*\)\s*$/, "").trim() || title.trim();
+}
+
+function joinTechList(body: string): string {
+  const parts = body.split(/,\s*/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]} and ${parts.slice(1).join(", ")}`;
+  return body.trim();
+}
+
+function rewriteFallbackSentence(raw: string, title: string): string {
+  const sentence = raw.replace(/\s+/g, " ").trim();
+  if (!sentence || DROP_LABEL_RE.test(sentence)) return "";
+  const project = projectNameFromTitle(title);
+  const label = sentence.match(TECH_LABEL_RE);
+  if (label) {
+    const body = sentence.slice(label[0].length).replace(/[.!?]+$/, "").trim();
+    if (!body) return "";
+    return `${project} uses ${joinTechList(body)}.`;
+  }
+  if (/^It is\b/i.test(sentence)) {
+    return sentence.replace(/^It is\b/i, `${project} is`);
+  }
+  return sentence;
+}
+
+function fallbackSentenceKey(sentence: string): string {
+  return sentence
+    .toLowerCase()
+    .replace(/\s*\[\d+\]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function fallbackSentenceFromChunk(
+  chunk: RetrievedChunk,
+  question: string,
+  pythonQuestion: boolean,
+): string {
+  const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
+  const contentWords = questionContentWords(question);
+  const ranked = [...parts].sort((a, b) => {
+    const score = (part: string): number => {
+      if (pythonQuestion && /\bpython\b/i.test(part)) return 2;
+      if (contentWords.some((w) => part.toLowerCase().includes(w))) return 1;
+      return 0;
+    };
+    return score(b) - score(a);
+  });
+  for (const part of ranked) {
+    const rewritten = rewriteFallbackSentence(part, chunk.title);
+    if (rewritten) return firstSentence(rewritten);
+  }
+  return "";
 }
 
 function questionContentWords(question: string): string[] {
@@ -423,17 +478,21 @@ export function citedFallbackFromChunks(
       );
   const top = matching.slice(0, 3);
   if (top.length === 0) return null;
-  const response = top
-    .map((chunk, i) => {
-      const raw = pythonQuestion
-        ? sentenceMatching(chunk.text, /\bpython\b/i)
-        : firstSentence(chunk.text);
-      const sentence = raw.replace(/[.!?]$/, "");
-      return `${sentence} [${i + 1}].`;
-    })
-    .join(" ");
-  const sources = top.map((c) => ({ id: c.id, title: c.title, url: c.sourceUrl }));
-  return { response, sources, via: "static" };
+  const seen = new Set<string>();
+  const pieces: string[] = [];
+  const sources: AnswerSource[] = [];
+  for (const chunk of top) {
+    const raw = fallbackSentenceFromChunk(chunk, question, pythonQuestion);
+    const sentence = raw.replace(/[.!?]+$/, "").trim();
+    if (!sentence) continue;
+    const key = fallbackSentenceKey(sentence);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    pieces.push(`${sentence} [${pieces.length + 1}].`);
+    sources.push({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl });
+  }
+  if (pieces.length === 0) return null;
+  return { response: pieces.join(" "), sources, via: "static" };
 }
 
 function staticOrSafeReply(
@@ -590,6 +649,7 @@ function polishResult(
   question: string,
   result: AnswerResult,
   chunks: RetrievedChunk[],
+  options?: { skipContradictionFallback?: boolean },
 ): AnswerResult {
   if (isRefusal(result.response) || isOffTopicQuestion(question)) {
     return { ...result, response: result.response, sources: [] };
@@ -625,7 +685,7 @@ function polishResult(
   } else if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
     sources = productionSystemSources(from);
-  } else if (isWorkQuestion(question) && out === CANONICAL_WORK_ANSWER) {
+  } else if (isWorkQuestion(question)) {
     ({ text: out, sources } = applySourceList(
       out,
       from,
@@ -640,6 +700,22 @@ function polishResult(
   ) {
     out = CANONICAL_PRODUCTION_ANSWER;
     sources = productionSystemSources(from);
+  }
+
+  if (!options?.skipContradictionFallback && hasProjectFactContradiction(out)) {
+    const staticHit = matchStaticAnswer(question);
+    if (staticHit && staticHit.answer !== result.response) {
+      return polishResult(
+        question,
+        {
+          response: staticHit.answer,
+          sources: sourcesFor(staticHit),
+          via: "static",
+        },
+        chunks,
+        { skipContradictionFallback: true },
+      );
+    }
   }
 
   return { ...result, response: ensureInlineCitation(out, sources), sources };

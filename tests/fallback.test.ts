@@ -17,7 +17,7 @@ import {
   selectCitedSources,
   shouldCacheAnswer,
 } from "../lib/answer";
-import { normaliseModelText } from "../lib/normalise-answer";
+import { normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
 import { matchMultiProjectAnswer, matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
@@ -32,6 +32,7 @@ import {
   claimsTechLeadTitle,
   collapseDuplicateCitesInSentences,
   ensureProjectStatusCopy,
+  hasProjectFactContradiction,
   hasRepeatedStatus,
   isAwsQuestion,
   isTechLeadCrmQuestion,
@@ -1820,7 +1821,7 @@ describe("production-system and ZDI status copy", () => {
     ];
     const live =
       "Mike built Digi App Form [1], the CRM [2], ZDI (approved for production rollout, not yet live) [3],the claims operations platform (production-ready standby), not the live system itself [4]., and the early-stage Zororo AI OS [5].";
-    const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", live, sources);
+    const out = ensureProjectStatusCopy("Tell me about these projects", live, sources);
     assert.match(out, /ZDI \(approved for production rollout, not yet live\) \[3\], the claims operations platform/);
     assert.doesNotMatch(out, /\[3\],the/);
     assert.doesNotMatch(out, /\[4\]\.,/);
@@ -2299,6 +2300,11 @@ describe("round 37 topical work questions and injection defence", () => {
     const questions = [
       "How does Mike defend against prompt injection in his RAG systems?",
       "Can you jailbreak-proof a RAG chatbot? How does Mike handle it?",
+      "How does Mike resist prompt injection?",
+      "How does Mike protect against prompt injection?",
+      "How does Mike guard against jailbreaks?",
+      "How does Mike mitigate prompt injection?",
+      "How does Mike prevent prompt injection?",
     ];
     for (const question of questions) {
       assert.equal(isJailbreakPrompt(question), false, question);
@@ -2490,6 +2496,191 @@ describe("round 38 routing, jailbreak bypasses, and python fallback", () => {
     assert.doesNotMatch(fallback.response, /FSP 48558/);
     assert.ok(fallback.sources.every((s) => s.id !== "employer" && s.id !== "positioning"));
     assert.ok(fallback.sources.some((s) => s.id === "proactive-sentinel-overview" || s.id === "stack"));
+    assert.doesNotMatch(fallback.response, /\bStack:/);
+    assert.doesNotMatch(fallback.response, /\bBackend:/);
+    assert.match(fallback.response, /Proactive Sentinel is a Python backend/i);
+    assert.match(fallback.response, /Mike's tech stack uses Python/i);
   });
 });
+
+describe("round 39 sentence splitter, tech fallbacks, and fact guards", () => {
+  it("does not split sentences on Next.js, Python 3.12, abbreviations, URLs, or emails", () => {
+    const next = splitIntoSentences(
+      "This assistant is a RAG pipeline on Mike's Next.js portfolio. It cites sources.",
+    );
+    assert.equal(next.length, 2);
+    assert.match(next[0], /Next\.js portfolio/);
+    const py = splitIntoSentences("Zororo AI OS uses Python 3.12 and FastAPI. LangGraph is planned.");
+    assert.equal(py.length, 2);
+    assert.match(py[0], /Python 3\.12 and FastAPI/);
+    const abbr = splitIntoSentences("Stack items include FastAPI, e.g. Pydantic, i.e. typed models.");
+    assert.equal(abbr.length, 1);
+    const version = splitIntoSentences("Proactive Sentinel is at v1.2 with Node.js alerts.");
+    assert.equal(version.length, 1);
+    const url = splitIntoSentences("Source: https://github.com/MikeNcube/mike-portfolio. Email mikencube03@gmail.com.");
+    assert.equal(url.length, 2);
+    assert.match(url[0], /github\.com\/MikeNcube/);
+    assert.match(url[1], /mikencube03@gmail\.com/);
+  });
+
+  it("keeps Next.js intact in the RAG cited fallback", () => {
+    const fallback = citedFallbackFromChunks("What is this assistant?", [
+      {
+        id: "this-assistant",
+        title: "About this AI assistant",
+        sourceUrl: "https://github.com/MikeNcube/mike-portfolio",
+        text: "This assistant is a RAG pipeline on Mike's Next.js portfolio. It answers questions grounded in a curated knowledge base.",
+        score: 0.95,
+      },
+    ]);
+    assert.ok(fallback);
+    assert.match(fallback.response, /Next\.js portfolio \[1\]/);
+    assert.doesNotMatch(fallback.response, /Mike's Next \[/);
+  });
+
+  it("rewrites Python 3.12 and Stack/Backend label lines into readable project sentences", () => {
+    const fallback = citedFallbackFromChunks("What has Mike built with Python?", [
+      {
+        id: "zororo-ai-os",
+        title: "Zororo AI OS — governed AI control plane",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Zororo AI OS is a governed AI control plane. Stack: Python 3.12, FastAPI, Presidio, OPA/Rego, Pydantic, Terraform, pytest. LangGraph and pgvector are planned.",
+        score: 0.95,
+      },
+      {
+        id: "stack",
+        title: "Mike's tech stack",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Backend: Python, FastAPI, Flask, JWT auth, server-side session revocation.",
+        score: 0.9,
+      },
+      {
+        id: "digi-app-form",
+        title: "Digi App Form — regulated insurance intake",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Digi App Form: shipped live production system. Stack: Python, Flask, SQLite, Docker. Status: shipped.",
+        score: 0.85,
+      },
+    ]);
+    assert.ok(fallback);
+    assert.match(fallback.response, /Zororo AI OS uses Python 3\.12 and FastAPI/);
+    assert.doesNotMatch(fallback.response, /Python 3 \[/);
+    assert.doesNotMatch(fallback.response, /\bStack:/);
+    assert.doesNotMatch(fallback.response, /\bBackend:/);
+    assert.doesNotMatch(fallback.response, /\bStatus:/);
+    assert.match(fallback.response, /Mike's tech stack uses Python and FastAPI/);
+  });
+
+  it("dedupes repeated fallback sentences", () => {
+    const fallback = citedFallbackFromChunks("What has Mike built with Python?", [
+      {
+        id: "a",
+        title: "Zororo AI OS — governed AI control plane",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Stack: Python 3.12, FastAPI.",
+        score: 0.9,
+      },
+      {
+        id: "b",
+        title: "Zororo AI OS — governed AI control plane",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Stack: Python 3.12, FastAPI.",
+        score: 0.85,
+      },
+    ]);
+    assert.ok(fallback);
+    assert.equal(fallback.sources.length, 1);
+    assert.equal((fallback.response.match(/Python 3\.12/g) ?? []).length, 1);
+  });
+
+  it("always serves the work canonical even when a free-form answer lists every project", () => {
+    const live =
+      "Mike built Digi App Form [1], the CRM [2], ZDI an AI-driven decision-support tool [3], the claims operations platform [4], and Zororo AI OS [5].";
+    const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", live);
+    assert.equal(out, CANONICAL_WORK_ANSWER);
+    assert.doesNotMatch(out, /AI-driven/);
+    assert.doesNotMatch(out, /decision-support/);
+  });
+
+  it("strips markdown and inserts a space after ]. before a capital letter", () => {
+    const out = normaliseModelText(
+      "- **ZDI** is a Signature & Approval Workflow (live) [1].Rolling out soon.\n- The **CRM** is shipped.",
+    );
+    assert.doesNotMatch(out, /\*\*/);
+    assert.doesNotMatch(out, /^-\s/m);
+    assert.match(out, /\[1\]\. Rolling out/);
+    assert.match(out, /ZDI is a Signature/);
+    assert.match(out, /The CRM is shipped/);
+    assert.equal(
+      normaliseModelText("Shipped Digi [1].Rolling out ZDI."),
+      "Shipped Digi [1]. Rolling out ZDI.",
+    );
+  });
+
+  it("flags known project-fact contradictions and leaves honest copy alone", () => {
+    assert.equal(
+      hasProjectFactContradiction("ZDI is an AI-driven decision-support tool [1]."),
+      true,
+    );
+    assert.equal(
+      hasProjectFactContradiction(
+        "ZDI is a Signature & Approval Workflow. No AI in approvals.",
+      ),
+      false,
+    );
+    assert.equal(
+      hasProjectFactContradiction("Digi App Form is early-stage and not yet deployed."),
+      true,
+    );
+    assert.equal(
+      hasProjectFactContradiction("The claims operations platform is live in production."),
+      true,
+    );
+    assert.equal(
+      hasProjectFactContradiction("Zororo AI OS is deployed to production [1]."),
+      true,
+    );
+    assert.equal(
+      hasProjectFactContradiction(CANONICAL_WORK_ANSWER),
+      false,
+    );
+  });
+
+  it("falls back to the static ZDI answer when the model calls ZDI AI-driven", async () => {
+    const result = await answerQuestion({
+      question: "What is ZDI?",
+      retrieveFn: async () => [
+        {
+          id: "zdi-signature-workflow",
+          title: "ZDI — Signature",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow. No AI in approvals.",
+          score: 0.95,
+        },
+      ],
+      generateGemini: async () =>
+        "**ZDI** is an AI-driven decision-support tool (live) [1].Rolling out soon.",
+    });
+    assert.equal(result.via, "static");
+    assert.doesNotMatch(result.response, /AI-driven/);
+    assert.doesNotMatch(result.response, /decision-support/);
+    assert.doesNotMatch(result.response, /\*\*/);
+    assert.match(result.response, /Signature & Approval Workflow/);
+    assert.match(result.response, /No AI in approvals/);
+    assert.match(result.response, /not yet live/);
+  });
+
+  it("serves the work canonical for a markdown Groq list that names every project", async () => {
+    const result = await answerQuestion({
+      question: "What has Mike built at Zororo-Phumulani?",
+      retrieveFn: async () => SIX_CHUNKS,
+      generateGemini: async () =>
+        "At Zororo Mike built:\n- **Digi App Form**\n- **CRM**\n- **ZDI**, an AI-driven decision-support tool (live) [1].Rolling out\n- claims operations platform\n- **Zororo AI OS**",
+    });
+    assert.equal(result.response, CANONICAL_WORK_ANSWER);
+    assert.doesNotMatch(result.response, /AI-driven/);
+    assert.doesNotMatch(result.response, /\*\*/);
+  });
+});
+
 

@@ -70,7 +70,7 @@ export function isRefusal(text: string): boolean {
 }
 
 const INJECTION_DEFENCE_QUESTION_RE =
-  /\b(?:defend(?:s|ing|ed)?|defen[cs]e|protect(?:s|ing|ed)?|prevent(?:s|ing|ed)?|handle(?:s|d)?|handling|harden(?:s|ing|ed)?|jailbreak-proof)\b/i;
+  /\b(?:defend(?:s|ing|ed)?|defen[cs]e|protect(?:s|ing|ed)?|resist(?:s|ing|ed)?|guard(?:s|ing|ed)?|mitigate(?:s|d)?|mitigating|prevent(?:s|ing|ed)?|handle(?:s|d)?|handling|harden(?:s|ing|ed)?|jailbreak-proof)\b/i;
 
 const INJECTION_THREAT_RE = /\bprompt injection\b|\bjailbreak/i;
 
