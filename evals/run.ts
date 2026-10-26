@@ -31,7 +31,7 @@ const BASE_URL = urlArg >= 0 ? process.argv[urlArg + 1] : DEFAULT_URL;
 async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
   const start = Date.now();
   let response = "";
-  let sources: Array<{ title: string; url: string }> = [];
+  let sources: Array<{ id?: string; title: string; url: string }> = [];
   let fetchOk = false;
 
   try {
@@ -133,6 +133,27 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
       pass: aligned.pass,
       detail: aligned.failures.join("; ") || undefined,
     });
+    if (q.id === "production-systems") {
+      const expected = ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"];
+      const ids = sources.map((s) => s.id);
+      const orderById = expected.every((id, i) => ids[i] === id);
+      const orderByTitle =
+        /digi/i.test(sources[0]?.title ?? "")
+        && /crm/i.test(sources[1]?.title ?? "")
+        && /zdi/i.test(sources[2]?.title ?? "")
+        && /claims/i.test(sources[3]?.title ?? "");
+      const order = orderById || orderByTitle;
+      const numbered =
+        /Digi App Form \[1\]/i.test(response)
+        && /Zororo CRM \[2\]/i.test(response)
+        && /ZDI \[3\]/i.test(response)
+        && /\[4\]/.test(response);
+      checks.push({
+        label: "production_citations_map",
+        pass: order && aligned.pass && numbered,
+        detail: order && numbered ? undefined : `ids ${ids.join(", ")}; ${aligned.failures.join("; ")}`,
+      });
+    }
   }
 
   const pass = checks.every((c) => c.pass);

@@ -1,18 +1,18 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r29";
+export const ANSWER_CACHE_VERSION = "r30";
 
 export const CANONICAL_PRODUCTION_ANSWER =
-  "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [4].";
+  "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
 
 export const ZDI_STATUS_SENTENCE =
   "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live.";
 
 export const AI_OS_STATUS_SENTENCE =
-  "Zororo AI OS is built, early-stage, and not yet deployed.";
+  "Zororo AI OS is built, early-stage and not yet deployed.";
 
 export const CLAIMS_STATUS_SENTENCE =
-  "The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's live claims system, not the live system itself.";
+  "The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself.";
 
 export const CANONICAL_ZDI_LIVE_ANSWER =
   "No. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].";
@@ -39,7 +39,8 @@ const AWS_QUESTION_RE = /\baws\b/i;
 
 const AWS_OVERCLAIM_RE = /\bextensive(?:ly)?\b|\bproduction-grade\b/i;
 
-const TECH_LEAD_RE = /\btech lead\b/i;
+const TECH_LEAD_RE =
+  /\btech lead\b|\bteam lead\b|\bleadership\b|\bengineering lead\b/i;
 
 const TECH_LEAD_TITLE_CLAIM_RE =
   /\b(?:the tech lead|as tech lead|was tech lead|is tech lead)\b/i;
@@ -52,6 +53,10 @@ const AWS_PROVIDER_AS_CREDENTIAL_RE =
 const REPEATED_STATUS_RES: RegExp[] = [
   /built\.\s*built/i,
   /prototype\.\s*status:\s*prototype/i,
+  /early[- ]stage[\s\S]+?early[- ]stage/i,
+  /not(?: yet)? deployed[\s\S]+?not(?: yet)? deployed/i,
+  /standby \(failover\)[\s\S]+?standby \(failover\)/i,
+  /not the live system[\s\S]+?not the live system/i,
 ];
 
 // True when the visitor asked which production systems Mike shipped.
@@ -84,9 +89,9 @@ export function isAwsQuestion(question: string): boolean {
   return AWS_QUESTION_RE.test(question);
 }
 
-// True when the visitor asked whether Mike was tech lead on the CRM.
+// True when the visitor asked about tech-lead or leadership titles.
 export function isTechLeadCrmQuestion(question: string): boolean {
-  return TECH_LEAD_RE.test(question) && /\bcrm\b/i.test(question);
+  return TECH_LEAD_RE.test(question);
 }
 
 // True when the text claims the title tech lead (not merely naming the unused term).
@@ -224,14 +229,17 @@ export function zdiListedAsShipped(text: string): boolean {
 }
 
 // True when the answer already uses the Shipped / Rolling out split.
-function productionAnswerIsCanonical(text: string): boolean {
+export function productionAnswerIsCanonical(text: string): boolean {
   if (ELLIPSIS_RE.test(text)) return false;
   return (
     /^shipped:/i.test(text) &&
-    /rolling out:\s*zdi/i.test(text) &&
+    /Digi App Form \[1\]/i.test(text) &&
+    /Zororo CRM \[2\]/i.test(text) &&
+    /rolling out:\s*zdi \[3\]/i.test(text) &&
     /not yet live/i.test(text) &&
     /claims operations platform/i.test(text) &&
     /not the live system/i.test(text) &&
+    /\[4\]/.test(text) &&
     !zdiListedAsShipped(text)
   );
 }
@@ -267,6 +275,84 @@ function canonicalNamedStatus(kind: StatusKind): string {
       return _exhaustive;
     }
   }
+}
+
+function projectDisplayName(kind: StatusKind): string {
+  switch (kind) {
+    case "zdi":
+      return "ZDI";
+    case "ai-os":
+      return "Zororo AI OS";
+    case "claims":
+      return "The claims operations platform";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function fullStatusPredicate(kind: StatusKind): string {
+  switch (kind) {
+    case "zdi":
+      return "approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live";
+    case "ai-os":
+      return "built, early-stage and not yet deployed";
+    case "claims":
+      return "an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function joinStatusBits(bits: string[]): string {
+  if (bits.length === 0) return "";
+  if (bits.length === 1) return bits[0];
+  if (bits.length === 2) return `${bits[0]} and ${bits[1]}`;
+  return `${bits.slice(0, -1).join(", ")} and ${bits[bits.length - 1]}`;
+}
+
+function missingStatusBits(kind: StatusKind, text: string): string[] {
+  switch (kind) {
+    case "zdi": {
+      const bits: string[] = [];
+      if (!hasApproved(text)) bits.push("approved for production rollout at Zororo-Phumulani");
+      if (!hasRollingOut(text)) bits.push("rolling out soon");
+      if (!hasNotLive(text)) bits.push("not yet live");
+      return bits;
+    }
+    case "ai-os": {
+      const bits: string[] = [];
+      if (!hasBuilt(text)) bits.push("built");
+      if (!hasEarlyStage(text)) bits.push("early-stage");
+      if (!hasNotDeployed(text)) bits.push("not yet deployed");
+      return bits;
+    }
+    case "claims": {
+      const bits: string[] = [];
+      if (!hasApproved(text)) bits.push("approved");
+      if (!hasProductionReady(text)) bits.push("production-ready");
+      if (!hasFailoverOrStandby(text)) bits.push("a standby (failover)");
+      if (!hasNotTheLiveSystem(text)) bits.push("not the live system itself");
+      return bits;
+    }
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function namedStatusForBits(kind: StatusKind, bits: string[]): string {
+  if (bits.length === 0) return "";
+  const allMissing =
+    (kind === "ai-os" && bits.length === 3)
+    || (kind === "zdi" && bits.length === 3)
+    || (kind === "claims" && bits.length === 4);
+  if (allMissing) return canonicalNamedStatus(kind);
+  return `${projectDisplayName(kind)} is ${joinStatusBits(bits)}.`;
 }
 
 function sentenceHasKindStatus(kind: StatusKind, sentence: string): boolean {
@@ -378,16 +464,6 @@ function leftoverAfterStrippingStatus(sentence: string): string {
     .join(" ");
 }
 
-function isRewritableStatusSentence(sentence: string, kind: StatusKind): boolean {
-  if (!sentenceHasKindStatus(kind, sentence)) return false;
-  if (isPronounStatusSentence(sentence, kind) && sentenceProjectHits(sentence) === 0) {
-    return true;
-  }
-  if (!mentionRe(kind).test(sentence)) return false;
-  if (namesMultipleProjects(sentence)) return false;
-  return leftoverAfterStrippingStatus(sentence) === "";
-}
-
 function spliceSentence(
   parts: string[],
   idx: number,
@@ -433,33 +509,100 @@ function mentionRe(kind: StatusKind): RegExp {
   }
 }
 
-// Replace a partial status sentence, or insert one named canonical sentence.
+function foldMissingIntoSentence(
+  sentence: string,
+  kind: StatusKind,
+  missing: string[],
+): string {
+  const { body, cites } = peelTrailingCitations(sentence.trim());
+  const core = body.replace(/[.!?]$/, "").trim();
+  if (missing.length === 0) return attachCites(`${core}.`, cites);
+  const onlyNotLive =
+    kind === "claims"
+    && missing.length === 1
+    && missing[0] === "not the live system itself";
+  if (onlyNotLive) {
+    return attachCites(`${core}, not the live system itself.`, cites);
+  }
+  if (leftoverAfterStrippingStatus(sentence) === "") {
+    return attachCites(canonicalNamedStatus(kind), cites);
+  }
+  return attachCites(`${core}; it is ${joinStatusBits(missing)}.`, cites);
+}
+
+function foldFullIntoMention(
+  mention: string,
+  kind: StatusKind,
+  extraCites = "",
+): string {
+  const { body, cites } = peelTrailingCitations(mention.trim());
+  const core = body.replace(/[.!?]$/, "").trim();
+  return attachCites(`${core}; it is ${fullStatusPredicate(kind)}.`, cites || extraCites);
+}
+
+// Fold missing status into the mentioning sentence, or add a named clause.
 function insertStatusAfterMention(text: string, kind: StatusKind): string {
   const parts = splitSentences(text);
-  const canonical = canonicalNamedStatus(kind);
-  const replaceIdx = parts.findIndex((part) => isRewritableStatusSentence(part, kind));
-  if (replaceIdx >= 0) {
-    const { cites } = peelTrailingCitations(parts[replaceIdx].trim());
-    return spliceSentence(parts, replaceIdx, attachCites(canonical, cites));
-  }
+  const missing = missingStatusBits(kind, text);
+  if (missing.length === 0) return text;
 
   const re = mentionRe(kind);
-  const idx = parts.findIndex((part) => re.test(part));
-  if (idx < 0) {
-    const { body, cites } = peelTrailingCitations(text.trim());
-    return appendStatusSentence(body, canonical, cites);
+  const mentionIdx = parts.findIndex((part) => re.test(part));
+  const pronounIdx = parts.findIndex(
+    (part) => isPronounStatusSentence(part, kind) && sentenceProjectHits(part) === 0,
+  );
+
+  if (mentionIdx >= 0 && sentenceHasKindStatus(kind, parts[mentionIdx])) {
+    const mention = parts[mentionIdx];
+    if (!namesMultipleProjects(mention) && leftoverAfterStrippingStatus(mention) === "") {
+      const { cites } = peelTrailingCitations(mention.trim());
+      return spliceSentence(parts, mentionIdx, attachCites(canonicalNamedStatus(kind), cites));
+    }
+    if (namesMultipleProjects(mention)) {
+      const kept = /[.!?]$/.test(mention.trim()) ? mention.trim() : `${mention.trim()}.`;
+      const { cites } = peelTrailingCitations(mention.trim());
+      return spliceSentence(
+        parts,
+        mentionIdx,
+        `${kept} ${attachCites(namedStatusForBits(kind, missing), cites)}`.replace(/ {2,}/g, " "),
+      );
+    }
+    return spliceSentence(parts, mentionIdx, foldMissingIntoSentence(mention, kind, missing));
   }
 
-  const mention = parts[idx].trim();
-  const { body, cites } = peelTrailingCitations(mention);
-  const injected = attachCites(canonical, cites);
-  if (namesMultipleProjects(mention)) {
-    const kept = /[.!?]$/.test(mention) ? mention : `${mention}.`;
-    return spliceSentence(parts, idx, `${kept} ${injected}`.replace(/ {2,}/g, " "));
+  if (pronounIdx >= 0 && mentionIdx >= 0 && !namesMultipleProjects(parts[mentionIdx])) {
+    const { cites: pronounCites } = peelTrailingCitations(parts[pronounIdx].trim());
+    const folded = foldFullIntoMention(parts[mentionIdx], kind, pronounCites);
+    const withoutPronoun = parts.filter((_, i) => i !== pronounIdx);
+    const newIdx = mentionIdx < pronounIdx ? mentionIdx : mentionIdx - 1;
+    return spliceSentence(withoutPronoun, newIdx, folded);
   }
 
-  const sep = /[.!?]$/.test(body) ? " " : ". ";
-  return spliceSentence(parts, idx, `${body}${sep}${injected}`);
+  if (pronounIdx >= 0) {
+    const pronoun = parts[pronounIdx];
+    if (leftoverAfterStrippingStatus(pronoun) === "") {
+      const { cites } = peelTrailingCitations(pronoun.trim());
+      return spliceSentence(parts, pronounIdx, attachCites(canonicalNamedStatus(kind), cites));
+    }
+    return spliceSentence(parts, pronounIdx, foldMissingIntoSentence(pronoun, kind, missing));
+  }
+
+  if (mentionIdx >= 0) {
+    const mention = parts[mentionIdx];
+    if (namesMultipleProjects(mention)) {
+      const kept = /[.!?]$/.test(mention.trim()) ? mention.trim() : `${mention.trim()}.`;
+      const { cites } = peelTrailingCitations(mention.trim());
+      return spliceSentence(
+        parts,
+        mentionIdx,
+        `${kept} ${attachCites(namedStatusForBits(kind, missing), cites)}`.replace(/ {2,}/g, " "),
+      );
+    }
+    return spliceSentence(parts, mentionIdx, foldFullIntoMention(mention, kind));
+  }
+
+  const { body, cites } = peelTrailingCitations(text.trim());
+  return appendStatusSentence(body, canonicalNamedStatus(kind), cites);
 }
 
 // Drop a second "Built." or "Status: Prototype." when the equivalent is already said.
@@ -467,6 +610,17 @@ export function collapseRepeatedStatus(text: string): string {
   return text
     .replace(/\bprototype\.\s*Status:\s*Prototype\.?/gi, "prototype.")
     .replace(/\bbuilt\.\s*Built\b/gi, "built");
+}
+
+const EVALUATIVE_CONCLUSION_RE =
+  /\bthis (?:shows|demonstrates|proves) (?:he|him|mike|that (?:he|mike)) can\b/i;
+
+function stripUncitedEvaluativeConclusions(text: string): string {
+  const kept = splitSentences(text).filter((part) => {
+    if (!EVALUATIVE_CONCLUSION_RE.test(part)) return true;
+    return /\[\d+\]/.test(part);
+  });
+  return kept.join("").replace(/ {2,}/g, " ").trim();
 }
 
 // Force AWS copy, the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
@@ -481,7 +635,7 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   if (isAwsQuestion(question) && !awsAnswerIsCanonical(out)) {
     out = CANONICAL_AWS_ANSWER;
   }
-  if (isProductionSystemsQuestion(question) && !productionAnswerIsCanonical(out)) {
+  if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
   if ((mentionsZdi(question) || mentionsZdi(out)) && !alreadyConveysStatus("zdi", out)) {
@@ -493,5 +647,5 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   if ((mentionsClaims(question) || mentionsClaims(out)) && !alreadyConveysStatus("claims", out)) {
     out = insertStatusAfterMention(out, "claims");
   }
-  return collapseRepeatedStatus(out);
+  return collapseRepeatedStatus(stripUncitedEvaluativeConclusions(out));
 }

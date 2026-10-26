@@ -73,7 +73,8 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     mustNotContain: ["confidential client"],
     expectRefusal: false,
     expectSources: true,
-    description: "Shipped Digi and CRM; Rolling out ZDI; claims platform on standby",
+    expectCitation: true,
+    description: "Shipped Digi [1] and CRM [2]; Rolling out ZDI [3]; claims [4] on standby",
   },
   {
     id: "proactive-sentinel",

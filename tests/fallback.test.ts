@@ -26,6 +26,7 @@ import {
   claimsTechLeadTitle,
   ensureProjectStatusCopy,
   hasRepeatedStatus,
+  isTechLeadCrmQuestion,
   ZDI_STATUS_SENTENCE,
   zdiListedAsShipped,
 } from "../lib/status-copy";
@@ -426,6 +427,7 @@ describe("cited sources", () => {
     assert.match(prompt, /lab, prototype, or not production must never be described as production/);
     assert.match(prompt, /title or term the sources don't contain/);
     assert.match(prompt, /never invent a title or team size/);
+    assert.match(prompt, /this shows he can/);
     assert.match(prompt, /works remote-first/);
     assert.doesNotMatch(prompt, /works remotely-first/);
     assert.doesNotMatch(prompt, /CRM \u2026/);
@@ -561,7 +563,7 @@ describe("static CV copy", () => {
     assert.match(hit.answer, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
     assert.match(hit.answer, /not yet live/i);
     assert.match(hit.answer, /claims operations platform/i);
-    assert.match(hit.answer, /production-ready standby \(failover\), not the live system \[4\]/);
+    assert.match(hit.answer, /production-ready standby \(failover\) for Zororo-Phumulani's current claims system, not the live system itself \[4\]/);
     assert.equal(zdiListedAsShipped(hit.answer), false);
     assert.doesNotMatch(hit.answer, /claims extraction/i);
     assert.equal(hit.sourceIds.length, 4);
@@ -756,6 +758,16 @@ describe("production-system and ZDI status copy", () => {
     assert.match(out, /\[\d+\]/);
   });
 
+  it("applies the tech-lead guard to any leadership question", () => {
+    assert.equal(isTechLeadCrmQuestion("What leadership experience does Mike have?"), true);
+    const out = ensureProjectStatusCopy(
+      "What leadership experience does Mike have?",
+      "This shows he can lead a team of engineers.",
+    );
+    assert.equal(out, CANONICAL_TECH_LEAD_CRM_ANSWER);
+    assert.doesNotMatch(out, /this shows he can/i);
+  });
+
   it("rewrites overclaiming AWS answers and keeps canonical AWS copy", () => {
     const overclaim = ensureProjectStatusCopy(
       "What AWS experience does Mike have?",
@@ -780,7 +792,7 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(out, CANONICAL_PRODUCTION_ANSWER);
     assert.equal(zdiListedAsShipped(out), false);
     assert.match(out, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
-    assert.match(out, /production-ready standby \(failover\), not the live system \[4\]/);
+    assert.match(out, /production-ready standby \(failover\) for Zororo-Phumulani's current claims system, not the live system itself \[4\]/);
   });
 
   it("appends ZDI status when an answer names ZDI without it", () => {
@@ -818,8 +830,11 @@ describe("production-system and ZDI status copy", () => {
       "What is Zororo AI OS?",
       "Zororo AI OS is a governed AI control plane [1].",
     );
-    assert.match(out, /Zororo AI OS is built, early-stage, and not yet deployed \[1\]\./);
-    assert.doesNotMatch(out, /\[1\]\.\s*Zororo AI OS is built/);
+    assert.match(
+      out,
+      /Zororo AI OS is a governed AI control plane; it is built, early-stage and not yet deployed \[1\]\./,
+    );
+    assert.doesNotMatch(out, /\[1\]\.\s*(?:Zororo AI OS|It) is built/);
     assert.equal(hasRepeatedStatus(out), false);
     assert.equal(itIsSentenceCount(out), 0);
   });
@@ -899,9 +914,9 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       out,
-      /ZDI is a signature workflow\. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live\. It uses FastAPI/,
+      /ZDI is a signature workflow; it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live\. It uses FastAPI/,
     );
-    assert.doesNotMatch(out, /phones\. ZDI is approved/);
+    assert.doesNotMatch(out, /phones\.(?: ZDI is approved|; it is approved)/);
     assert.equal(itIsSentenceCount(out), 0);
   });
 
@@ -912,9 +927,9 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       out,
-      /Zororo AI OS is a governed control plane\. Zororo AI OS is built, early-stage, and not yet deployed\. It uses Presidio/,
+      /Zororo AI OS is a governed control plane; it is built, early-stage and not yet deployed\. It uses Presidio/,
     );
-    assert.doesNotMatch(out, /hash-chained\. Zororo AI OS is built/);
+    assert.doesNotMatch(out, /hash-chained\.(?: Zororo AI OS is built|; it is built)/);
     assert.equal(itIsSentenceCount(out), 0);
   });
 
@@ -925,7 +940,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       platform,
-      /The claims platform handles funeral-case processing\. The claims operations platform is an approved, production-ready standby \(failover\) for Zororo-Phumulani's live claims system, not the live system itself\. It has a staff dashboard/,
+      /The claims platform handles funeral-case processing; it is an approved, production-ready standby \(failover\) for Zororo-Phumulani's current claims system, not the live system itself\. It has a staff dashboard/,
     );
     assert.equal(itIsSentenceCount(platform), 0);
     const system = ensureProjectStatusCopy(
@@ -1003,13 +1018,13 @@ describe("production-system and ZDI status copy", () => {
     );
   });
 
-  it("merges a later AI OS partial into one named status sentence", () => {
+  it("merges a later AI OS partial into the mentioning sentence", () => {
     const input =
       "Zororo AI OS is a governed AI control plane. It is early-stage and not yet deployed [1].";
     const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
     assert.equal(
       out,
-      "Zororo AI OS is a governed AI control plane. Zororo AI OS is built, early-stage, and not yet deployed [1].",
+      "Zororo AI OS is a governed AI control plane; it is built, early-stage and not yet deployed [1].",
     );
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
     assert.equal((out.match(/early[- ]stage/gi) ?? []).length, 1);
@@ -1018,12 +1033,12 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(hasRepeatedStatus(out), false);
   });
 
-  it("merges a later ZDI partial into one named status sentence", () => {
+  it("merges a later ZDI partial into the mentioning sentence", () => {
     const input = "ZDI is a signature workflow. It is rolling out soon and not yet live [1].";
     const out = ensureProjectStatusCopy("What is ZDI?", input);
     assert.equal(
       out,
-      "ZDI is a signature workflow. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
+      "ZDI is a signature workflow; it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
     );
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
     assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
@@ -1031,13 +1046,13 @@ describe("production-system and ZDI status copy", () => {
     assertNoAddedItIs(input, out);
   });
 
-  it("merges a later claims partial into one named status sentence", () => {
+  it("folds missing claims not-live into the partial status sentence", () => {
     const input =
       "The claims operations platform handles funeral cases. It is an approved, production-ready standby (failover) [1].";
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
     assert.equal(
       out,
-      "The claims operations platform handles funeral cases. The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's live claims system, not the live system itself [1].",
+      "The claims operations platform handles funeral cases; it is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [1].",
     );
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
     assert.equal((out.match(/not the live system/gi) ?? []).length, 1);
@@ -1048,21 +1063,67 @@ describe("production-system and ZDI status copy", () => {
     const input = "He also built Zororo AI OS and the CRM [1].";
     const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
     assert.match(out, /He also built Zororo AI OS and the CRM \[1\]\./);
-    assert.match(out, /Zororo AI OS is built, early-stage, and not yet deployed \[1\]\./);
+    assert.match(out, /Zororo AI OS is early-stage and not yet deployed \[1\]\./);
     assert.doesNotMatch(out, /the CRM is not(?: yet)? deployed/i);
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
+    assert.equal(hasRepeatedStatus(out), false);
     assertNoAddedItIs(input, out);
   });
 
-  it("names Zororo AI OS on a recruiter answer that also names a claims-extraction pipeline", () => {
+  it("does not dump a second AI OS canonical after a recruiter early-stage mention", () => {
     const input =
       "Mike shipped Digi App Form and the CRM at Zororo-Phumulani, and he also developed the early-stage Zororo AI OS and a claims-extraction pipeline.";
     const out = ensureProjectStatusCopy("Tell me about Mike's work", input);
     assert.match(out, /developed the early-stage Zororo AI OS and a claims-extraction pipeline/);
-    assert.match(out, /Zororo AI OS is built, early-stage, and not yet deployed/);
+    assert.doesNotMatch(out, /Zororo AI OS is built, early-stage and not yet deployed/);
+    assert.match(out, /Zororo AI OS is built and not yet deployed/);
     assert.doesNotMatch(out, /pipeline[^.]*\bIt is not(?: yet)? deployed/i);
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
+    assert.equal(hasRepeatedStatus(out), false);
     assertNoAddedItIs(input, out);
+  });
+
+  it("folds only the missing not-live clause into a claims mention that already has standby", () => {
+    const input =
+      "The claims operations platform acts as an approved, production-ready standby (failover) for the live claims system.";
+    const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
+    assert.equal(
+      out,
+      "The claims operations platform acts as an approved, production-ready standby (failover) for the live claims system, not the live system itself.",
+    );
+    assert.equal((out.match(/standby \(failover\)/gi) ?? []).length, 1);
+    assert.equal(hasRepeatedStatus(out), false);
+    assert.equal(itIsSentenceCount(out), 0);
+  });
+
+  it("flags duplicated early-stage or standby status for evals", () => {
+    assert.equal(
+      hasRepeatedStatus(
+        "He developed the early-stage Zororo AI OS. Zororo AI OS is built, early-stage and not yet deployed.",
+      ),
+      true,
+    );
+    assert.equal(
+      hasRepeatedStatus(
+        "It acts as an approved, production-ready standby (failover). The claims operations platform is an approved, production-ready standby (failover), not the live system itself.",
+      ),
+      true,
+    );
+    assert.equal(hasRepeatedStatus(AI_OS_STATUS_SENTENCE), false);
+    assert.equal(hasRepeatedStatus(CANONICAL_PRODUCTION_ANSWER), false);
+  });
+
+  it("strips uncited evaluative conclusions and keeps cited ones", () => {
+    const stripped = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is built, early-stage and not yet deployed [1]. This shows he can ship governed platforms.",
+    );
+    assert.doesNotMatch(stripped, /this shows he can/i);
+    const cited = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is built, early-stage and not yet deployed [1]. This shows he can ship governed platforms [1].",
+    );
+    assert.match(cited, /this shows he can ship governed platforms \[1\]/i);
   });
 
   it("skips claims status when the answer already says rather than the live claims system", () => {
@@ -1229,7 +1290,7 @@ describe("production-system and ZDI status copy", () => {
     assert.match(result.response, /Digi App Form \[1\]/);
     assert.match(result.response, /Zororo CRM \[2\]/);
     assert.match(result.response, /ZDI \[3\]/);
-    assert.match(result.response, /not the live system \[4\]/);
+    assert.match(result.response, /not the live system itself \[4\]/);
     assert.equal(result.sources.length, 4);
     assert.match(result.sources[0].title, /Digi App Form/i);
     assert.match(result.sources[1].title, /CRM/i);
@@ -1237,6 +1298,41 @@ describe("production-system and ZDI status copy", () => {
     assert.match(result.sources[3].title, /claims operations platform/i);
     const aligned = citationsMatchNamedProjects(result.response, result.sources);
     assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("replaces a mis-cited production-systems model answer with canonical sources", async () => {
+    const result = await answerQuestion({
+      question: "What production systems has Mike shipped?",
+      retrieveFn: async () => SIX_CHUNKS,
+      generateGemini: async () =>
+        "Shipped: Digi App Form [1] and the Zororo CRM [1]. Rolling out: ZDI [1]. The claims platform [1].",
+    });
+    assert.equal(result.response, CANONICAL_PRODUCTION_ANSWER);
+    assert.equal(result.sources[0]?.id, "digi-app-form");
+    assert.equal(result.sources[1]?.id, "zororo-crm");
+    assert.equal(result.sources[2]?.id, "zdi-signature-workflow");
+    assert.equal(result.sources[3]?.id, "zororo-claims");
+    const aligned = citationsMatchNamedProjects(result.response, result.sources);
+    assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("does not cache answers whose citations do not match named projects", () => {
+    assert.equal(
+      shouldCacheAnswer({
+        via: "gemini",
+        response: "The claims platform is a standby [1].",
+        sources: [{ id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" }],
+      }),
+      false,
+    );
+    assert.equal(
+      shouldCacheAnswer({
+        via: "gemini",
+        response: "He developed the early-stage Zororo AI OS. Zororo AI OS is built, early-stage and not yet deployed [1].",
+        sources: [{ id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" }],
+      }),
+      false,
+    );
   });
 
   it("says ZDI is not yet live when asked if it is live", async () => {
@@ -1286,7 +1382,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       out,
-      /ZDI is a signature workflow\. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live \[1\]\.$/,
+      /ZDI is a signature workflow; it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live \[1\]\.$/,
     );
   });
 
@@ -1371,7 +1467,7 @@ describe("production-system and ZDI status copy", () => {
     assert.match(result.response, /Digi App Form \[1\]/);
     assert.match(result.response, /Zororo CRM \[2\]/);
     assert.match(result.response, /ZDI \[3\]/);
-    assert.match(result.response, /not the live system \[4\]/);
+    assert.match(result.response, /not the live system itself \[4\]/);
     assert.equal(result.sources[0]?.id, "digi-app-form");
     assert.equal(result.sources[1]?.id, "zororo-crm");
     assert.equal(result.sources[2]?.id, "zdi-signature-workflow");
