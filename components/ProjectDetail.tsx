@@ -1,30 +1,7 @@
 import Link from "next/link";
-import type { Project } from "@/lib/content";
-import RagDiagram from "./diagrams/RagDiagram";
-import SitewardenDiagram from "./diagrams/SitewardenDiagram";
-import CubeDiagram from "./diagrams/CubeDiagram";
-import CrmDiagram from "./diagrams/CrmDiagram";
-import ZdiDiagram from "./diagrams/ZdiDiagram";
-import ClaimsDiagram from "./diagrams/ClaimsDiagram";
-import DigiFormDiagram from "./diagrams/DigiFormDiagram";
-import SentinelDiagram from "./diagrams/SentinelDiagram";
-import AiOsDiagram from "./diagrams/AiOsDiagram";
-import ClaimsOpsDiagram from "./diagrams/ClaimsOpsDiagram";
-import SocialAgentDiagram from "./diagrams/SocialAgentDiagram";
-
-const DIAGRAMS: Partial<Record<string, React.ReactNode>> = {
-  "portfolio-rag-assistant": <RagDiagram />,
-  "sitewarden":              <SitewardenDiagram />,
-  "cube-agent":              <CubeDiagram />,
-  "zororo-crm":              <CrmDiagram />,
-  "zdi-signature-workflow":  <ZdiDiagram />,
-  "zororo-ai-os":            <AiOsDiagram />,
-  "zororo-claims":           <ClaimsOpsDiagram />,
-  "ai-social-agent":         <SocialAgentDiagram />,
-  "claims-pipeline":         <ClaimsDiagram />,
-  "digi-app-form":           <DigiFormDiagram />,
-  "proactive-sentinel":      <SentinelDiagram />,
-};
+import { statusLabel, type Project } from "@/lib/content";
+import { hasProjectDiagram } from "@/lib/diagram-slugs";
+import ProjectDiagram from "./ProjectDiagram";
 
 type Props = { project: Project; prev: Project; next: Project };
 
@@ -73,7 +50,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
         <header className="mb-12 max-w-3xl">
           <div className="mb-4 flex items-center gap-3">
             <span className={`font-mono text-sm ${statusColor(project.status)}`}>
-              {project.status}
+              {statusLabel(project.status)}
             </span>
             <span className="text-ink-faint" aria-hidden>·</span>
             <span className="text-sm text-ink-muted">{project.domain}</span>
@@ -144,7 +121,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
 
           {/* Body — diagrams use the full 1fr column so 14px labels never scale down */}
           <div className="min-w-0 space-y-10">
-            {DIAGRAMS[project.slug] && (
+            {hasProjectDiagram(project.slug) && (
               <section>
                 <h2
                   className="font-display-section font-medium text-ink mb-4"
@@ -153,7 +130,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
                   Architecture
                 </h2>
                 <div className="overflow-visible rounded-xl border border-ink/[0.07] bg-surface/40 p-4 sm:p-6">
-                  {DIAGRAMS[project.slug]}
+                  <ProjectDiagram slug={project.slug} />
                 </div>
               </section>
             )}

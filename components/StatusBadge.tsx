@@ -1,4 +1,4 @@
-import type { ProjectStatus } from "@/lib/content";
+import { statusLabel, type ProjectStatus } from "@/lib/content";
 
 const STYLES: Record<ProjectStatus, string> = {
   "Live demo":            "text-signal",
@@ -14,8 +14,8 @@ const STYLES: Record<ProjectStatus, string> = {
 
 export default function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
-    <span className={`font-mono text-micro uppercase tracking-wide ${STYLES[status]}`}>
-      {status}
+    <span className={`font-mono text-micro tracking-wide ${STYLES[status]}`}>
+      {statusLabel(status)}
     </span>
   );
 }

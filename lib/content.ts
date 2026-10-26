@@ -12,6 +12,34 @@ export type ProjectStatus =
   | "Lab"
   | "Built";
 
+// Lowercase badge copy so every status chip matches shipped / built / prototype.
+export function statusLabel(status: ProjectStatus): string {
+  switch (status) {
+    case "Live demo":
+      return "live";
+    case "Shipped":
+      return "shipped";
+    case "Rolling out":
+      return "rolling out";
+    case "Approved · standby":
+      return "approved · standby";
+    case "Prototype":
+      return "prototype";
+    case "Paused":
+      return "paused";
+    case "Built":
+      return "built";
+    case "Reference":
+      return "reference";
+    case "Lab":
+      return "lab";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
 export const WORK_ORDER = [
   "digi-app-form",
   "zororo-crm",
@@ -170,7 +198,7 @@ export const flagshipProjects: Project[] = [
     built:
       "A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link; the requester completes the form, attaches a quotation and signs. The request returns to that manager to approve and sign, return with a reason, or reject; only then can Accounts act, sign off, or return it for correction. Every signature is a row in an append-only, hash-chained signing-event table that binds the signer, their role and capacity at signing, explicit intent, the method (drawn, captured or typed), and a SHA-256 of the exact content revision. On final approval a background worker renders an archival PDF with an evidence appendix. Separate Manager, Accounts and IT workspaces plus a Management App share one backend and one routing contract, with capability-based access control and segregation of duties.",
     outcome:
-      "Approved for production rollout at Zororo-Phumulani. Rollout starting soon. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
+      "Approved for production rollout at Zororo-Phumulani. Rolling out soon, not yet live. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
     systemOverview:
       "Requester (secure link, no login) → submit + sign → manager review (approve & sign / return / reject) → Accounts review (approve & sign / return / reject / forward to a colleague) → archive_pending → worker renders PDF, stores it, hashes it → archived. A return issues a correction link; the resubmission becomes a new revision and the route restarts, so an approval of revision 1 never carries over to revision 2. Each step writes the mutable requisition status, an append-only workflow event and an append-only audit event in the same transaction; notifications go through a transactional outbox so a mail outage cannot block an approval. An evidence check recomputes the signing events, event hashes, document hash, attachment and PDF hashes on demand.",
     engineeringDecisions: [

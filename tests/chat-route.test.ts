@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { POST } from "../app/api/chat/route";
+import { ANSWER_CACHE_VERSION } from "../lib/status-copy";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
 
@@ -38,6 +39,12 @@ function chatRequest(message: string): NextRequest {
     body: JSON.stringify({ message }),
   });
 }
+
+describe("answer cache key", () => {
+  it("uses a bumped version so older cached answers are not reused", () => {
+    assert.equal(ANSWER_CACHE_VERSION, "r17");
+  });
+});
 
 describe("chat route never returns 5xx when providers fail", () => {
   it("degrades to static with 200 and via when every provider fails", async () => {

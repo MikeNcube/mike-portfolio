@@ -108,6 +108,11 @@ export default function EvalsPage() {
                         must contain: {p}
                       </span>
                     ))}
+                    {(q.meaningChecks ?? []).map((check) => (
+                      <span key={check.label} className="text-micro font-mono text-signal bg-surface rounded px-1.5 py-0.5">
+                        meaning: {check.anyOf.join(" or ")}
+                      </span>
+                    ))}
                     {(q.mustNotContain ?? []).map((p) => (
                       <span key={p} className="text-micro font-mono text-ink-muted bg-surface rounded px-1.5 py-0.5 line-through">
                         not: {p}

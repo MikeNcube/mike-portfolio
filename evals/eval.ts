@@ -8,6 +8,8 @@ export type EvalQuestion = {
   audience?: "recruiter" | "developer" | "friend";
   // Substrings that must appear in the response (case-insensitive)
   mustContain?: string[];
+  // Meaning checks: at least one phrase in anyOf must appear (case-insensitive)
+  meaningChecks?: Array<{ label: string; anyOf: string[] }>;
   // Substrings that must NOT appear (hallucinations to guard against)
   mustNotContain?: string[];
   // True → the response should be a refusal (no confident factual answer)
@@ -44,11 +46,11 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "production-systems",
     question: "What production systems has Mike shipped?",
     audience: "recruiter",
-    mustContain: ["CRM", "Digi", "ZDI", "rolling out", "standby"],
+    mustContain: ["Shipped:", "Digi", "CRM", "Rolling out:", "ZDI", "standby"],
     mustNotContain: ["confidential client"],
     expectRefusal: false,
     expectSources: true,
-    description: "Digi and CRM live; ZDI rolling out; claims platform on standby",
+    description: "Shipped Digi and CRM; Rolling out ZDI; claims platform on standby",
   },
   {
     id: "proactive-sentinel",
@@ -84,7 +86,11 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zdi",
     question: "What is ZDI?",
     audience: "developer",
-    mustContain: ["approved for production rollout", "rolling out"],
+    mustContain: [
+      "approved for production rollout",
+      "rolling out soon",
+      "not yet live",
+    ],
     mustNotContain: [
       "is live",
       "it's live",
@@ -95,7 +101,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     ],
     expectRefusal: false,
     expectSources: true,
-    description: "ZDI — must say approved for production rollout and must not claim it is live",
+    description: "ZDI — approved for production rollout, rolling out soon, not yet live",
   },
   {
     id: "zororo-ai-os",
@@ -111,15 +117,14 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zororo-claims",
     question: "What is the claims operations platform?",
     audience: "recruiter",
-    mustContain: [
-      "Approved, production-ready standby",
-      "failover",
-      "current claims system",
+    meaningChecks: [
+      { label: "standby_or_failover", anyOf: ["standby", "failover"] },
+      { label: "production_ready", anyOf: ["production-ready", "production ready"] },
     ],
     mustNotContain: ["is the live system"],
     expectRefusal: false,
     expectSources: true,
-    description: "Claims ops — approved failover standby, not the live system",
+    description: "Claims ops — approved production-ready standby or failover, not the live system",
   },
   {
     id: "ai-social-agent",

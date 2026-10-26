@@ -3,26 +3,9 @@ import {
   flagshipProjects,
   PRODUCTION_SLUGS,
   WORK_ORDER,
+  statusLabel,
   type Project,
 } from "@/lib/content";
-
-function statusLabel(status: Project["status"]): string {
-  switch (status) {
-    case "Live demo":            return "live";
-    case "Shipped":              return "shipped";
-    case "Rolling out":          return "Rolling out";
-    case "Approved · standby":   return "Approved · standby";
-    case "Prototype":            return "prototype";
-    case "Paused":               return "paused";
-    case "Built":                return "built";
-    case "Reference":    return "reference";
-    case "Lab":          return "lab";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
 
 function statusClass(status: Project["status"]): string {
   switch (status) {
@@ -76,7 +59,7 @@ function ProjectRow({ project }: { project: Project }) {
               {statusLabel(project.status)}
             </span>
             {project.privateRepo && (
-              <span className="font-mono text-micro text-ink-muted">Private repo</span>
+              <span className="font-mono text-micro text-ink-muted sm:hidden">Private repo</span>
             )}
           </div>
           <p className="mt-0.5 text-sm text-ink-muted text-pretty">

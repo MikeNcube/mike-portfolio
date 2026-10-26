@@ -11,6 +11,7 @@ import {
 import { isRefusal } from "./refusal";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
+import { ensureProjectStatusCopy } from "./status-copy";
 
 export const CONTACT_EMAIL = "mikencube03@gmail.com";
 
@@ -69,6 +70,8 @@ export function buildPrompt(
     "Each context block is labelled PROJECT: <title>. Attribute a fact, library, metric, or stack item only to the project whose block states it. Never carry tools or details from one PROJECT block into another.",
     "Never invent projects, employers, metrics, or dates.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
+    "When asked which production systems Mike shipped, answer in this structure: 'Shipped: Digi App Form and the Zororo CRM … Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.' Never list ZDI under Shipped.",
+    "Whenever you mention ZDI, state that it is approved for production rollout, rolling out soon, and not yet live.",
     "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: …)' list in the answer body.",
     "",
     "CONTEXT:",
@@ -177,6 +180,14 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
   return { ...result, response: ensureContactEmail(result.response) };
 }
 
+// Apply production-system split and ZDI status after generation or static match.
+function polishResult(question: string, result: AnswerResult): AnswerResult {
+  return {
+    ...result,
+    response: ensureProjectStatusCopy(question, result.response),
+  };
+}
+
 async function tryGenerate(
   generate: GenerateFn | undefined,
   prompt: string,
@@ -226,19 +237,19 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
         if (geminiAvailable()) {
           const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
           if (geminiText) {
-            return withContactEmail(question, {
+            return withContactEmail(question, polishResult(question, {
               ...finaliseModelText(geminiText, relevant),
               via: "gemini",
-            });
+            }));
           }
         }
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
-            return withContactEmail(question, {
+            return withContactEmail(question, polishResult(question, {
               ...finaliseModelText(groqText, relevant),
               via: "groq",
-            });
+            }));
           }
         }
       }
@@ -249,11 +260,11 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
 
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
-    return withContactEmail(question, {
+    return withContactEmail(question, polishResult(question, {
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
       via: "static",
-    });
+    }));
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };

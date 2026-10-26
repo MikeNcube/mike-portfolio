@@ -3,6 +3,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { tokenize } from "./bm25";
+import { CANONICAL_PRODUCTION_ANSWER } from "./status-copy";
 
 export type StaticAnswer = {
   question: string;
@@ -42,8 +43,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "production systems",
       "what did mike build at zororo",
     ],
-    answer:
-      "At Zororo-Phumulani he shipped Digi App Form and the lead-management CRM used by over 40 people across around 10 roles; both are live production systems. ZDI (Zororo Document Intelligence) is approved for production rollout and rolling out. The claims operations platform is approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani.",
+    answer: CANONICAL_PRODUCTION_ANSWER,
     sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
   },
   {
@@ -103,7 +103,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "zdi signature workflow",
     ],
     answer:
-      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. Approved for production rollout at Zororo-Phumulani; rollout starting soon. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. Approved for production rollout at Zororo-Phumulani; rolling out soon, not yet live. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
     sourceIds: ["zdi-signature-workflow"],
   },
   {

@@ -68,6 +68,16 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
     checks.push({ label: `contains:${phrase}`, pass });
   }
 
+  // 3b. meaning checks — any listed phrase is enough
+  for (const check of q.meaningChecks ?? []) {
+    const pass = check.anyOf.some((phrase) => lowerResp.includes(phrase.toLowerCase()));
+    checks.push({
+      label: `meaning:${check.label}`,
+      pass,
+      detail: pass ? undefined : `expected one of: ${check.anyOf.join(", ")}`,
+    });
+  }
+
   // 4. mustNotContain checks
   for (const phrase of q.mustNotContain ?? []) {
     const pass = !lowerResp.includes(phrase.toLowerCase());

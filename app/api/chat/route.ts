@@ -4,6 +4,7 @@ import { answerQuestion, EMAIL_FALLBACK, shouldCacheAnswer, type AnswerResult } 
 import { generateGemini, generateGroq } from "@/lib/providers";
 import { allowRequest } from "@/lib/rate-limit";
 import { normaliseQuestion } from "@/lib/static-answers";
+import { ANSWER_CACHE_VERSION } from "@/lib/status-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +44,9 @@ class LRUCache {
 
 const responseCache = new LRUCache();
 
+// Versioned so a copy change does not serve an older cached answer.
 function cacheKey(question: string): string {
-  return normaliseQuestion(question);
+  return `${ANSWER_CACHE_VERSION}:${normaliseQuestion(question)}`;
 }
 
 function clientIp(req: NextRequest): string {

@@ -54,8 +54,11 @@ describe("keyword retrieval fallback", () => {
     const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
     assert.ok(zdi && zdi.score >= MIN_RELEVANCE_SCORE);
     assert.match(zdi!.text, /approved for production rollout/i);
+    assert.match(zdi!.text, /rolling out soon/i);
+    assert.match(zdi!.text, /not yet live/i);
     assert.doesNotMatch(zdi!.text, /\bin production\b/);
-    assert.doesNotMatch(zdi!.text, /\blive\b/i);
+    assert.doesNotMatch(zdi!.text, /\bis live\b/i);
+    assert.doesNotMatch(zdi!.text, /\bcurrently live\b/i);
     assert.doesNotMatch(zdi!.text, /\bshipped\b/i);
   });
 

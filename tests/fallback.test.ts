@@ -9,7 +9,12 @@ import {
   shouldCacheAnswer,
 } from "../lib/answer";
 import { matchStaticAnswer } from "../lib/static-answers";
-import { getProjectBySlug, getProjectNeighbours } from "../lib/content";
+import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
+import {
+  CANONICAL_PRODUCTION_ANSWER,
+  ensureProjectStatusCopy,
+  zdiListedAsShipped,
+} from "../lib/status-copy";
 import { isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
@@ -201,7 +206,7 @@ describe("cited sources", () => {
 
   it("strips inline Sources footers from the answer body", async () => {
     const result = await answerQuestion({
-      question: "What production systems has Mike shipped?",
+      question: "What is the CRM?",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
         "The lead-management CRM is in production [1]. (Sources: [1], [2])",
@@ -217,6 +222,8 @@ describe("cited sources", () => {
     const prompt = buildPrompt("What is the CRM?", SIX_CHUNKS.slice(0, 2), "developer");
     assert.match(prompt, /PROJECT: CRM/);
     assert.match(prompt, /Never carry tools or details from one PROJECT block into another/);
+    assert.match(prompt, /Never list ZDI under Shipped/);
+    assert.match(prompt, /not yet live/);
   });
 
   it("remaps inline citations to the returned sources list", async () => {
@@ -263,15 +270,14 @@ describe("static CV copy", () => {
   it("keeps production-systems facts on the CV", () => {
     const hit = matchStaticAnswer("What production systems has Mike shipped?");
     assert.ok(hit);
-    assert.match(hit.answer, /CRM/);
+    assert.match(hit.answer, /^Shipped:/);
+    assert.match(hit.answer, /Digi App Form and the Zororo CRM/);
     assert.match(hit.answer, /40/);
-    assert.match(hit.answer, /Digi App Form/);
-    assert.match(hit.answer, /live production/);
-    assert.match(hit.answer, /ZDI/);
-    assert.match(hit.answer, /rolling out/i);
+    assert.match(hit.answer, /Rolling out:\s*ZDI \(approved for production rollout/);
+    assert.match(hit.answer, /not yet live/i);
     assert.match(hit.answer, /claims operations platform/i);
-    assert.match(hit.answer, /standby/i);
-    assert.match(hit.answer, /failover/i);
+    assert.match(hit.answer, /production-ready standby/i);
+    assert.equal(zdiListedAsShipped(hit.answer), false);
     assert.doesNotMatch(hit.answer, /claims extraction/i);
   });
 
@@ -308,8 +314,11 @@ describe("static CV copy", () => {
     assert.match(zdi.answer, /approved for production rollout/i);
     assert.match(zdi.answer, /Zororo Document Intelligence/);
     assert.match(zdi.answer, /Rolling out/);
+    assert.match(zdi.answer, /rolling out soon/i);
+    assert.match(zdi.answer, /not yet live/i);
     assert.doesNotMatch(zdi.answer, /\bin production\b/);
-    assert.doesNotMatch(zdi.answer, /\blive\b/i);
+    assert.doesNotMatch(zdi.answer, /\bis live\b/i);
+    assert.doesNotMatch(zdi.answer, /\bcurrently live\b/i);
     assert.doesNotMatch(zdi.answer, /\bshipped\b/i);
 
     const aiOs = matchStaticAnswer("What is Zororo AI OS?");
@@ -383,5 +392,47 @@ describe("private More work projects", () => {
     assert.equal(getProjectNeighbours("zororo-ai-os").next.slug, "zororo-claims");
     assert.equal(getProjectNeighbours("zororo-claims").next.slug, "ai-social-agent");
     assert.equal(getProjectNeighbours("ai-social-agent").next.slug, "portfolio-rag-assistant");
+  });
+});
+
+describe("production-system and ZDI status copy", () => {
+  it("uses lowercase status badges", () => {
+    assert.equal(statusLabel("Shipped"), "shipped");
+    assert.equal(statusLabel("Rolling out"), "rolling out");
+    assert.equal(statusLabel("Approved · standby"), "approved · standby");
+    assert.equal(statusLabel("Built"), "built");
+    assert.equal(statusLabel("Prototype"), "prototype");
+  });
+
+  it("rewrites production-systems answers into Shipped / Rolling out and never lists ZDI under Shipped", () => {
+    const out = ensureProjectStatusCopy(
+      "What production systems has Mike shipped?",
+      "Mike shipped Digi App Form, the Zororo CRM, and ZDI.",
+    );
+    assert.equal(out, CANONICAL_PRODUCTION_ANSWER);
+    assert.equal(zdiListedAsShipped(out), false);
+    assert.match(out, /Rolling out:\s*ZDI \(approved for production rollout/);
+    assert.match(out, /production-ready standby/);
+  });
+
+  it("appends ZDI status when an answer names ZDI without it", () => {
+    const out = ensureProjectStatusCopy(
+      "What is ZDI?",
+      "ZDI is a signature and approval workflow on FastAPI.",
+    );
+    assert.match(out, /approved for production rollout/i);
+    assert.match(out, /rolling out soon/i);
+    assert.match(out, /not yet live/i);
+  });
+
+  it("rewrites a model production-systems answer into the canonical split", async () => {
+    const result = await answerQuestion({
+      question: "What production systems has Mike shipped?",
+      retrieveFn: async () => SIX_CHUNKS,
+      generateGemini: async () => "Mike shipped Digi App Form, the CRM, and ZDI in production.",
+    });
+    assert.equal(result.via, "gemini");
+    assert.equal(result.response, CANONICAL_PRODUCTION_ANSWER);
+    assert.equal(zdiListedAsShipped(result.response), false);
   });
 });
