@@ -5,16 +5,14 @@ const CURLY_DOUBLE = /[\u201C\u201D]/g;
 const HYPHEN_LIKE = /[\u2010\u2011\u2012]/g;
 const LONG_DASH = /(\s*)[\u2013\u2014\u2015](\s*)/g;
 const FULLWIDTH_CITE = /[【［]\s*(\d+)\s*[】］]/g;
-const DUP_CITE = /(\[\d+\])(?:\s*\1)+/g;
+const CITE_CLUSTER = /(?:\[\d+\]){2,}/g;
 
-function collapseDuplicateCitations(text: string): string {
-  let prev = "";
-  let out = text;
-  while (out !== prev) {
-    prev = out;
-    out = out.replace(DUP_CITE, "$1");
-  }
-  return out;
+function collapseCitationClusters(text: string): string {
+  return text.replace(CITE_CLUSTER, (cluster) => {
+    const nums = [...cluster.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const unique = [...new Set(nums)].sort((a, b) => a - b);
+    return unique.map((n) => `[${n}]`).join("");
+  });
 }
 
 // Spaced en/em dashes become a comma pause; tight ones become ' - ' so words never join.
@@ -31,6 +29,6 @@ export function normaliseModelText(text: string): string {
     text.replace(CURLY_SINGLE, "'").replace(CURLY_DOUBLE, '"').replace(HYPHEN_LIKE, "-"),
   );
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
-  const collapsed = collapseDuplicateCitations(cited);
+  const collapsed = collapseCitationClusters(cited);
   return collapsed.replace(/([.!?])\s*\[(\d+)\]\s*\./g, " [$2].");
 }

@@ -10,6 +10,7 @@ import {
 } from "./rag";
 import { isJailbreakPrompt, isRefusal } from "./refusal";
 import { normaliseModelText } from "./normalise-answer";
+import { tokenize } from "./bm25";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 import {
@@ -27,6 +28,7 @@ import {
   isZdiLiveQuestion,
   productionAnswerIsCanonical,
   punctuationIsSane,
+  sourcesWithCanonicalStatus,
 } from "./status-copy";
 
 export const CONTACT_EMAIL = "mikencube03@gmail.com";
@@ -35,6 +37,21 @@ export const EMAIL_FALLBACK =
   "I don't have information about that in my knowledge base — it covers Mike's projects, skills, and experience. Email him at mikencube03@gmail.com for anything else.";
 
 export const SAFE_TOPIC_REPLY = "I can only answer questions about Mike's work.";
+
+export const CITED_FALLBACK_MIN_SCORE = 0.5;
+
+const NAME_TOKENS = new Set(["mike", "ncube"]);
+
+const OFF_TOPIC_QUESTION_RE =
+  /\b(hobb(?:y|ies)|favourite foods?|favorite foods?|politics|political party|weather|forecast)\b/i;
+
+const OFF_TOPIC_MATH_RE = /\b\d+\s*[+\-×x*/]\s*\d+\b|\bwhat is\s+\d+\b/i;
+
+// True when the visitor asked something outside Mike's work (personal, world, math).
+export function isOffTopicQuestion(question: string): boolean {
+  const q = question.toLowerCase();
+  return OFF_TOPIC_QUESTION_RE.test(q) || OFF_TOPIC_MATH_RE.test(q);
+}
 
 const CONTACT_QUESTION_RE =
   /\b(available|availability|hiring|hire|contact|email|reach|contract|full[ -]?time)\b/i;
@@ -338,9 +355,37 @@ function firstSentence(text: string): string {
   return `${sentence.slice(0, 217).trim()}.`;
 }
 
-// Short cited answer from the top retrieved HTTP passages when the model cannot be used.
-export function citedFallbackFromChunks(chunks: RetrievedChunk[]): AnswerResult | null {
-  const top = chunks.filter((c) => c.sourceUrl.startsWith("http")).slice(0, 3);
+function questionContentWords(question: string): string[] {
+  return tokenize(question).filter((t) => !NAME_TOKENS.has(t));
+}
+
+function passageHasQuestionWords(question: string, passage: string): boolean {
+  const words = questionContentWords(question);
+  if (words.length === 0) return false;
+  const hay = passage.toLowerCase();
+  const hits = words.filter((w) => hay.includes(w));
+  if (hits.length === 0) return false;
+  return hits.length >= Math.ceil(words.length / 2);
+}
+
+function refusalResult(response = EMAIL_FALLBACK): AnswerResult {
+  return { response, sources: [], via: "email" };
+}
+
+// Short cited answer from retrieved passages only when the question is on-topic and relevant.
+export function citedFallbackFromChunks(
+  question: string,
+  chunks: RetrievedChunk[],
+): AnswerResult | null {
+  if (isOffTopicQuestion(question)) return null;
+  const http = chunks.filter((c) => c.sourceUrl.startsWith("http"));
+  if (http.length === 0) return null;
+  const topScore = Math.max(...http.map((c) => c.score));
+  if (topScore < CITED_FALLBACK_MIN_SCORE) return null;
+  const matching = http.filter((c) =>
+    passageHasQuestionWords(question, `${c.title}\n${c.text}`),
+  );
+  const top = matching.slice(0, 3);
   if (top.length === 0) return null;
   const response = top
     .map((chunk, i) => {
@@ -352,7 +397,15 @@ export function citedFallbackFromChunks(chunks: RetrievedChunk[]): AnswerResult 
   return { response, sources, via: "static" };
 }
 
-function staticOrSafeReply(question: string, chunks: RetrievedChunk[]): AnswerResult {
+function staticOrSafeReply(
+  question: string,
+  chunks: RetrievedChunk[],
+  modelText?: string,
+): AnswerResult {
+  if (modelText && isRefusal(modelText)) {
+    return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
+  }
+  if (isOffTopicQuestion(question)) return refusalResult();
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
     return polishResult(question, {
@@ -368,11 +421,11 @@ function staticOrSafeReply(question: string, chunks: RetrievedChunk[]): AnswerRe
       via: "static",
     }, chunks);
   }
-  const retrieved = citedFallbackFromChunks(chunks);
+  const retrieved = citedFallbackFromChunks(question, chunks);
   if (retrieved) {
     return polishResult(question, retrieved, chunks);
   }
-  return { response: SAFE_TOPIC_REPLY, sources: [], via: "email" };
+  return refusalResult();
 }
 
 function withContactEmail(question: string, result: AnswerResult): AnswerResult {
@@ -489,8 +542,13 @@ function polishResult(
   result: AnswerResult,
   chunks: RetrievedChunk[],
 ): AnswerResult {
-  const response = ensureProjectStatusCopy(question, result.response, result.sources);
-  const from = result.sources;
+  if (isRefusal(result.response) || isOffTopicQuestion(question)) {
+    return { ...result, response: result.response, sources: [] };
+  }
+  const sourced = sourcesWithCanonicalStatus(question, result.response, result.sources)
+    .filter((s): s is AnswerSource => Boolean(s.title && s.url));
+  const response = ensureProjectStatusCopy(question, result.response, sourced);
+  const from = sourced;
   let out = response;
   let sources = from;
 
@@ -564,7 +622,7 @@ export type AnswerInput = {
 
 export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> {
   const question = input.question.trim();
-  if (isJailbreakPrompt(question)) {
+  if (isJailbreakPrompt(question) || isOffTopicQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
   }
 
@@ -604,7 +662,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
             if (grounded) {
               return withContactEmail(question, polishResult(question, grounded, relevant));
             }
-            return withContactEmail(question, staticOrSafeReply(question, relevant));
+            return withContactEmail(question, staticOrSafeReply(question, relevant, groqText));
           }
         }
       }
@@ -622,6 +680,10 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     }, relevant));
   }
 
+  if (isOffTopicQuestion(question)) {
+    return refusalResult();
+  }
+
   if (isWorkQuestion(question)) {
     return withContactEmail(question, polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
@@ -631,7 +693,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   }
 
   if (relevant.length > 0) {
-    const retrieved = citedFallbackFromChunks(relevant);
+    const retrieved = citedFallbackFromChunks(question, relevant);
     if (retrieved) {
       return withContactEmail(question, polishResult(question, retrieved, relevant));
     }

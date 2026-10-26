@@ -1,8 +1,10 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r33";
+import { KNOWLEDGE_CHUNKS } from "./knowledge";
 
-export type StatusSourceRef = { id?: string; title?: string };
+export const ANSWER_CACHE_VERSION = "r34";
+
+export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
@@ -59,6 +61,23 @@ const AWS_PROVIDER_AS_CREDENTIAL_RE =
   /AWS Training and Certification|AWS Skills Center/i;
 
 const CONTACT_EMAIL_TAIL_RE = /\s*Email mikencube03@gmail\.com\.?\s*$/i;
+
+const OTHER_PROJECT_RES: RegExp[] = [
+  /\bdigi(?:\s+app\s+form)?\b/i,
+  /\bcrm\b/i,
+  /\bsitewarden\b/i,
+  /\bcube(?:\s+agent)?\b/i,
+  /\bclaims[\s-]extraction\b/i,
+  /\bsentinel\b/i,
+];
+
+type StatusKind = "zdi" | "ai-os" | "claims";
+
+const STATUS_SOURCE_ID: Record<StatusKind, string> = {
+  zdi: "zdi-signature-workflow",
+  "ai-os": "zororo-ai-os",
+  claims: "zororo-claims",
+};
 
 const REPEATED_STATUS_RES: RegExp[] = [
   /built\.\s*built/i,
@@ -255,8 +274,6 @@ export function hasRepeatedStatus(text: string): boolean {
   return REPEATED_STATUS_RES.some((re) => re.test(body));
 }
 
-type StatusKind = "zdi" | "ai-os" | "claims";
-
 function mentionsKind(kind: StatusKind, text: string): boolean {
   switch (kind) {
     case "zdi":
@@ -272,42 +289,126 @@ function mentionsKind(kind: StatusKind, text: string): boolean {
   }
 }
 
-// Sentences that name this project, plus a following pronoun status clause for that project.
+function isSameProjectFollowUp(sentence: string): boolean {
+  if (sentenceProjectHits(sentence) > 0) return false;
+  return (
+    /^\s*it\b/i.test(sentence)
+    || /^\s*the platform\b/i.test(sentence)
+    || /^\s*this (?:system|platform|project|product)\b/i.test(sentence)
+    || /^\s*the system\b/i.test(sentence)
+  );
+}
+
+// Sentences that name this project, plus follow-ups about the same project until another is named.
 function projectSpan(kind: StatusKind, text: string): string {
   const parts = splitSentences(text);
   const re = mentionRe(kind);
   const kept: string[] = [];
-  let includeNextPronoun = false;
+  let following = false;
   for (const part of parts) {
     if (re.test(part)) {
       kept.push(part);
-      includeNextPronoun = sentenceProjectHits(part) === 1;
+      following = sentenceProjectHits(part) === 1;
       continue;
     }
-    if (
-      includeNextPronoun
-      && isPronounStatusSentence(part, kind)
-      && sentenceProjectHits(part) === 0
-    ) {
+    if (following && isSameProjectFollowUp(part)) {
       kept.push(part);
       continue;
     }
-    includeNextPronoun = false;
+    following = false;
   }
   return kept.join("");
 }
 
-// Clip a list sentence to this project's own clause so a neighbour's "approved" cannot satisfy it.
+function projectMentionIndexes(text: string): Array<{ index: number }> {
+  const found: Array<{ index: number }> = [];
+  const add = (re: RegExp) => {
+    const global = new RegExp(re.source, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = global.exec(text)) !== null) {
+      found.push({ index: m.index });
+    }
+  };
+  add(ZDI_RE);
+  add(AI_OS_RE);
+  add(CLAIMS_RE);
+  for (const re of OTHER_PROJECT_RES) add(re);
+  return found.sort((a, b) => a.index - b.index);
+}
+
+function stripTrailingCiteAndParens(text: string): string {
+  let out = text;
+  for (;;) {
+    const next = out
+      .replace(/\s*\[\d+\]\s*$/, "")
+      .replace(/\s*\([^()]*\)\s*$/, "")
+      .replace(/[\s.,;:]+$/, "");
+    if (next === out) return out.trimEnd();
+    out = next;
+  }
+}
+
+function endsWithProjectMention(text: string): boolean {
+  const stripped = stripTrailingCiteAndParens(text);
+  if (!stripped) return false;
+  const res = [ZDI_RE, AI_OS_RE, CLAIMS_RE, ...OTHER_PROJECT_RES];
+  return res.some((re) => new RegExp(`(?:${re.source})$`, "i").test(stripped));
+}
+
+// Last list break: ';', ', and', or a comma after a project item (not 'early-stage, not-deployed').
+function lastListBreak(before: string): number {
+  type Sep = { start: number; end: number; always: boolean };
+  const seps: Sep[] = [];
+  let depth = 0;
+  for (let i = 0; i < before.length; i++) {
+    const ch = before[i];
+    if (ch === "(") {
+      depth += 1;
+      continue;
+    }
+    if (ch === ")") {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (ch === ";") {
+      seps.push({ start: i, end: i + 1, always: true });
+      continue;
+    }
+    if (ch === ",") {
+      const andMatch = before.slice(i).match(/^,\s*and\b/i);
+      if (andMatch) {
+        seps.push({ start: i, end: i + andMatch[0].length, always: true });
+        i += andMatch[0].length - 1;
+        continue;
+      }
+      seps.push({ start: i, end: i + 1, always: false });
+    }
+  }
+
+  let best = 0;
+  for (const sep of seps) {
+    const rightHas = projectMentionIndexes(before.slice(sep.end)).length > 0;
+    if (sep.always) {
+      best = sep.end;
+      if (!rightHas) break;
+      continue;
+    }
+    if (!endsWithProjectMention(before.slice(0, sep.start))) continue;
+    best = sep.end;
+    if (!rightHas) break;
+  }
+  return best;
+}
+
+// Clip a list sentence at list separators, not at every comma (keep 'early-stage, not-deployed').
 function clauseAroundMention(kind: StatusKind, text: string): string {
   const re = mentionRe(kind);
   re.lastIndex = 0;
   const m = re.exec(text);
   if (!m) return text;
   const before = text.slice(0, m.index);
-  const lastSemi = before.lastIndexOf(";");
-  const lastComma = before.lastIndexOf(",");
-  const lastBreak = Math.max(lastSemi, lastComma);
-  const start = lastBreak >= 0 ? lastBreak + 1 : 0;
+  const start = lastListBreak(before);
   const afterMention = text.slice(m.index + m[0].length);
   const next = nextOtherProjectIndex(afterMention, kind);
   const end = next >= 0 ? m.index + m[0].length + next : text.length;
@@ -399,24 +500,53 @@ function attachCites(sentence: string, cites: string): string {
   return `${core} ${cites}${punct}`;
 }
 
+function titleMatchesKind(kind: StatusKind, title: string): boolean {
+  switch (kind) {
+    case "zdi":
+      return /\bzdi\b|document intelligence/i.test(title);
+    case "ai-os":
+      return /ai os/i.test(title);
+    case "claims":
+      return /claims operations/i.test(title);
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
 function sourceCiteForKind(kind: StatusKind, sources: StatusSourceRef[]): string {
   if (sources.length === 0) return "";
-  const idx = sources.findIndex((s) => {
-    const title = s.title ?? "";
-    switch (kind) {
-      case "zdi":
-        return s.id === "zdi-signature-workflow" || /\bzdi\b|document intelligence/i.test(title);
-      case "ai-os":
-        return s.id === "zororo-ai-os" || /ai os/i.test(title);
-      case "claims":
-        return s.id === "zororo-claims" || /\bclaims\b/i.test(title);
-      default: {
-        const _exhaustive: never = kind;
-        return _exhaustive;
-      }
-    }
-  });
-  return idx >= 0 ? `[${idx + 1}]` : "";
+  const id = STATUS_SOURCE_ID[kind];
+  const idIdx = sources.findIndex((s) => s.id === id);
+  if (idIdx >= 0) return `[${idIdx + 1}]`;
+  const titleIdx = sources.findIndex((s) => titleMatchesKind(kind, s.title ?? ""));
+  if (titleIdx >= 0) return `[${titleIdx + 1}]`;
+  return "";
+}
+
+function canonicalSourceForKind(kind: StatusKind): StatusSourceRef | null {
+  const id = STATUS_SOURCE_ID[kind];
+  const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === id);
+  if (!chunk || !chunk.sourceUrl.startsWith("http")) return null;
+  return { id: chunk.id, title: chunk.title, url: chunk.sourceUrl };
+}
+
+// Append each incomplete project's canonical source when it is missing from the list.
+export function sourcesWithCanonicalStatus(
+  question: string,
+  text: string,
+  sources: StatusSourceRef[],
+): StatusSourceRef[] {
+  const out = [...sources];
+  for (const kind of statusKindsToFill(question, text)) {
+    if (sourceCiteForKind(kind, out)) continue;
+    const extra = canonicalSourceForKind(kind);
+    if (!extra) continue;
+    if (out.some((s) => s.id && extra.id && s.id === extra.id)) continue;
+    out.push(extra);
+  }
+  return out;
 }
 
 function nextOtherProjectIndex(after: string, kind: StatusKind): number {
@@ -470,19 +600,79 @@ function ownCitation(
   return "";
 }
 
-function currentStatusClause(kind: StatusKind): string {
+function joinStatusBits(bits: string[]): string {
+  if (bits.length === 0) return "";
+  if (bits.length === 1) return bits[0];
+  if (bits.length === 2) return `${bits[0]} and ${bits[1]}`;
+  return `${bits.slice(0, -1).join(", ")} and ${bits[bits.length - 1]}`;
+}
+
+function projectDisplayName(kind: StatusKind): string {
   switch (kind) {
     case "zdi":
-      return "ZDI is approved for production rollout but not yet live";
+      return "ZDI";
     case "ai-os":
-      return "Zororo AI OS is early-stage and not yet deployed";
+      return "Zororo AI OS";
     case "claims":
-      return "the claims operations platform is an approved, production-ready standby, not the live system";
+      return "the claims operations platform";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
     }
   }
+}
+
+function missingStatusBits(kind: StatusKind, text: string): string[] {
+  switch (kind) {
+    case "zdi": {
+      const bits: string[] = [];
+      if (!hasApproved(text)) bits.push("approved for production rollout");
+      if (!hasNotLive(text)) bits.push("not yet live");
+      return bits;
+    }
+    case "ai-os": {
+      const bits: string[] = [];
+      if (!hasEarlyStage(text)) bits.push("early-stage");
+      if (!hasNotDeployed(text)) bits.push("not yet deployed");
+      return bits;
+    }
+    case "claims": {
+      const bits: string[] = [];
+      if (!hasApproved(text)) bits.push("approved");
+      if (!hasProductionReady(text)) bits.push("production-ready");
+      if (!hasFailoverOrStandby(text)) bits.push("a standby");
+      if (!hasNotTheLiveSystem(text)) bits.push("not the live system");
+      return bits;
+    }
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function currentStatusClause(kind: StatusKind, span: string): string {
+  const missing = missingStatusBits(kind, span);
+  if (missing.length === 0) return "";
+  const allMissing =
+    (kind === "zdi" && missing.length === 2)
+    || (kind === "ai-os" && missing.length === 2)
+    || (kind === "claims" && missing.length === 4);
+  if (allMissing) {
+    switch (kind) {
+      case "zdi":
+        return "ZDI is approved for production rollout but not yet live";
+      case "ai-os":
+        return "Zororo AI OS is early-stage and not yet deployed";
+      case "claims":
+        return "the claims operations platform is an approved, production-ready standby, not the live system";
+      default: {
+        const _exhaustive: never = kind;
+        return _exhaustive;
+      }
+    }
+  }
+  return `${projectDisplayName(kind)} is ${joinStatusBits(missing)}`;
 }
 
 function peelContactEmail(text: string): { body: string; email: string } {
@@ -499,11 +689,15 @@ function appendCurrentStatus(
   const kinds = statusKindsToFill(question, text);
   if (kinds.length === 0) return text;
   const { body, email } = peelContactEmail(text.trim());
-  const parts = kinds.map((kind) => {
-    const clause = currentStatusClause(kind);
+  const parts: string[] = [];
+  for (const kind of kinds) {
+    const span = statusTextForKind(kind, body, question);
+    const clause = currentStatusClause(kind, span);
+    if (!clause) continue;
     const cite = ownCitation(kind, body, sources);
-    return cite ? `${clause} ${cite}` : clause;
-  });
+    parts.push(cite ? `${clause} ${cite}` : clause);
+  }
+  if (parts.length === 0) return text;
   const sentence = `Current status: ${parts.join("; ")}.`;
   const trimmed = body.trim();
   const sep = /[.!?]$/.test(trimmed) ? " " : ". ";
@@ -512,15 +706,6 @@ function appendCurrentStatus(
   const emailBit = CONTACT_EMAIL_TAIL_RE.test(email) ? email.trim() : `Email mikencube03@gmail.com.`;
   return `${combined} ${emailBit}`.replace(/ {2,}/g, " ").trim();
 }
-
-const OTHER_PROJECT_RES: RegExp[] = [
-  /\bdigi(?:\s+app\s+form)?\b/i,
-  /\bcrm\b/i,
-  /\bsitewarden\b/i,
-  /\bcube(?:\s+agent)?\b/i,
-  /\bclaims[\s-]extraction\b/i,
-  /\bsentinel\b/i,
-];
 
 function sentenceHasKindStatus(kind: StatusKind, sentence: string): boolean {
   switch (kind) {
@@ -724,7 +909,8 @@ export function ensureProjectStatusCopy(
 ): string {
   let out = applyCanonicalGuards(question, text);
   out = stripFalseProductionLabel(out);
-  out = appendCurrentStatus(question, out, sources);
+  const sourced = sourcesWithCanonicalStatus(question, out, sources);
+  out = appendCurrentStatus(question, out, sourced);
   out = collapseDuplicateCitesInSentences(out);
   out = sanitisePunctuation(out);
   return collapseRepeatedStatus(stripUncitedEvaluativeConclusions(out));

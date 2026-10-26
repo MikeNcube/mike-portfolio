@@ -4,7 +4,9 @@ import {
   answerQuestion,
   buildPrompt,
   citedFallbackFromChunks,
+  CITED_FALLBACK_MIN_SCORE,
   citationsMatchNamedProjects,
+  isOffTopicQuestion,
   CONTACT_EMAIL,
   EMAIL_FALLBACK,
   ensureContactEmail,
@@ -33,6 +35,7 @@ import {
   hasRepeatedStatus,
   isTechLeadCrmQuestion,
   isWorkQuestion,
+  sourcesWithCanonicalStatus,
   punctuationFailures,
   punctuationIsSane,
   sanitisePunctuation,
@@ -112,7 +115,7 @@ describe("assistant fallback chain", () => {
     assert.equal(shouldCacheAnswer(result), false);
   });
 
-  it("uses a cited retrieved fallback when Groq cites nothing and no static topic matches", async () => {
+  it("refuses off-topic math instead of answering from retrieved chunks when Groq cites nothing", async () => {
     const result = await answerQuestion({
       question: "What is 2 + 2?",
       retrieveFn,
@@ -122,12 +125,11 @@ describe("assistant fallback chain", () => {
       generateGroq: async () => "The answer is 4.",
     });
 
-    assert.equal(result.via, "static");
-    assert.notEqual(result.response, SAFE_TOPIC_REPLY);
-    assert.match(result.response, /Applied AI Engineer/);
-    assert.match(result.response, /\[1\]/);
-    assert.ok(result.sources.length > 0);
-    assert.equal(isRefusal(result.response), false);
+    assert.equal(result.via, "email");
+    assert.equal(result.response, EMAIL_FALLBACK);
+    assert.equal(result.sources.length, 0);
+    assert.equal(isRefusal(result.response), true);
+    assert.doesNotMatch(result.response, /Applied AI Engineer/);
     assert.equal(shouldCacheAnswer(result), false);
   });
 
@@ -150,7 +152,7 @@ describe("assistant fallback chain", () => {
     });
 
     assert.equal(result.via, "email");
-    assert.equal(result.response, SAFE_TOPIC_REPLY);
+    assert.equal(result.response, EMAIL_FALLBACK);
     assert.equal(result.sources.length, 0);
     assert.equal(isRefusal(result.response), true);
   });
@@ -215,30 +217,74 @@ describe("assistant fallback chain", () => {
     assert.equal(shouldCacheAnswer(result), false);
   });
 
-  it("does not attach sources to a model refusal", async () => {
+  it("refuses hobbies before retrieval even when chunks would match", async () => {
+    let retrieveCalls = 0;
+    let geminiCalls = 0;
     const result = await answerQuestion({
       question: "What are Mike's hobbies?",
-      retrieveFn,
-      generateGemini: async () =>
-        "I don't have information about that in my knowledge base. Email mikencube03@gmail.com.",
+      retrieveFn: async () => {
+        retrieveCalls += 1;
+        return CHUNKS;
+      },
+      generateGemini: async () => {
+        geminiCalls += 1;
+        return "Mike enjoys hiking [1].";
+      },
     });
 
-    assert.equal(result.via, "gemini");
+    assert.equal(retrieveCalls, 0);
+    assert.equal(geminiCalls, 0);
+    assert.equal(result.via, "email");
+    assert.equal(result.response, EMAIL_FALLBACK);
     assert.equal(result.sources.length, 0);
+    assert.equal(isRefusal(result.response), true);
     assert.equal(shouldCacheAnswer(result), false);
   });
 
-  it("does not cache a not-in-knowledge-base reply even with retrieved chunks", async () => {
+  it("does not turn a rate-limited provider into a hobbies answer from chunks", async () => {
     const result = await answerQuestion({
       question: "What are Mike's hobbies?",
       retrieveFn,
-      generateGemini: async () =>
-        "That is not in my knowledge base. Email mikencube03@gmail.com.",
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+      generateGroq: async () => {
+        throw new Error("429");
+      },
     });
 
-    assert.equal(result.via, "gemini");
+    assert.equal(result.via, "email");
+    assert.equal(isRefusal(result.response), true);
     assert.equal(result.sources.length, 0);
+    assert.doesNotMatch(result.response, /Applied AI Engineer/);
     assert.equal(shouldCacheAnswer(result), false);
+  });
+
+  it("refuses favourite food, politics, and weather as off-topic, including under 429", async () => {
+    const questions = [
+      "What is Mike's favourite food?",
+      "What are Mike's politics?",
+      "What's the weather in Johannesburg?",
+    ];
+    for (const question of questions) {
+      assert.equal(isOffTopicQuestion(question), true, question);
+      assert.equal(citedFallbackFromChunks(question, CHUNKS), null, question);
+      const result = await answerQuestion({
+        question,
+        retrieveFn,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => {
+          throw new Error("429");
+        },
+      });
+      assert.equal(result.via, "email", question);
+      assert.equal(result.response, EMAIL_FALLBACK, question);
+      assert.equal(result.sources.length, 0, question);
+      assert.equal(isRefusal(result.response), true, question);
+      assert.doesNotMatch(result.response, /Applied AI Engineer/);
+    }
   });
 });
 
@@ -519,7 +565,7 @@ describe("cited sources", () => {
 
   it("does not attach sources to a curly-apostrophe refusal", async () => {
     const result = await answerQuestion({
-      question: "What are Mike's hobbies?",
+      question: "What is Cube?",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
         "I\u2019m sorry, but I can\u2019t provide that. \u30101\u3011",
@@ -879,6 +925,11 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(out, /\[3\]\[3\]/);
   });
 
+  it("collapses mixed citation clusters to unique sorted cites", () => {
+    assert.equal(normaliseModelText("Shipped Digi [1][2][3][4][1]."), "Shipped Digi [1][2][3][4].");
+    assert.equal(normaliseModelText("See [3][1][2][1]."), "See [1][2][3].");
+  });
+
   it("converts hyphen-like dashes to '-' and long dashes to prose separators", () => {
     assert.equal(normaliseModelText("production\u2010ready"), "production-ready");
     assert.equal(normaliseModelText("non\u2011breaking"), "non-breaking");
@@ -900,7 +951,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
     assert.equal(
       out,
-      "Zororo AI OS is built but not yet deployed. Current status: Zororo AI OS is early-stage and not yet deployed.",
+      "Zororo AI OS is built but not yet deployed. Current status: Zororo AI OS is early-stage [1].",
     );
     assert.match(out, /early[- ]stage/i);
     assert.doesNotMatch(out, /built\.\s*built/i);
@@ -942,7 +993,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       claimsHyphen,
-      /Current status: the claims operations platform is an approved, production-ready standby, not the live system/,
+      /Current status: the claims operations platform is not the live system/,
     );
     assert.equal(itIsSentenceCount(claimsHyphen), 0);
   });
@@ -996,7 +1047,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
     assert.equal(
       out,
-      "It is a fail-over standby. Current status: the claims operations platform is an approved, production-ready standby, not the live system.",
+      "It is a fail-over standby. Current status: the claims operations platform is approved, production-ready and not the live system [1].",
     );
     assert.match(out, /approved/i);
     assert.match(out, /production-ready/i);
@@ -1010,7 +1061,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is ZDI?", input);
     assert.equal(
       out,
-      "ZDI is currently rolling out and not yet live. Current status: ZDI is approved for production rollout but not yet live.",
+      "ZDI is currently rolling out and not yet live. Current status: ZDI is approved for production rollout [1].",
     );
     assert.match(out, /approved for production rollout/i);
     assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
@@ -1024,7 +1075,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(
       out,
-      "It is a fail-over standby [1]. Current status: the claims operations platform is an approved, production-ready standby, not the live system [1].",
+      "It is a fail-over standby [1]. Current status: the claims operations platform is approved, production-ready and not the live system [1].",
     );
     assert.doesNotMatch(out, /standby; it is/);
     assertNoAddedItIs("It is a fail-over standby [1].", out);
@@ -1035,7 +1086,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
     assert.equal(
       out,
-      "The claims operations platform is an approved, production-ready standby. Current status: the claims operations platform is an approved, production-ready standby, not the live system.",
+      "The claims operations platform is an approved, production-ready standby. Current status: the claims operations platform is not the live system [1].",
     );
     assert.equal(itIsSentenceCount(out), 0);
   });
@@ -1080,7 +1131,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is ZDI?", input);
     assert.equal(
       out,
-      "ZDI is a signature workflow. It is rolling out soon and not yet live [1]. Current status: ZDI is approved for production rollout but not yet live [1].",
+      "ZDI is a signature workflow. It is rolling out soon and not yet live [1]. Current status: ZDI is approved for production rollout [1].",
     );
     assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
     assertNoAddedItIs(input, out);
@@ -1092,7 +1143,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
     assert.equal(
       out,
-      "The claims operations platform handles funeral cases. It is an approved, production-ready standby (failover) [1]. Current status: the claims operations platform is an approved, production-ready standby, not the live system [1].",
+      "The claims operations platform handles funeral cases. It is an approved, production-ready standby (failover) [1]. Current status: the claims operations platform is not the live system [1].",
     );
     assert.doesNotMatch(out, /funeral cases; it is/);
     assertNoAddedItIs(input, out);
@@ -1114,7 +1165,8 @@ describe("production-system and ZDI status copy", () => {
       "Mike shipped Digi App Form and the CRM at Zororo-Phumulani, and he also developed the early-stage Zororo AI OS and a claims-extraction pipeline.";
     const out = ensureProjectStatusCopy("Tell me about Mike's work", input);
     assert.match(out, /^Mike shipped Digi App Form and the CRM at Zororo-Phumulani, and he also developed the early-stage Zororo AI OS and a claims-extraction pipeline\./);
-    assert.match(out, /Current status: Zororo AI OS is early-stage and not yet deployed/);
+    assert.match(out, /Current status: Zororo AI OS is not yet deployed \[1\]\./);
+    assert.doesNotMatch(out, /Current status: Zororo AI OS is early-stage and not yet deployed/);
     assert.doesNotMatch(out, /Zororo AI OS is built/);
     assert.doesNotMatch(out, /which is not yet deployed/);
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
@@ -1183,7 +1235,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("Tell me about these two projects", input);
     assert.match(
       out,
-      /^Mike built the claims operations platform and ZDI \[1\]\. Current status: ZDI is approved for production rollout but not yet live(?: \[1\])?; the claims operations platform is an approved, production-ready standby, not the live system \[1\]\./,
+      /^Mike built the claims operations platform and ZDI \[1\]\. Current status: ZDI is approved for production rollout but not yet live \[1\]; the claims operations platform is an approved, production-ready standby, not the live system \[2\]\./,
     );
     const statusAt = out.indexOf("Current status:");
     const zdiAt = out.indexOf("ZDI is approved for production rollout but not yet live", statusAt);
@@ -1215,7 +1267,8 @@ describe("production-system and ZDI status copy", () => {
       "Mike built a claims operations platform that serves as a production-ready failover for the live claims system [5]; and the CRM [4].";
     const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", input, sources);
     assert.match(out, /^Mike built a claims operations platform that serves as a production-ready failover for the live claims system \[5\]; and the CRM \[4\]\./);
-    assert.match(out, /Current status: the claims operations platform is an approved, production-ready standby, not the live system \[5\]/);
+    assert.match(out, /Current status: the claims operations platform is approved \[5\]/);
+    assert.doesNotMatch(out, /Current status: the claims operations platform is an approved, production-ready standby/);
     assert.doesNotMatch(out, /\[5\],the/);
     assert.doesNotMatch(out, /not the live system itself \[4\]/);
     assert.doesNotMatch(out, /failover for the live claims system \[4\]/);
@@ -1718,7 +1771,8 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(out, /\[3\],the/);
     assert.doesNotMatch(out, /\[4\]\.,/);
     assert.doesNotMatch(out, /\[4\];the/);
-    assert.match(out, /Current status: the claims operations platform is an approved, production-ready standby, not the live system \[4\]; Zororo AI OS is early-stage and not yet deployed \[5\]/);
+    assert.match(out, /Current status: the claims operations platform is approved \[4\]; Zororo AI OS is not yet deployed \[5\]/);
+    assert.doesNotMatch(out, /Current status: the claims operations platform is an approved, production-ready standby/);
     assert.equal(punctuationIsSane(out), true, out);
   });
 
@@ -1802,10 +1856,12 @@ describe("production-system and ZDI status copy", () => {
         score: 0.8,
       },
     ];
-    const fallback = citedFallbackFromChunks(chunks);
+    const fallback = citedFallbackFromChunks("What database does the CRM use?", chunks);
     assert.ok(fallback);
     assert.match(fallback.response, /lead-management CRM used by over 40 people \[1\]/);
-    assert.match(fallback.response, /Digi App Form: shipped live production system for regulated funeral-assurance intake \[2\]/);
+    assert.doesNotMatch(fallback.response, /Digi App Form/);
+    assert.equal(fallback.sources.length, 1);
+    assert.equal(fallback.sources[0]?.id, "zororo-crm");
     const result = await answerQuestion({
       question: "What database does the CRM use?",
       retrieveFn: async () => chunks,
@@ -1820,4 +1876,125 @@ describe("production-system and ZDI status copy", () => {
     assert.ok(result.sources.length > 0);
     assert.equal(isRefusal(result.response), false);
   });
+
+  it("does not build a cited fallback from off-topic questions or weak retrieval scores", () => {
+    const strong = [
+      {
+        id: "positioning",
+        title: "Who Mike is",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Mike S Ncube is an Applied AI Engineer at Zororo-Phumulani Funeral Assurance.",
+        score: 0.91,
+      },
+    ];
+    assert.equal(citedFallbackFromChunks("What are Mike's hobbies?", strong), null);
+    assert.equal(citedFallbackFromChunks("What is Mike's favourite food?", strong), null);
+    assert.ok(CITED_FALLBACK_MIN_SCORE > 0.35);
+    const weak = [{ ...strong[0], score: 0.4 }];
+    assert.equal(citedFallbackFromChunks("What database does the CRM use?", weak), null);
+  });
+
+  it("does not replace a Groq refusal with retrieved-chunk patchwork", async () => {
+    const result = await answerQuestion({
+      question: "What database does the CRM use?",
+      retrieveFn: async () => [
+        {
+          id: "zororo-crm",
+          title: "Lead-management CRM",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Shipped live production system at Zororo-Phumulani: lead-management CRM used by over 40 people.",
+          score: 0.9,
+        },
+      ],
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+      generateGroq: async () => EMAIL_FALLBACK,
+    });
+    assert.equal(isRefusal(result.response), true);
+    assert.equal(result.sources.length, 0);
+    assert.doesNotMatch(result.response, /lead-management CRM used by over 40 people/);
+  });
 });
+
+describe("round 34 status cites and live repros", () => {
+  it("keeps claims follow-up 'The platform is not the live system' and adds nothing", () => {
+    const input =
+      "The claims operations platform is an approved, production-ready standby (failover). The platform is not the live system.";
+    const out = ensureProjectStatusCopy("What is the claims platform?", input);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /Current status:/);
+  });
+
+  it("treats 'the early-stage, not-deployed Zororo AI OS' as complete, including in a list with Digi", () => {
+    const named = "He developed the early-stage, not-deployed Zororo AI OS.";
+    assert.equal(ensureProjectStatusCopy("What is Zororo AI OS?", named), named);
+    const listed = "Mike shipped Digi App Form and the early-stage, not-deployed Zororo AI OS.";
+    const listedOut = ensureProjectStatusCopy("What is Zororo AI OS?", listed);
+    assert.equal(listedOut, listed);
+    assert.doesNotMatch(listedOut, /Current status:/);
+  });
+
+  it("cites zororo-claims by id, never the extraction pipeline, and appends the canonical source when missing", () => {
+    const pipeline = {
+      id: "claims-pipeline",
+      title: "Claims document extraction pipeline (Zororo-Phumulani)",
+      url: "https://github.com/MikeNcube",
+    };
+    const claims = {
+      id: "zororo-claims",
+      title: "Claims operations platform (Zororo-Phumulani)",
+      url: "https://github.com/MikeNcube",
+    };
+    const both = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform handles funeral cases.",
+      [pipeline, claims],
+    );
+    assert.match(both, /Current status: the claims operations platform is an approved, production-ready standby, not the live system \[2\]/);
+    assert.doesNotMatch(both, /\[1\]/);
+
+    const input = "The claims operations platform handles funeral cases.";
+    const missing = sourcesWithCanonicalStatus(
+      "What is the claims operations platform?",
+      input,
+      [pipeline],
+    );
+    assert.equal(missing[0]?.id, "claims-pipeline");
+    assert.equal(missing[1]?.id, "zororo-claims");
+    const appended = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      input,
+      [pipeline],
+    );
+    assert.match(appended, /not the live system \[2\]/);
+    assert.doesNotMatch(appended, /not the live system \[1\]/);
+  });
+
+  it("cites ZDI and AI OS by source id first, and appends the canonical source when missing", () => {
+    const zdiBoth = ensureProjectStatusCopy(
+      "What is ZDI?",
+      "ZDI is a signature workflow.",
+      [
+        { id: "other-notes", title: "Notes", url: "https://github.com/MikeNcube" },
+        { id: "zdi-signature-workflow", title: "ZDI — Signature", url: "https://github.com/MikeNcube" },
+      ],
+    );
+    assert.match(zdiBoth, /Current status: ZDI is approved for production rollout but not yet live \[2\]/);
+
+    const aiOsMissing = sourcesWithCanonicalStatus(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is a governed control plane.",
+      [{ id: "other-notes", title: "Notes", url: "https://github.com/MikeNcube" }],
+    );
+    assert.equal(aiOsMissing[0]?.id, "other-notes");
+    assert.equal(aiOsMissing[1]?.id, "zororo-ai-os");
+    const aiOsOut = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is a governed control plane.",
+      [{ id: "other-notes", title: "Notes", url: "https://github.com/MikeNcube" }],
+    );
+    assert.match(aiOsOut, /Current status: Zororo AI OS is early-stage and not yet deployed \[2\]/);
+  });
+});
+
