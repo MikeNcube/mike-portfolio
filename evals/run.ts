@@ -9,7 +9,7 @@
 // Exit code 0 = all evals pass, 1 = one or more fail.
 
 import { writeFileSync } from "fs";
-import { EVAL_QUESTIONS, type EvalResult } from "./eval";
+import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
 
 function computesTwoPlusTwo(text: string): boolean {
@@ -47,7 +47,7 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
   }
 
   const durationMs = Date.now() - start;
-  const lowerResp = response.toLowerCase();
+  const haystack = normaliseEvalText(response);
   const checks: Array<{ label: string; pass: boolean; detail?: string }> = [];
 
   // 1. API returned successfully
@@ -64,13 +64,13 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
 
   // 3. mustContain checks
   for (const phrase of q.mustContain ?? []) {
-    const pass = lowerResp.includes(phrase.toLowerCase());
+    const pass = haystack.includes(normaliseEvalText(phrase));
     checks.push({ label: `contains:${phrase}`, pass });
   }
 
   // 3b. meaning checks — any listed phrase is enough
   for (const check of q.meaningChecks ?? []) {
-    const pass = check.anyOf.some((phrase) => lowerResp.includes(phrase.toLowerCase()));
+    const pass = check.anyOf.some((phrase) => haystack.includes(normaliseEvalText(phrase)));
     checks.push({
       label: `meaning:${check.label}`,
       pass,
@@ -80,7 +80,7 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
 
   // 4. mustNotContain checks
   for (const phrase of q.mustNotContain ?? []) {
-    const pass = !lowerResp.includes(phrase.toLowerCase());
+    const pass = !haystack.includes(normaliseEvalText(phrase));
     checks.push({ label: `not_contains:${phrase}`, pass, detail: pass ? undefined : `Found forbidden phrase: "${phrase}"` });
   }
 

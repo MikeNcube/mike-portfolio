@@ -98,6 +98,44 @@ describe("provider circuit breakers", () => {
     }
   });
 
+  it("tries GROQ_FALLBACK_MODEL after primary 429 without cooling Groq entirely", async () => {
+    resetProviderCircuits();
+    const prevModel = process.env.GROQ_MODEL;
+    const prevFallback = process.env.GROQ_FALLBACK_MODEL;
+    delete process.env.GROQ_MODEL;
+    delete process.env.GROQ_FALLBACK_MODEL;
+    const seen: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { model?: string };
+      seen.push(body.model ?? "");
+      if (body.model === DEFAULT_GROQ_MODEL) {
+        return jsonResponse(429, { error: "rate limited" });
+      }
+      return jsonResponse(200, { choices: [{ message: { content: "fallback ok" } }] });
+    }) as typeof fetch;
+
+    try {
+      const text = await generateGroq("prompt", "key");
+      assert.equal(text, "fallback ok");
+      assert.deepEqual(seen, [DEFAULT_GROQ_MODEL, DEFAULT_GROQ_FALLBACK_MODEL]);
+      assert.equal(groqAvailable(), true);
+      const again = await generateGroq("prompt", "key");
+      assert.equal(again, "fallback ok");
+      assert.deepEqual(seen, [
+        DEFAULT_GROQ_MODEL,
+        DEFAULT_GROQ_FALLBACK_MODEL,
+        DEFAULT_GROQ_FALLBACK_MODEL,
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (prevModel === undefined) delete process.env.GROQ_MODEL;
+      else process.env.GROQ_MODEL = prevModel;
+      if (prevFallback === undefined) delete process.env.GROQ_FALLBACK_MODEL;
+      else process.env.GROQ_FALLBACK_MODEL = prevFallback;
+    }
+  });
+
   it("does not retry Gemini 404 and opens the breaker", async () => {
     resetProviderCircuits();
     let calls = 0;

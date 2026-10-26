@@ -16,6 +16,7 @@ import {
   zdiListedAsShipped,
 } from "../lib/status-copy";
 import { isRefusal } from "../lib/refusal";
+import { normaliseEvalText } from "../evals/eval";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
 import type { RetrievedChunk } from "../lib/rag";
@@ -224,6 +225,9 @@ describe("cited sources", () => {
     assert.match(prompt, /Never carry tools or details from one PROJECT block into another/);
     assert.match(prompt, /Never list ZDI under Shipped/);
     assert.match(prompt, /not yet live/);
+    assert.match(prompt, /Cite the claims-standby sentence/);
+    assert.doesNotMatch(prompt, /CRM \u2026/);
+    assert.doesNotMatch(prompt, /CRM \.\.\. Rolling out/);
   });
 
   it("remaps inline citations to the returned sources list", async () => {
@@ -425,6 +429,25 @@ describe("production-system and ZDI status copy", () => {
     assert.match(out, /not yet live/i);
   });
 
+  it("replaces a production-systems answer that copied the prompt ellipsis", () => {
+    const out = ensureProjectStatusCopy(
+      "What production systems has Mike shipped?",
+      "Shipped: Digi App Form and the Zororo CRM \u2026 Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.",
+    );
+    assert.equal(out, CANONICAL_PRODUCTION_ANSWER);
+    assert.doesNotMatch(out, /\u2026/);
+  });
+
+  it("appends Zororo AI OS status when missing", () => {
+    const out = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is a governed AI control plane with Presidio and OPA.",
+    );
+    assert.match(out, /built/i);
+    assert.match(out, /early stage/i);
+    assert.match(out, /not deployed/i);
+  });
+
   it("rewrites a model production-systems answer into the canonical split", async () => {
     const result = await answerQuestion({
       question: "What production systems has Mike shipped?",
@@ -434,5 +457,25 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(result.via, "gemini");
     assert.equal(result.response, CANONICAL_PRODUCTION_ANSWER);
     assert.equal(zdiListedAsShipped(result.response), false);
+    assert.doesNotMatch(result.response, /\u2026/);
+  });
+
+  it("normalises Unicode dashes and whitespace in eval matching", () => {
+    const en = "production\u2013ready standby";
+    const em = "not  deployed";
+    assert.equal(normaliseEvalText(en), "production-ready standby");
+    assert.ok(normaliseEvalText(em).includes("not deployed"));
+    assert.ok(normaliseEvalText("Approved \u2011 standby").includes("approved - standby"));
+  });
+
+  it("cites the claims-standby sentence on a production-systems static answer", async () => {
+    const result = await answerQuestion({
+      question: "What production systems has Mike shipped?",
+      retrieveFn: async () => [],
+    });
+    assert.equal(result.via, "static");
+    assert.doesNotMatch(result.response, /\u2026/);
+    assert.match(result.response, /production-ready standby \[\d+\]/);
+    assert.ok(result.sources.some((s) => /claims operations platform/i.test(s.title)));
   });
 });

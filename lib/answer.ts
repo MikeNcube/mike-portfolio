@@ -11,7 +11,11 @@ import {
 import { isRefusal } from "./refusal";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
-import { ensureProjectStatusCopy } from "./status-copy";
+import {
+  CANONICAL_PRODUCTION_ANSWER,
+  ensureProjectStatusCopy,
+  isProductionSystemsQuestion,
+} from "./status-copy";
 
 export const CONTACT_EMAIL = "mikencube03@gmail.com";
 
@@ -70,9 +74,10 @@ export function buildPrompt(
     "Each context block is labelled PROJECT: <title>. Attribute a fact, library, metric, or stack item only to the project whose block states it. Never carry tools or details from one PROJECT block into another.",
     "Never invent projects, employers, metrics, or dates.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
-    "When asked which production systems Mike shipped, answer in this structure: 'Shipped: Digi App Form and the Zororo CRM … Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.' Never list ZDI under Shipped.",
+    `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite the claims-standby sentence with [n] from the claims operations platform context block.`,
     "Whenever you mention ZDI, state that it is approved for production rollout, rolling out soon, and not yet live.",
-    "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: …)' list in the answer body.",
+    "Whenever you mention Zororo AI OS, state that it is Built, early stage, and not deployed.",
+    "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: [n])' list in the answer body.",
     "",
     "CONTEXT:",
     context,
@@ -180,12 +185,39 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
   return { ...result, response: ensureContactEmail(result.response) };
 }
 
-// Apply production-system split and ZDI status after generation or static match.
-function polishResult(question: string, result: AnswerResult): AnswerResult {
-  return {
-    ...result,
-    response: ensureProjectStatusCopy(question, result.response),
-  };
+function ensureClaimsSource(
+  sources: Array<{ title: string; url: string }>,
+  chunks: RetrievedChunk[],
+): Array<{ title: string; url: string }> {
+  if (sources.some((s) => /claims operations platform/i.test(s.title))) return sources;
+  const chunk = chunks.find((c) => c.id === "zororo-claims");
+  if (!chunk || !chunk.sourceUrl.startsWith("http")) return sources;
+  return [...sources, { title: chunk.title, url: chunk.sourceUrl }];
+}
+
+function citeClaimsStandby(
+  response: string,
+  sources: Array<{ title: string; url: string }>,
+): string {
+  if (/standby\s*\[\d+\]/i.test(response)) return response;
+  const idx = sources.findIndex((s) => /claims operations platform/i.test(s.title));
+  if (idx < 0) return response;
+  return response.replace(
+    /(the claims operations platform is an approved, production-ready standby)/i,
+    `$1 [${idx + 1}]`,
+  );
+}
+
+// Apply production-system split, ZDI/AI OS status, and the claims-standby citation.
+function polishResult(
+  question: string,
+  result: AnswerResult,
+  chunks: RetrievedChunk[],
+): AnswerResult {
+  const response = ensureProjectStatusCopy(question, result.response);
+  if (!isProductionSystemsQuestion(question)) return { ...result, response };
+  const sources = ensureClaimsSource(result.sources, chunks);
+  return { ...result, response: citeClaimsStandby(response, sources), sources };
 }
 
 async function tryGenerate(
@@ -240,7 +272,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
             return withContactEmail(question, polishResult(question, {
               ...finaliseModelText(geminiText, relevant),
               via: "gemini",
-            }));
+            }, relevant));
           }
         }
         if (groqAvailable()) {
@@ -249,7 +281,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
             return withContactEmail(question, polishResult(question, {
               ...finaliseModelText(groqText, relevant),
               via: "groq",
-            }));
+            }, relevant));
           }
         }
       }
@@ -264,7 +296,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
       via: "static",
-    }));
+    }, relevant));
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };

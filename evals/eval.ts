@@ -20,6 +20,13 @@ export type EvalQuestion = {
   description: string;
 };
 
+const UNICODE_DASH_RE = /[\u2010-\u2015]/g;
+
+// Map Unicode hyphens/dashes to ASCII '-' and collapse whitespace for eval matching.
+export function normaliseEvalText(text: string): string {
+  return text.replace(UNICODE_DASH_RE, "-").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 export const EVAL_QUESTIONS: EvalQuestion[] = [
   // ─── Answer correctness ──────────────────────────────────────────────
   {
@@ -107,7 +114,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zororo-ai-os",
     question: "What is Zororo AI OS?",
     audience: "developer",
-    mustContain: ["Built", "not deployed"],
+    mustContain: ["Built", "early stage", "not deployed"],
     mustNotContain: ["is live", "shipped", "in production"],
     expectRefusal: false,
     expectSources: true,

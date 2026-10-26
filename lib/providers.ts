@@ -37,19 +37,29 @@ export class ProviderHttpError extends Error {
 }
 
 let geminiCoolUntil = 0;
-let groqCoolUntil = 0;
+const groqModelCoolUntil = new Map<string, number>();
 
 export function geminiAvailable(): boolean {
   return Date.now() >= geminiCoolUntil;
 }
 
+// True when at least one configured Groq model is not in cooldown.
 export function groqAvailable(): boolean {
-  return Date.now() >= groqCoolUntil;
+  return groqModels().some((model) => groqModelIsOpen(model));
 }
 
 export function resetProviderCircuits(): void {
   geminiCoolUntil = 0;
-  groqCoolUntil = 0;
+  groqModelCoolUntil.clear();
+}
+
+function groqModelIsOpen(model: string): boolean {
+  return Date.now() >= (groqModelCoolUntil.get(model) ?? 0);
+}
+
+function coolGroqModel(model: string, ms: number, reason: string): void {
+  groqModelCoolUntil.set(model, Date.now() + ms);
+  console.error(`[provider] groq model=${model} circuit ${ms}ms: ${reason}`);
 }
 
 export function groqModels(): string[] {
@@ -62,11 +72,14 @@ export function groqModels(): string[] {
   return out.length > 0 ? out : [DEFAULT_GROQ_MODEL];
 }
 
-function openCircuit(provider: "gemini" | "groq", ms: number, reason: string): void {
-  const until = Date.now() + ms;
-  if (provider === "gemini") geminiCoolUntil = until;
-  else groqCoolUntil = until;
-  console.error(`[provider] ${provider} circuit open ${ms}ms: ${reason}`);
+function openGeminiCircuit(ms: number, reason: string): void {
+  geminiCoolUntil = Date.now() + ms;
+  console.error(`[provider] gemini circuit open ${ms}ms: ${reason}`);
+}
+
+function coolAllGroqModels(ms: number, reason: string): void {
+  for (const model of groqModels()) groqModelCoolUntil.set(model, Date.now() + ms);
+  console.error(`[provider] groq circuit open ${ms}ms: ${reason}`);
 }
 
 function isFatalClientStatus(status: number): boolean {
@@ -110,7 +123,8 @@ function tripClientCircuit(
   console.error(
     `[provider] ${provider} ${status} model=${model} — fail fast, circuit 10min`,
   );
-  openCircuit(provider, CLIENT_ERROR_COOLDOWN_MS, reason);
+  if (provider === "gemini") openGeminiCircuit(CLIENT_ERROR_COOLDOWN_MS, reason);
+  else coolAllGroqModels(CLIENT_ERROR_COOLDOWN_MS, reason);
 }
 
 async function callWithRetry(
@@ -129,8 +143,10 @@ async function callWithRetry(
       if (res.ok) return res;
 
       if (res.status === 429) {
-        console.error(`[provider] ${provider} 429 model=${model} — circuit ${RATE_LIMIT_COOLDOWN_MS}ms`);
-        openCircuit(provider, RATE_LIMIT_COOLDOWN_MS, `HTTP 429 model=${model}`);
+        if (provider === "gemini") {
+          console.error(`[provider] gemini 429 model=${model} — circuit ${RATE_LIMIT_COOLDOWN_MS}ms`);
+          openGeminiCircuit(RATE_LIMIT_COOLDOWN_MS, `HTTP 429 model=${model}`);
+        }
         throw new ProviderHttpError(provider, 429, model);
       }
 
@@ -244,6 +260,35 @@ async function generateGroqOnce(
   return text;
 }
 
+type GroqFailAction = { kind: "next" } | { kind: "throw"; error: Error };
+
+// 429/404 on one Groq model can try the next; 401/400/403 trip every Groq model.
+function onGroqModelFailure(err: unknown, model: string, hasNext: boolean): GroqFailAction {
+  const error = err instanceof Error ? err : new Error(String(err));
+  const status = err instanceof ProviderHttpError ? err.status : 0;
+  if (status === 401) {
+    console.error("[provider] groq 401 invalid key — skip Groq for 10 minutes");
+    tripClientCircuit("groq", 401, model);
+    return { kind: "throw", error };
+  }
+  if (status === 400 || status === 403) {
+    tripClientCircuit("groq", status, model);
+    return { kind: "throw", error };
+  }
+  if (status === 404 || status === 429) {
+    if (status === 429) {
+      coolGroqModel(model, RATE_LIMIT_COOLDOWN_MS, `HTTP 429 model=${model}`);
+    }
+    if (hasNext) {
+      console.error(`[provider] groq ${status} model=${model} — trying fallback`);
+      return { kind: "next" };
+    }
+    if (status === 404) tripClientCircuit("groq", 404, model);
+    return { kind: "throw", error };
+  }
+  return { kind: "throw", error };
+}
+
 export async function generateGroq(prompt: string, apiKey: string): Promise<string> {
   if (!groqAvailable()) {
     throw new Error("Groq cooling down");
@@ -254,31 +299,22 @@ export async function generateGroq(prompt: string, apiKey: string): Promise<stri
 
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
+    if (!groqModelIsOpen(model)) continue;
     try {
       return await generateGroqOnce(prompt, apiKey, model, deadline);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      const status = err instanceof ProviderHttpError ? err.status : 0;
-
-      if (status === 401) {
-        console.error("[provider] groq 401 invalid key — skip Groq for 10 minutes");
-        tripClientCircuit("groq", 401, model);
-        throw lastError;
-      }
-      if (status === 400 || status === 403) {
-        tripClientCircuit("groq", status, model);
-        throw lastError;
-      }
-      if (status === 404) {
-        const next = models[i + 1];
-        if (next) {
-          console.error(`[provider] groq 404 model=${model} — trying fallback ${next}`);
+      const action = onGroqModelFailure(err, model, i < models.length - 1);
+      switch (action.kind) {
+        case "next":
           continue;
+        case "throw":
+          throw action.error;
+        default: {
+          const _exhaustive: never = action;
+          throw _exhaustive;
         }
-        tripClientCircuit("groq", 404, model);
-        throw lastError;
       }
-      throw lastError;
     }
   }
   throw lastError;
