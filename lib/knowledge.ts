@@ -38,7 +38,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'portfolio-rag-assistant',
     title: 'Portfolio RAG assistant (live demo)',
     sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
-    text: "The portfolio RAG assistant is Mike's primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance. Each query is embedded separately. Cosine similarity retrieves top-4 chunks. Chunks below 0.35 similarity are discarded. Gemini 2.5 Flash generates grounded answers with thinking tokens disabled (thinkingBudget:0) to prevent token budget exhaustion on free tier. Rate-limited to 20 req/IP/10min. Grounding prompt is server-side only. Source code: lib/rag.ts, app/api/chat/route.ts, lib/knowledge.ts.",
+    text: "The portfolio RAG assistant is Mike's primary public AI proof. Pipeline: Gemini embedding-001 batch-embeds the knowledge base once per server instance. Each query is embedded separately. Cosine similarity retrieves top-4 chunks. Chunks below 0.35 similarity are discarded. If embeddings fail, BM25 keyword search over the same chunks is used. Gemini 2.5 Flash generates grounded answers with thinking tokens disabled (thinkingBudget:0); if Gemini errors or is rate-limited, Groq llama-3.3-70b-versatile is used with the same prompt and citations; if both fail, a static CV answer for the closest suggested question is served. Rate-limited to 20 req/IP/10min via Upstash Redis when configured. Grounding prompt is server-side only. Source code: lib/rag.ts, lib/answer.ts, app/api/chat/route.ts, lib/knowledge.ts.",
   },
   {
     id: 'zororo-crm',

@@ -275,13 +275,30 @@ Lighthouse (Chrome headless):
 
 ---
 
+## Round 4 — assistant never fails (free tier)
+
+The chat route no longer returns 502 when a model is down. The answer chain is:
+
+1. **Retrieve** — Gemini embeddings + cosine, gate 0.35. If the embedding call errors, **BM25 keyword search** over the same `KNOWLEDGE_CHUNKS`.
+2. **Gemini 2.5 Flash** (`GEMINI_API_KEY`) — same grounded prompt, 12s provider budget, capped 429/5xx retries.
+3. **Groq `llama-3.3-70b-versatile`** (`GROQ_API_KEY`) — OpenAI-compatible `https://api.groq.com/openai/v1/chat/completions`, same prompt, gate, and citations, 12s budget.
+4. **Static CV answers** — closest suggested question from `lib/static-answers.ts` (facts only from the CV and knowledge base). Used when neither key is set or both providers fail.
+5. **Email fallback** — `EMAIL_FALLBACK` in `lib/answer.ts`, last resort only.
+
+Abuse guards: 20 requests / IP / 10 minutes (Upstash Redis when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise in-memory). Questions over 500 characters are rejected with a clear 400. `/api/health` reports `{ gemini, groq, upstash }` booleans and `knowledgeBaseChunks` — never key values.
+
+Tests: `npm test` (`tests/fallback.test.ts`, `tests/retrieve.test.ts`). CI: `.github/workflows/ci.yml` runs lint, typecheck, tests, and build on pull requests.
+
+---
+
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.
-2. **Replace `/public/Mike_Org.jpeg`** with a 1200×630 export for correct OG image on Twitter/LinkedIn previews.
-3. **Run evals against the preview URL** (after re-linking Vercel) and commit the generated `evals/results.json`:
+2. **Confirm `GROQ_API_KEY`** is set for Production and Preview (already present). No paid Groq plan is required; `llama-3.3-70b-versatile` is on the free tier.
+3. **Upstash Redis** is used for the per-IP rate limit when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` exist (already configured in Production). Preview falls back to in-memory.
+4. **Replace `/public/Mike_Org.jpeg`** with a 1200×630 export for correct OG image on Twitter/LinkedIn previews.
+5. **Run evals against the preview URL** (after re-linking Vercel) and commit the generated `evals/results.json`:
    ```bash
    GEMINI_API_KEY=... npx tsx evals/run.ts --url https://preview-url.vercel.app
    ```
-4. **Write Notes content** and uncomment the Notes section scaffold in `app/page.tsx` when ready.
-5. **Optional — higher RPM**: If the assistant gets heavy traffic, set `GENERATION_MODEL=gemini-1.5-flash` as an env var to use the 15 RPM free-tier model instead of the 10 RPM gemini-2.5-flash. Change requires adding `process.env.GENERATION_MODEL ?? 'gemini-2.5-flash'` in `route.ts`.
+6. **Write Notes content** and uncomment the Notes section scaffold in `app/page.tsx` when ready.
