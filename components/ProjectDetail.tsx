@@ -80,7 +80,7 @@ export default function ProjectDetail({ project, prev, next }: Props) {
           <aside className="lg:sticky lg:top-20">
             <div className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
               <dl className="space-y-4">
-                <Row label="Status" value={project.status} />
+                <Row label="Status" value={statusLabel(project.status)} />
                 <Row label="Domain" value={project.domain} />
                 <Row label="Year" value={project.year} />
                 <div>
