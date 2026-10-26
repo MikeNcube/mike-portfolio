@@ -1,6 +1,6 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r30";
+export const ANSWER_CACHE_VERSION = "r31";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
@@ -140,7 +140,13 @@ function hasRollingOut(text: string): boolean {
 }
 
 function hasEarlyStage(text: string): boolean {
-  return /\bearly stage\b/.test(foldStatusText(text));
+  const t = foldStatusText(text);
+  return (
+    /\bearly (?:stage|development)\b/.test(t)
+    || /\bin development\b/.test(t)
+    || /\bprototype\b/.test(t)
+    || /\bnot production ready\b/.test(t)
+  );
 }
 
 function hasProductionReady(text: string): boolean {
@@ -157,11 +163,19 @@ function hasApproved(text: string): boolean {
 }
 
 function hasBuilt(text: string): boolean {
-  return /\bbuilt\b/.test(foldStatusText(text));
+  return /\b(?:built|builds|building|developed|developing|created|designed)\b/.test(
+    foldStatusText(text),
+  );
 }
 
 function hasNotDeployed(text: string): boolean {
-  return /\bnot(?: yet)? deployed\b/.test(foldStatusText(text));
+  const t = foldStatusText(text);
+  return (
+    /\bnot(?: yet)? deployed\b/.test(t)
+    || /\bnot(?: yet)? in production\b/.test(t)
+    || /\bundeployed\b/.test(t)
+    || /\bnot(?: yet)? live\b/.test(t)
+  );
 }
 
 function hasNotLive(text: string): boolean {
@@ -180,9 +194,27 @@ export function hasZdiStatus(text: string): boolean {
   return hasApproved(text) && hasRollingOut(text) && hasNotLive(text);
 }
 
-// True when Zororo AI OS is built and not (yet) deployed.
+const EARLY_STAGE_MEANING_RE =
+  /\bearly (?:stage|development)\b|\bin development\b|\bprototype\b|\bnot production ready\b/g;
+
+const NOT_DEPLOYED_MEANING_RE =
+  /\bnot(?: yet)? deployed\b|\bundeployed\b|\bnot(?: yet)? in production\b|\bnot(?: yet)? live\b/g;
+
+function countMatches(text: string, re: RegExp): number {
+  const global = new RegExp(re.source, "g");
+  return (foldStatusText(text).match(global) ?? []).length;
+}
+
+// True when Zororo AI OS is early-stage and not (yet) deployed. "Built" alone is not required.
 export function hasAiOsStatus(text: string): boolean {
-  return hasBuilt(text) && hasEarlyStage(text) && hasNotDeployed(text);
+  return hasEarlyStage(text) && hasNotDeployed(text);
+}
+
+// True when early-stage and not-deployed each appear once on the AI OS span.
+export function aiOsStatusAppearsOnce(text: string): boolean {
+  const span = projectSpan("ai-os", text) || text;
+  return countMatches(span, EARLY_STAGE_MEANING_RE) === 1
+    && countMatches(span, NOT_DEPLOYED_MEANING_RE) === 1;
 }
 
 // True when claims ops is the approved standby/failover and not the live system.
@@ -202,15 +234,93 @@ export function hasRepeatedStatus(text: string): boolean {
 
 type StatusKind = "zdi" | "ai-os" | "claims";
 
-// Skip appending only when the answer already has that project's full meaning.
-function alreadyConveysStatus(kind: StatusKind, text: string): boolean {
+function mentionsKind(kind: StatusKind, text: string): boolean {
   switch (kind) {
     case "zdi":
-      return hasZdiStatus(text);
+      return mentionsZdi(text);
     case "ai-os":
-      return hasAiOsStatus(text);
+      return mentionsAiOs(text);
     case "claims":
-      return hasClaimsStatus(text);
+      return mentionsClaims(text);
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function firstMentionIndex(text: string, kind: StatusKind): number {
+  const m = mentionRe(kind).exec(text);
+  return m ? m.index : Number.POSITIVE_INFINITY;
+}
+
+// Sentences that name this project, plus a following pronoun status clause for that project.
+function projectSpan(kind: StatusKind, text: string): string {
+  const parts = splitSentences(text);
+  const re = mentionRe(kind);
+  const kept: string[] = [];
+  let includeNextPronoun = false;
+  for (const part of parts) {
+    if (re.test(part)) {
+      kept.push(part);
+      includeNextPronoun = sentenceProjectHits(part) === 1;
+      continue;
+    }
+    if (
+      includeNextPronoun
+      && isPronounStatusSentence(part, kind)
+      && sentenceProjectHits(part) === 0
+    ) {
+      kept.push(part);
+      continue;
+    }
+    includeNextPronoun = false;
+  }
+  return kept.join("");
+}
+
+// Status text for one project: its mentioning sentences, or the question's subject if unnamed.
+function statusTextForKind(kind: StatusKind, text: string, question: string): string {
+  const span = projectSpan(kind, text);
+  if (span.trim()) return span;
+  if (!mentionsKind(kind, question)) return "";
+  const parts = splitSentences(text);
+  const allKinds: StatusKind[] = ["zdi", "ai-os", "claims"];
+  const otherKinds = allKinds.filter((k) => k !== kind);
+  const owned = parts.filter((part) => otherKinds.every((k) => !mentionRe(k).test(part)));
+  return owned.join("") || text;
+}
+
+function statusKindsToFill(question: string, text: string): StatusKind[] {
+  const kinds: StatusKind[] = [];
+  for (const kind of ["zdi", "ai-os", "claims"] as const) {
+    if (
+      (mentionsKind(kind, question) || mentionsKind(kind, text))
+      && !alreadyConveysStatus(kind, text, question)
+    ) {
+      kinds.push(kind);
+    }
+  }
+  kinds.sort((a, b) => {
+    const ia = firstMentionIndex(text, a);
+    const ib = firstMentionIndex(text, b);
+    if (ia !== ib) return ib - ia;
+    return firstMentionIndex(question, b) - firstMentionIndex(question, a);
+  });
+  return kinds;
+}
+
+// Skip appending only when THIS project's mentioning sentences already have the full meaning.
+function alreadyConveysStatus(kind: StatusKind, text: string, question: string): boolean {
+  const span = statusTextForKind(kind, text, question);
+  if (!span.trim()) return false;
+  switch (kind) {
+    case "zdi":
+      return hasZdiStatus(span);
+    case "ai-os":
+      return hasAiOsStatus(span);
+    case "claims":
+      return hasClaimsStatus(span);
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -260,6 +370,23 @@ function attachCites(sentence: string, cites: string): string {
   const punct = punctMatch ? punctMatch[0] : ".";
   const core = punctMatch ? trimmed.slice(0, -1).trimEnd() : trimmed;
   return `${core} ${cites}${punct}`;
+}
+
+function lastCitationMarker(text: string): string {
+  const matches = [...text.matchAll(/\[(\d+)\]/g)];
+  if (matches.length === 0) return "";
+  return `[${matches[matches.length - 1][1]}]`;
+}
+
+// A new status sentence after the final citation must carry a citation.
+function citeNewStatusSentence(
+  sentence: string,
+  sourceText: string,
+  preferredCites: string,
+): string {
+  const withPreferred = attachCites(sentence, preferredCites);
+  if (/\[\d+\]/.test(withPreferred)) return withPreferred;
+  return attachCites(withPreferred, lastCitationMarker(sourceText));
 }
 
 function canonicalNamedStatus(kind: StatusKind): string {
@@ -325,7 +452,6 @@ function missingStatusBits(kind: StatusKind, text: string): string[] {
     }
     case "ai-os": {
       const bits: string[] = [];
-      if (!hasBuilt(text)) bits.push("built");
       if (!hasEarlyStage(text)) bits.push("early-stage");
       if (!hasNotDeployed(text)) bits.push("not yet deployed");
       return bits;
@@ -348,8 +474,7 @@ function missingStatusBits(kind: StatusKind, text: string): string[] {
 function namedStatusForBits(kind: StatusKind, bits: string[]): string {
   if (bits.length === 0) return "";
   const allMissing =
-    (kind === "ai-os" && bits.length === 3)
-    || (kind === "zdi" && bits.length === 3)
+    (kind === "zdi" && bits.length === 3)
     || (kind === "claims" && bits.length === 4);
   if (allMissing) return canonicalNamedStatus(kind);
   return `${projectDisplayName(kind)} is ${joinStatusBits(bits)}.`;
@@ -450,12 +575,17 @@ function leftoverAfterStrippingStatus(sentence: string): string {
   t = t.replace(/\brolling out\b/g, " ");
   t = t.replace(/\broll out\b/g, " ");
   t = t.replace(/\bnot(?: yet)? (?:live|deployed)\b/g, " ");
-  t = t.replace(/\bearly stage\b/g, " ");
+  t = t.replace(/\bnot(?: yet)? in production\b/g, " ");
+  t = t.replace(/\bundeployed\b/g, " ");
+  t = t.replace(/\bearly (?:stage|development)\b/g, " ");
+  t = t.replace(/\bin development\b/g, " ");
+  t = t.replace(/\bprototype\b/g, " ");
+  t = t.replace(/\bnot production ready\b/g, " ");
   t = t.replace(/\bfail over\b/g, " ");
   t = t.replace(/\bfailover\b/g, " ");
   t = t.replace(/\bstandby\b/g, " ");
   t = t.replace(/\bapproved\b/g, " ");
-  t = t.replace(/\bbuilt\b/g, " ");
+  t = t.replace(/\b(?:built|builds|building|developed|developing|created|designed)\b/g, " ");
   t = t.replace(/\blive system\b/g, " ");
   t = t.replace(/\brather than\b/g, " ");
   return t
@@ -540,10 +670,68 @@ function foldFullIntoMention(
   return attachCites(`${core}; it is ${fullStatusPredicate(kind)}.`, cites || extraCites);
 }
 
+function projectNamePattern(kind: StatusKind): RegExp | null {
+  switch (kind) {
+    case "ai-os":
+      return /(Zororo AI OS(?:\s*\([^)]*\))?)/i;
+    case "zdi":
+      return /(\bZDI\b(?:\s*\([^)]*\))?)/;
+    case "claims":
+      return /(the claims operations platform(?:\s*\([^)]*\))?)/i;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+// Fold a relative clause after the project name instead of a second named sentence.
+function foldWhichAfterName(
+  sentence: string,
+  kind: StatusKind,
+  bits: string[],
+): string | null {
+  if (kind !== "ai-os") return null;
+  if (bits.length !== 1 || bits[0] !== "not yet deployed") return null;
+  const nameRe = projectNamePattern(kind);
+  if (!nameRe) return null;
+  const { body, cites } = peelTrailingCitations(sentence.trim());
+  const punctMatch = body.match(/[.!?]$/);
+  const punct = punctMatch ? punctMatch[0] : "";
+  const core = punctMatch ? body.slice(0, -1) : body;
+  nameRe.lastIndex = 0;
+  const found = nameRe.exec(core);
+  if (!found || found.index < 0) return null;
+  const clause = joinStatusBits(bits);
+  const after = core.slice(found.index + found[0].length);
+  const needsTrailingComma = /^\s+and\b/i.test(after);
+  const injected =
+    `${core.slice(0, found.index)}${found[0]}, which is ${clause}${needsTrailingComma ? "," : ""}${after}`;
+  return attachCites(`${injected}${punct || "."}`, cites);
+}
+
+function multiProjectStatusInsert(
+  mention: string,
+  kind: StatusKind,
+  missing: string[],
+  sourceText: string,
+): string {
+  const which = foldWhichAfterName(mention, kind, missing);
+  if (which) return which;
+  const kept = /[.!?]$/.test(mention.trim()) ? mention.trim() : `${mention.trim()}.`;
+  const { cites } = peelTrailingCitations(mention.trim());
+  const named = citeNewStatusSentence(namedStatusForBits(kind, missing), sourceText, cites);
+  return `${kept} ${named}`.replace(/ {2,}/g, " ");
+}
+
 // Fold missing status into the mentioning sentence, or add a named clause.
-function insertStatusAfterMention(text: string, kind: StatusKind): string {
+function insertStatusAfterMention(
+  text: string,
+  kind: StatusKind,
+  question: string,
+): string {
   const parts = splitSentences(text);
-  const missing = missingStatusBits(kind, text);
+  const missing = missingStatusBits(kind, statusTextForKind(kind, text, question));
   if (missing.length === 0) return text;
 
   const re = mentionRe(kind);
@@ -556,15 +744,17 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
     const mention = parts[mentionIdx];
     if (!namesMultipleProjects(mention) && leftoverAfterStrippingStatus(mention) === "") {
       const { cites } = peelTrailingCitations(mention.trim());
-      return spliceSentence(parts, mentionIdx, attachCites(canonicalNamedStatus(kind), cites));
-    }
-    if (namesMultipleProjects(mention)) {
-      const kept = /[.!?]$/.test(mention.trim()) ? mention.trim() : `${mention.trim()}.`;
-      const { cites } = peelTrailingCitations(mention.trim());
       return spliceSentence(
         parts,
         mentionIdx,
-        `${kept} ${attachCites(namedStatusForBits(kind, missing), cites)}`.replace(/ {2,}/g, " "),
+        citeNewStatusSentence(canonicalNamedStatus(kind), text, cites),
+      );
+    }
+    if (namesMultipleProjects(mention)) {
+      return spliceSentence(
+        parts,
+        mentionIdx,
+        multiProjectStatusInsert(mention, kind, missing, text),
       );
     }
     return spliceSentence(parts, mentionIdx, foldMissingIntoSentence(mention, kind, missing));
@@ -582,7 +772,11 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
     const pronoun = parts[pronounIdx];
     if (leftoverAfterStrippingStatus(pronoun) === "") {
       const { cites } = peelTrailingCitations(pronoun.trim());
-      return spliceSentence(parts, pronounIdx, attachCites(canonicalNamedStatus(kind), cites));
+      return spliceSentence(
+        parts,
+        pronounIdx,
+        citeNewStatusSentence(canonicalNamedStatus(kind), text, cites),
+      );
     }
     return spliceSentence(parts, pronounIdx, foldMissingIntoSentence(pronoun, kind, missing));
   }
@@ -590,19 +784,21 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
   if (mentionIdx >= 0) {
     const mention = parts[mentionIdx];
     if (namesMultipleProjects(mention)) {
-      const kept = /[.!?]$/.test(mention.trim()) ? mention.trim() : `${mention.trim()}.`;
-      const { cites } = peelTrailingCitations(mention.trim());
       return spliceSentence(
         parts,
         mentionIdx,
-        `${kept} ${attachCites(namedStatusForBits(kind, missing), cites)}`.replace(/ {2,}/g, " "),
+        multiProjectStatusInsert(mention, kind, missing, text),
       );
     }
     return spliceSentence(parts, mentionIdx, foldFullIntoMention(mention, kind));
   }
 
   const { body, cites } = peelTrailingCitations(text.trim());
-  return appendStatusSentence(body, canonicalNamedStatus(kind), cites);
+  return appendStatusSentence(
+    body,
+    citeNewStatusSentence(canonicalNamedStatus(kind), text, cites),
+    "",
+  );
 }
 
 // Drop a second "Built." or "Status: Prototype." when the equivalent is already said.
@@ -638,14 +834,8 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
-  if ((mentionsZdi(question) || mentionsZdi(out)) && !alreadyConveysStatus("zdi", out)) {
-    out = insertStatusAfterMention(out, "zdi");
-  }
-  if ((mentionsAiOs(question) || mentionsAiOs(out)) && !alreadyConveysStatus("ai-os", out)) {
-    out = insertStatusAfterMention(out, "ai-os");
-  }
-  if ((mentionsClaims(question) || mentionsClaims(out)) && !alreadyConveysStatus("claims", out)) {
-    out = insertStatusAfterMention(out, "claims");
+  for (const kind of statusKindsToFill(question, out)) {
+    out = insertStatusAfterMention(out, kind, question);
   }
   return collapseRepeatedStatus(stripUncitedEvaluativeConclusions(out));
 }

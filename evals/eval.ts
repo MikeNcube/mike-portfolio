@@ -199,6 +199,19 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     description: "Zororo AI OS — Built, early stage, not deployed",
   },
   {
+    id: "zororo-ai-os-about",
+    question: "Tell me about Zororo AI OS",
+    audience: "recruiter",
+    meaningChecks: [
+      { label: "early_stage", anyOf: ["early stage", "early-stage", "early development"] },
+      { label: "not_deployed", anyOf: ["not deployed", "not yet deployed"] },
+    ],
+    mustNotContain: ["is live", "shipped", "in production"],
+    expectRefusal: false,
+    expectSources: true,
+    description: "Tell me about Zororo AI OS — early-stage and not-deployed meaning appears once",
+  },
+  {
     id: "zororo-claims",
     question: "What is the claims operations platform?",
     audience: "recruiter",

@@ -17,6 +17,7 @@ import { normaliseModelText } from "../lib/normalise-answer";
 import { matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
+  aiOsStatusAppearsOnce,
   AI_OS_STATUS_SENTENCE,
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
@@ -1022,13 +1023,11 @@ describe("production-system and ZDI status copy", () => {
     const input =
       "Zororo AI OS is a governed AI control plane. It is early-stage and not yet deployed [1].";
     const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
-    assert.equal(
-      out,
-      "Zororo AI OS is a governed AI control plane; it is built, early-stage and not yet deployed [1].",
-    );
-    assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /Zororo AI OS is built/);
     assert.equal((out.match(/early[- ]stage/gi) ?? []).length, 1);
     assert.equal((out.match(/not yet deployed/gi) ?? []).length, 1);
+    assert.equal(aiOsStatusAppearsOnce(out), true);
     assertNoAddedItIs(input, out);
     assert.equal(hasRepeatedStatus(out), false);
   });
@@ -1074,13 +1073,99 @@ describe("production-system and ZDI status copy", () => {
     const input =
       "Mike shipped Digi App Form and the CRM at Zororo-Phumulani, and he also developed the early-stage Zororo AI OS and a claims-extraction pipeline.";
     const out = ensureProjectStatusCopy("Tell me about Mike's work", input);
-    assert.match(out, /developed the early-stage Zororo AI OS and a claims-extraction pipeline/);
-    assert.doesNotMatch(out, /Zororo AI OS is built, early-stage and not yet deployed/);
-    assert.match(out, /Zororo AI OS is built and not yet deployed/);
+    assert.match(
+      out,
+      /developed the early-stage Zororo AI OS, which is not yet deployed, and a claims-extraction pipeline/,
+    );
+    assert.doesNotMatch(out, /Zororo AI OS is built/);
     assert.doesNotMatch(out, /pipeline[^.]*\bIt is not(?: yet)? deployed/i);
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
     assert.equal(hasRepeatedStatus(out), false);
+    assert.equal(aiOsStatusAppearsOnce(out), true);
     assertNoAddedItIs(input, out);
+  });
+
+  it("does not dump AI OS canonical after 'early development' and 'not yet deployed'", () => {
+    const named =
+      "Zororo AI OS is still in early development and not yet deployed [1].";
+    const namedOut = ensureProjectStatusCopy("Tell me about Zororo AI OS", named);
+    assert.equal(namedOut, named);
+    assert.doesNotMatch(namedOut, /Zororo AI OS is built, early-stage and not yet deployed/);
+    assert.equal(aiOsStatusAppearsOnce(namedOut), true);
+
+    const pronoun = "It is still in early development and not yet deployed [1].";
+    const pronounOut = ensureProjectStatusCopy("Tell me about Zororo AI OS", pronoun);
+    assert.equal(pronounOut, pronoun);
+    assert.doesNotMatch(pronounOut, /Zororo AI OS is built, early-stage and not yet deployed/);
+  });
+
+  it("does not add 'Zororo AI OS is built' after builds + early stage + not deployed", () => {
+    const input =
+      "He also builds the Zororo AI OS (early stage, not deployed) for internal stakeholders.";
+    const out = ensureProjectStatusCopy("Tell me about Mike's work", input);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /Zororo AI OS is built/);
+    assert.equal(aiOsStatusAppearsOnce(out), true);
+    assert.equal(hasRepeatedStatus(out), false);
+  });
+
+  it("recognises AI OS early-stage and not-deployed synonyms and skips extra status", () => {
+    const samples = [
+      "Zororo AI OS is in development and undeployed.",
+      "Zororo AI OS is a prototype and not live.",
+      "Zororo AI OS is not production-ready and not in production.",
+      "Mike developed Zororo AI OS (early-stage, not yet deployed).",
+      "He is building the Zororo AI OS, early stage, not deployed.",
+      "She designed Zororo AI OS; it is early-stage and not live.",
+      "They created Zororo AI OS, which is early stage and undeployed.",
+      "Zororo AI OS is early development and not yet deployed.",
+    ];
+    for (const input of samples) {
+      const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
+      assert.equal(out, input, `should skip status dump for: ${input}`);
+      assert.doesNotMatch(out, /Zororo AI OS is built, early-stage and not yet deployed/);
+    }
+  });
+
+  it("does not treat ZDI approved as satisfying claims status", () => {
+    const input =
+      "Mike built the claims operations platform and ZDI [1]. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live.";
+    const out = ensureProjectStatusCopy("Tell me about the claims operations platform", input);
+    assert.match(out, /The claims operations platform is an approved, production-ready standby \(failover\)/);
+    assert.match(out, /not the live system itself \[1\]/);
+    assert.match(out, /ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live/);
+    assert.equal((out.match(/approved/gi) ?? []).length >= 2, true);
+    assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
+  });
+
+  it("adds claims and ZDI status in mention order", () => {
+    const input = "Mike built the claims operations platform and ZDI [1].";
+    const out = ensureProjectStatusCopy("Tell me about these two projects", input);
+    const claimsAt = out.search(/The claims operations platform is an approved/);
+    const zdiAt = out.search(/ZDI is approved for production rollout/);
+    assert.ok(claimsAt >= 0, out);
+    assert.ok(zdiAt >= 0, out);
+    assert.ok(claimsAt < zdiAt, out);
+    assert.match(out, /\[1\]/);
+  });
+
+  it("never adds an uncited status sentence after the final citation", () => {
+    const input = "Zororo AI OS is a governed control plane [1]. Stakeholders use it internally.";
+    const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
+    assert.match(
+      out,
+      /Zororo AI OS is a governed control plane; it is built, early-stage and not yet deployed \[1\]\./,
+    );
+    assert.doesNotMatch(out, /\[1\]\.\s*Stakeholders[^.]*\.\s*Zororo AI OS is built/);
+    const afterLastCite = out.slice(out.lastIndexOf("]"));
+    assert.doesNotMatch(afterLastCite, /Zororo AI OS is (?:built|early-stage)/);
+  });
+
+  it("collapses 'South Africa. [1].' to 'South Africa [1].'", () => {
+    assert.equal(
+      normaliseModelText("Mike is based in South Africa. [1]."),
+      "Mike is based in South Africa [1].",
+    );
   });
 
   it("folds only the missing not-live clause into a claims mention that already has standby", () => {
@@ -1184,6 +1269,22 @@ describe("production-system and ZDI status copy", () => {
     meaningPass("rag-pipeline", "Embedding then retrieval by similarity.");
     meaningPass("production-systems", CANONICAL_PRODUCTION_ANSWER);
     meaningPass("zororo-ai-os", AI_OS_STATUS_SENTENCE);
+    meaningPass(
+      "zororo-ai-os-about",
+      "Zororo AI OS is a governed AI control plane. It is built, early stage, and not deployed [1].",
+    );
+    assert.equal(
+      aiOsStatusAppearsOnce(
+        "Zororo AI OS is a governed AI control plane. It is built, early stage, and not deployed [1].",
+      ),
+      true,
+    );
+    assert.equal(
+      aiOsStatusAppearsOnce(
+        "Zororo AI OS is still in early development and not yet deployed. Zororo AI OS is built, early-stage and not yet deployed [1].",
+      ),
+      false,
+    );
     meaningPass("zdi-live", CANONICAL_ZDI_LIVE_ANSWER);
     meaningPass(
       "zdi-live",

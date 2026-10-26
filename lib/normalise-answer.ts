@@ -31,5 +31,6 @@ export function normaliseModelText(text: string): string {
     text.replace(CURLY_SINGLE, "'").replace(CURLY_DOUBLE, '"').replace(HYPHEN_LIKE, "-"),
   );
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
-  return collapseDuplicateCitations(cited);
+  const collapsed = collapseDuplicateCitations(cited);
+  return collapsed.replace(/([.!?])\s*\[(\d+)\]\s*\./g, " [$2].");
 }

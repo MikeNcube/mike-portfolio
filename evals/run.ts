@@ -11,7 +11,7 @@
 import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
-import { hasRepeatedStatus } from "../lib/status-copy";
+import { aiOsStatusAppearsOnce, hasRepeatedStatus } from "../lib/status-copy";
 import { citationsMatchNamedProjects } from "../lib/answer";
 
 function computesTwoPlusTwo(text: string): boolean {
@@ -127,6 +127,14 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
       pass: !repeated,
       detail: repeated ? "repeated status wording (built/built or prototype/Status: Prototype)" : undefined,
     });
+    if (q.id === "zororo-ai-os-about") {
+      const once = aiOsStatusAppearsOnce(response);
+      checks.push({
+        label: "status_meaning_once",
+        pass: once,
+        detail: once ? undefined : "early-stage / not-deployed meaning must appear once",
+      });
+    }
     const aligned = citationsMatchNamedProjects(response, sources);
     checks.push({
       label: "citations_match_named_projects",
