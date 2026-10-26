@@ -43,8 +43,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what did mike build at zororo",
     ],
     answer:
-      "At Zororo-Phumulani he shipped the lead-management CRM used by over 40 people across around 10 roles. The claims document extraction pipeline is built and pending management approval.",
-    sourceIds: ["zororo-crm", "claims-pipeline"],
+      "At Zororo-Phumulani he shipped Digi App Form and the lead-management CRM used by over 40 people across around 10 roles; both are live production systems. ZDI (Zororo Document Intelligence) is approved for production rollout and rolling out.",
+    sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow"],
   },
   {
     question: "Walk me through Proactive Sentinel's architecture.",
@@ -103,7 +103,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "zdi signature workflow",
     ],
     answer:
-      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Built. Approved for production rollout at Zororo-Phumulani; rollout starting soon. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. Approved for production rollout at Zororo-Phumulani; rollout starting soon. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
     sourceIds: ["zdi-signature-workflow"],
   },
 ];

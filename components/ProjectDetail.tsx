@@ -29,10 +29,11 @@ type Props = { project: Project; prev: Project; next: Project };
 
 function statusColor(status: Project["status"]): string {
   switch (status) {
-    case "Live demo":  return "text-signal";
-    case "Shipped":    return "text-signal";
-    case "Prototype":  return "text-accent";
-    case "Built":      return "text-accent";
+    case "Live demo":    return "text-signal";
+    case "Shipped":      return "text-signal";
+    case "Rolling out":  return "text-signal";
+    case "Prototype":    return "text-accent";
+    case "Built":        return "text-accent";
     case "Paused":     return "text-ink-muted";
     case "Reference":  return "text-ink-muted";
     case "Lab":        return "text-ink-muted";

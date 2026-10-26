@@ -44,11 +44,11 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "production-systems",
     question: "What production systems has Mike shipped?",
     audience: "recruiter",
-    mustContain: ["CRM", "Zororo"],
+    mustContain: ["CRM", "Digi", "ZDI", "rolling out"],
     mustNotContain: ["confidential client"],
     expectRefusal: false,
     expectSources: true,
-    description: "Work history — must name the CRM and employer",
+    description: "Work history — Digi and CRM live; ZDI approved and rolling out",
   },
   {
     id: "proactive-sentinel",
@@ -84,7 +84,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zdi",
     question: "What is ZDI?",
     audience: "developer",
-    mustContain: ["approved for production rollout"],
+    mustContain: ["approved for production rollout", "rolling out"],
     mustNotContain: [
       "is live",
       "it's live",

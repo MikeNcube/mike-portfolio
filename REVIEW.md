@@ -334,14 +334,16 @@ Live preview at `36edb33` got grounded Groq answers. Remaining issues:
 
 ## Round 8 — ZDI Signature & Approval Workflow
 
-New flagship case study `zdi-signature-workflow` (ZDI, Zororo Document Intelligence), inserted in `WORK_ORDER` immediately after `zororo-crm`. Status **Built**. Role and outcome say **approved for production rollout at Zororo-Phumulani**; rollout starting soon. Copy does not say shipped, live, or in production. No people names, logins, approval amounts, or security findings. No public “synthetic data” claim.
+New flagship case study `zdi-signature-workflow` (ZDI, Zororo Document Intelligence). Status **Rolling out** (same signal styling as Shipped). Role and outcome say **approved for production rollout at Zororo-Phumulani**; rollout starting soon. ZDI copy does not say shipped, live, or in production. No people names, logins, approval amounts, or security findings. No public “synthetic data” claim.
+
+Homepage **Production systems** group, in order: Digi App Form (Shipped), lead-management CRM (Shipped), ZDI (Rolling out). Then: portfolio RAG, Sitewarden, Cube, claims pipeline, Proactive Sentinel.
 
 | Surface | Change |
 |---------|--------|
 | `/projects/zdi-signature-workflow` | Case study + HTML/CSS architecture diagram (14px labels, stacked on mobile): three apps → FastAPI API → capability check and workflow guards → config-driven route (submitted → manager → accounts → archived, return-for-correction new revision) → Signature Service → hash-chained evidence table → worker archival PDF → evidence check. Footer: “No AI in approvals · no payments executed”. |
-| `lib/knowledge.ts` + `lib/static-answers.ts` | Matching chunk and static answer for “What is ZDI?” |
-| `evals/eval.ts` | Eval case must contain `approved for production rollout` and must not claim live / shipped / in production |
-| Sitemap, OG, neighbours | Sitemap maps `allProjects`; project OG uses the tagline; neighbours cycle CRM → ZDI → claims |
+| `lib/knowledge.ts` + `lib/static-answers.ts` | Matching chunk and static answer for “What is ZDI?”. “What production systems has Mike shipped?” names Digi and the CRM as live, and ZDI as approved and rolling out. |
+| `evals/eval.ts` | ZDI eval must contain `approved for production rollout` / `rolling out` and must not claim live. Production-systems eval must name Digi, CRM, and ZDI. |
+| Sitemap, OG, neighbours | Sitemap maps `allProjects`; project OG uses the tagline; neighbours follow WORK_ORDER: Digi → CRM → ZDI → RAG |
 
 ---
 

@@ -10,21 +10,28 @@ describe("keyword retrieval fallback", () => {
     assert.ok(hits[0].score >= MIN_RELEVANCE_SCORE);
   });
 
-  it("retrieves CRM and claims for production systems shipped", () => {
+  it("retrieves Digi, CRM, and ZDI for production systems shipped", () => {
     const hits = retrieveKeyword("What production systems has Mike shipped?");
     const ids = hits.map((h) => h.id);
+    assert.ok(
+      ids.includes("digi-app-form"),
+      `expected digi-app-form in ${ids.join(", ")}`,
+    );
     assert.ok(
       ids.includes("zororo-crm"),
       `expected zororo-crm in ${ids.join(", ")}`,
     );
     assert.ok(
-      ids.includes("claims-pipeline"),
-      `expected claims-pipeline in ${ids.join(", ")}`,
+      ids.includes("zdi-signature-workflow"),
+      `expected zdi-signature-workflow in ${ids.join(", ")}`,
     );
     const crm = hits.find((h) => h.id === "zororo-crm");
     assert.ok(crm && crm.score >= MIN_RELEVANCE_SCORE);
     assert.match(crm!.text, /40 people/);
     assert.match(crm!.text, /10 roles/);
+    const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
+    assert.ok(zdi);
+    assert.match(zdi!.text, /rolling out/i);
   });
 
   it("retrieves Cube for What is Cube", () => {

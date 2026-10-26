@@ -4,11 +4,29 @@
 export type ProjectStatus =
   | "Live demo"
   | "Shipped"
+  | "Rolling out"
   | "Prototype"
   | "Paused"
   | "Reference"
   | "Lab"
   | "Built";
+
+export const WORK_ORDER = [
+  "digi-app-form",
+  "zororo-crm",
+  "zdi-signature-workflow",
+  "portfolio-rag-assistant",
+  "sitewarden",
+  "cube-agent",
+  "claims-pipeline",
+  "proactive-sentinel",
+] as const;
+
+export const PRODUCTION_SLUGS = [
+  "digi-app-form",
+  "zororo-crm",
+  "zdi-signature-workflow",
+] as const;
 
 export type WorkSection = "ai-proof" | "platform" | "client";
 
@@ -161,7 +179,7 @@ export const flagshipProjects: Project[] = [
       "Honest about limits: the evidence is tamper-evident within the database's controls, not a cryptographically signed PDF; no AI touches approvals or payments.",
     ],
     stack: ["Python", "FastAPI", "PostgreSQL", "Alembic", "Next.js", "TypeScript", "reportlab", "Docker", "pytest", "Vitest"],
-    status: "Built",
+    status: "Rolling out",
     domain: "Governed workflow · E-signature evidence",
     year: "2026",
   },
@@ -337,8 +355,8 @@ export const workSections = {
     description: "Inspectable AI engineering: live demo, governed agent prototype, and coding agent prototype.",
   },
   platform: {
-    title: "Production and shipped",
-    description: "Backends in regulated domains.",
+    title: "Production systems",
+    description: "Digi App Form, the lead-management CRM, and ZDI at Zororo-Phumulani.",
   },
   client: {
     title: "Client work",
@@ -380,13 +398,22 @@ export function getProjectBySlug(slug: string): Project | undefined {
   return allProjects.find((p) => p.slug === slug);
 }
 
+export function orderedWorkProjects(): Project[] {
+  const bySlug = new Map(flagshipProjects.map((p) => [p.slug, p]));
+  const ordered = WORK_ORDER.map((slug) => bySlug.get(slug)).filter(
+    (p): p is Project => p !== undefined,
+  );
+  return [...ordered, ...clientProjects, ...labProjects];
+}
+
 export function getProjectNeighbours(slug: string): {
   prev: Project;
   next: Project;
 } {
-  const i = allProjects.findIndex((p) => p.slug === slug);
+  const ordered = orderedWorkProjects();
+  const i = ordered.findIndex((p) => p.slug === slug);
   const safe = i < 0 ? 0 : i;
-  const prev = allProjects[(safe - 1 + allProjects.length) % allProjects.length];
-  const next = allProjects[(safe + 1) % allProjects.length];
+  const prev = ordered[(safe - 1 + ordered.length) % ordered.length];
+  const next = ordered[(safe + 1) % ordered.length];
   return { prev, next };
 }

@@ -265,8 +265,11 @@ describe("static CV copy", () => {
     assert.ok(hit);
     assert.match(hit.answer, /CRM/);
     assert.match(hit.answer, /40/);
-    assert.match(hit.answer, /claims/i);
-    assert.doesNotMatch(hit.answer, /Digi App Form/);
+    assert.match(hit.answer, /Digi App Form/);
+    assert.match(hit.answer, /live production/);
+    assert.match(hit.answer, /ZDI/);
+    assert.match(hit.answer, /rolling out/i);
+    assert.doesNotMatch(hit.answer, /claims/i);
   });
 
   it("limits Sentinel and availability to CV wording", () => {
@@ -301,7 +304,7 @@ describe("static CV copy", () => {
     assert.ok(zdi);
     assert.match(zdi.answer, /approved for production rollout/i);
     assert.match(zdi.answer, /Zororo Document Intelligence/);
-    assert.match(zdi.answer, /Built/);
+    assert.match(zdi.answer, /Rolling out/);
     assert.doesNotMatch(zdi.answer, /\bin production\b/);
     assert.doesNotMatch(zdi.answer, /\blive\b/i);
     assert.doesNotMatch(zdi.answer, /\bshipped\b/i);
@@ -309,10 +312,14 @@ describe("static CV copy", () => {
 });
 
 describe("ZDI project placement", () => {
-  it("sits after CRM with Built status and rollout wording", () => {
+  it("sits after CRM as Rolling out with production-system neighbours", () => {
+    const digi = getProjectBySlug("digi-app-form");
+    const crm = getProjectBySlug("zororo-crm");
     const zdi = getProjectBySlug("zdi-signature-workflow");
-    assert.ok(zdi);
-    assert.equal(zdi.status, "Built");
+    assert.ok(digi && crm && zdi);
+    assert.equal(digi.status, "Shipped");
+    assert.equal(crm.status, "Shipped");
+    assert.equal(zdi.status, "Rolling out");
     assert.match(zdi.role, /approved for production rollout at Zororo-Phumulani/);
     assert.match(zdi.outcome, /approved for production rollout at Zororo-Phumulani/i);
     assert.doesNotMatch(zdi.role, /not yet in production/i);
@@ -321,6 +328,7 @@ describe("ZDI project placement", () => {
     assert.doesNotMatch(zdi.tagline, /synthetic/i);
     const { prev, next } = getProjectNeighbours("zdi-signature-workflow");
     assert.equal(prev.slug, "zororo-crm");
-    assert.equal(next.slug, "claims-pipeline");
+    assert.equal(next.slug, "portfolio-rag-assistant");
+    assert.equal(getProjectNeighbours("digi-app-form").next.slug, "zororo-crm");
   });
 });
