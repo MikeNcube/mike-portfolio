@@ -328,6 +328,7 @@ Live preview at `36edb33` got grounded Groq answers. Remaining issues:
 3. Inline `(Sources: [2], [3])` is stripped from the answer body. Inline `[n]` markers stay.
 4. Each context block is prefixed `PROJECT: <title>`. The prompt forbids carrying stack/metrics from one project block into another (the CRM/Alembic mix came from a Sentinel chunk).
 5. Digi App Form content and knowledge-base chunks stay as they are.
+6. Availability / contact / hiring answers always include `mikencube03@gmail.com` (appended in code if the model omits it). Inline `[n]` markers are remapped to the returned sources list so a single cited chunk is `[1]`, not `[2]`.
 
 ---
 

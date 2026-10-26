@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   answerQuestion,
   buildPrompt,
+  CONTACT_EMAIL,
   EMAIL_FALLBACK,
   selectCitedSources,
   shouldCacheAnswer,
@@ -215,6 +216,45 @@ describe("cited sources", () => {
     const prompt = buildPrompt("What is the CRM?", SIX_CHUNKS.slice(0, 2), "developer");
     assert.match(prompt, /PROJECT: CRM/);
     assert.match(prompt, /Never carry tools or details from one PROJECT block into another/);
+  });
+
+  it("remaps inline citations to the returned sources list", async () => {
+    const result = await answerQuestion({
+      question: "What is Cube?",
+      retrieveFn: async () => SIX_CHUNKS,
+      generateGemini: async () => "Cube is a coding agent prototype [3].",
+    });
+
+    assert.equal(result.via, "gemini");
+    assert.deepEqual(result.sources.map((s) => s.title), ["Cube"]);
+    assert.match(result.response, /\[1\]/);
+    assert.doesNotMatch(result.response, /\[3\]/);
+  });
+});
+
+describe("contact email", () => {
+  it("appends the contact email after generation when a hiring answer omits it", async () => {
+    const result = await answerQuestion({
+      question: "Is Mike available?",
+      retrieveFn: async () => [
+        {
+          id: "availability",
+          title: "Availability",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Mike is available. Contact: mikencube03@gmail.com.",
+          score: 0.92,
+        },
+      ],
+      generateGemini: async () => "Yes, Mike is available for new roles.",
+    });
+
+    assert.equal(result.via, "gemini");
+    assert.match(result.response, /available/i);
+    assert.match(result.response, new RegExp(CONTACT_EMAIL));
+    assert.equal(
+      result.response.match(new RegExp(CONTACT_EMAIL, "g"))?.length,
+      1,
+    );
   });
 });
 

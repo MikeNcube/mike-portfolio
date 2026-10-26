@@ -12,8 +12,25 @@ import { isRefusal } from "./refusal";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 
+export const CONTACT_EMAIL = "mikencube03@gmail.com";
+
 export const EMAIL_FALLBACK =
   "I don't have information about that in my knowledge base — it covers Mike's projects, skills, and experience. Email him at mikencube03@gmail.com for anything else.";
+
+const CONTACT_QUESTION_RE =
+  /\b(available|availability|hiring|hire|contact|email|reach)\b/i;
+
+export function isContactQuestion(question: string): boolean {
+  return CONTACT_QUESTION_RE.test(question);
+}
+
+export function ensureContactEmail(text: string): string {
+  if (text.toLowerCase().includes(CONTACT_EMAIL)) return text;
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  const sep = /[.!?]$/.test(trimmed) ? " " : ". ";
+  return `${trimmed}${sep}Email ${CONTACT_EMAIL}.`;
+}
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
 
@@ -110,6 +127,33 @@ export function selectCitedSources(
   return picked;
 }
 
+export function remapCitations(
+  text: string,
+  chunks: RetrievedChunk[],
+  sources: Array<{ title: string; url: string }>,
+): string {
+  if (sources.length === 0) {
+    return text.replace(/\[(\d+)\]/g, "").replace(/ {2,}/g, " ").trim();
+  }
+
+  const map = new Map<number, number>();
+  for (const n of citedIndexes(text)) {
+    const chunk = chunks[n - 1];
+    if (!chunk) continue;
+    const key = `${chunk.title}|${chunk.sourceUrl}`;
+    const idx = sources.findIndex((s) => `${s.title}|${s.url}` === key);
+    if (idx >= 0) map.set(n, idx + 1);
+  }
+
+  return text
+    .replace(/\[(\d+)\]/g, (_, raw: string) => {
+      const mapped = map.get(Number(raw));
+      return mapped === undefined ? "" : `[${mapped}]`;
+    })
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
 export function shouldCacheAnswer(result: AnswerResult): boolean {
   return (
     (result.via === "gemini" || result.via === "groq")
@@ -122,9 +166,15 @@ function finaliseModelText(raw: string, chunks: RetrievedChunk[]): {
   response: string;
   sources: Array<{ title: string; url: string }>;
 } {
-  const response = stripSourceFooter(raw);
+  const stripped = stripSourceFooter(raw);
   const sources = selectCitedSources(raw, chunks);
+  const response = remapCitations(stripped, chunks, sources);
   return { response, sources };
+}
+
+function withContactEmail(question: string, result: AnswerResult): AnswerResult {
+  if (!isContactQuestion(question)) return result;
+  return { ...result, response: ensureContactEmail(result.response) };
 }
 
 async function tryGenerate(
@@ -176,13 +226,19 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
         if (geminiAvailable()) {
           const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
           if (geminiText) {
-            return { ...finaliseModelText(geminiText, relevant), via: "gemini" };
+            return withContactEmail(question, {
+              ...finaliseModelText(geminiText, relevant),
+              via: "gemini",
+            });
           }
         }
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
-            return { ...finaliseModelText(groqText, relevant), via: "groq" };
+            return withContactEmail(question, {
+              ...finaliseModelText(groqText, relevant),
+              via: "groq",
+            });
           }
         }
       }
@@ -193,11 +249,11 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
 
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
-    return {
+    return withContactEmail(question, {
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
       via: "static",
-    };
+    });
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };
