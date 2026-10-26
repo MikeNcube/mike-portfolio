@@ -2,7 +2,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 
-export const ANSWER_CACHE_VERSION = "r35";
+export const ANSWER_CACHE_VERSION = "r36";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -33,8 +33,16 @@ export const CANONICAL_TECH_LEAD_CRM_ANSWER =
 const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike ship|shipped at zororo)\b/i;
 
-const WORK_QUESTION_RE =
+const WORK_CORE_RE =
   /\bwhat (?:does mike work on|has mike built|did mike build)\b/i;
+
+const WORK_WH_RE = /\b(?:what|which)\b/i;
+
+const WORK_ACTION_RE =
+  /\b(?:build|built|deliver(?:ed)?|ship(?:ped)?|make|made|create(?:d)?|develop(?:ed)?)\b/i;
+
+const WORK_SCOPE_RE =
+  /\b(?:zororo(?:-phumulani)?|employer|his company|at work)\b/i;
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
@@ -92,7 +100,8 @@ export function isProductionSystemsQuestion(question: string): boolean {
 // True when the visitor asked what Mike works on / has built (not the production-systems list).
 export function isWorkQuestion(question: string): boolean {
   if (isProductionSystemsQuestion(question)) return false;
-  return WORK_QUESTION_RE.test(question);
+  if (WORK_CORE_RE.test(question)) return true;
+  return WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question) && WORK_SCOPE_RE.test(question);
 }
 
 // True when the text names ZDI or Zororo Document Intelligence.
@@ -195,7 +204,6 @@ function hasNotDeployed(text: string): boolean {
     || /\bhas(?: not|n't) been deployed\b/.test(t)
     || /\bnot(?: yet)? in production\b/.test(t)
     || /\bundeployed\b/.test(t)
-    || /\bnot(?: yet)? live\b/.test(t)
   );
 }
 
@@ -224,7 +232,7 @@ const EARLY_STAGE_MEANING_RE =
   /\bearly (?:stage|development|phase)\b|\bin development\b|\bprototype\b|\bnot production ready\b/g;
 
 const NOT_DEPLOYED_MEANING_RE =
-  /\bnot(?: yet)? deployed\b|\bhas(?: not|n't) been deployed\b|\bundeployed\b|\bnot(?: yet)? in production\b|\bnot(?: yet)? live\b/g;
+  /\bnot(?: yet)? deployed\b|\bhas(?: not|n't) been deployed\b|\bundeployed\b|\bnot(?: yet)? in production\b/g;
 
 function countMatches(text: string, re: RegExp): number {
   const global = new RegExp(re.source, "g");
@@ -344,10 +352,13 @@ function projectFollowSpan(kind: StatusKind, text: string): string {
     if (re.test(parts[i])) {
       keep[i] = true;
       following = sentenceProjectHits(parts[i]) === 1;
-      for (let j = i - 1; j >= 0; j--) {
-        if (sentenceProjectHits(parts[j]) > 0) break;
-        if (!isSameProjectFollowUp(parts[j])) break;
-        keep[j] = true;
+      const earlierNamesAProject = parts.slice(0, i).some((p) => sentenceProjectHits(p) > 0);
+      if (!earlierNamesAProject) {
+        for (let j = i - 1; j >= 0; j--) {
+          if (sentenceProjectHits(parts[j]) > 0) break;
+          if (!isSameProjectFollowUp(parts[j])) break;
+          keep[j] = true;
+        }
       }
       continue;
     }
@@ -482,6 +493,16 @@ function statusTextForKind(kind: StatusKind, text: string, question: string): st
   return span;
 }
 
+function firstMentionIndex(kind: StatusKind, text: string, question: string): number {
+  const re = mentionRe(kind);
+  re.lastIndex = 0;
+  const inText = re.exec(text);
+  if (inText) return inText.index;
+  re.lastIndex = 0;
+  const inQ = re.exec(question);
+  return inQ ? 10_000 + inQ.index : Number.MAX_SAFE_INTEGER;
+}
+
 function statusKindsToFill(question: string, text: string): StatusKind[] {
   const kinds: StatusKind[] = [];
   for (const kind of ["zdi", "claims", "ai-os"] as const) {
@@ -492,6 +513,7 @@ function statusKindsToFill(question: string, text: string): StatusKind[] {
       kinds.push(kind);
     }
   }
+  kinds.sort((a, b) => firstMentionIndex(a, text, question) - firstMentionIndex(b, text, question));
   return kinds;
 }
 
@@ -700,6 +722,25 @@ function missingStatusBits(kind: StatusKind, text: string): string[] {
   }
 }
 
+function claimsMissingPhrase(missing: string[]): string {
+  const needA = missing.includes("approved");
+  const needP = missing.includes("production-ready");
+  const needS = missing.includes("a standby");
+  const needN = missing.includes("not the live system");
+  let identity = "";
+  if (needA && needP && needS) identity = "an approved, production-ready standby";
+  else if (needA && needP) identity = "approved and production-ready";
+  else if (needA && needS) identity = "an approved standby";
+  else if (needP && needS) identity = "a production-ready standby";
+  else if (needA) identity = "approved";
+  else if (needP) identity = "production-ready";
+  else if (needS) identity = "a standby";
+  if (identity && needN) return `${identity}, not the live system`;
+  if (identity) return identity;
+  if (needN) return "not the live system";
+  return "";
+}
+
 function currentStatusClause(kind: StatusKind, span: string): string {
   const missing = missingStatusBits(kind, span);
   if (missing.length === 0) return "";
@@ -720,6 +761,10 @@ function currentStatusClause(kind: StatusKind, span: string): string {
         return _exhaustive;
       }
     }
+  }
+  if (kind === "claims") {
+    const phrase = claimsMissingPhrase(missing);
+    return phrase ? `${projectDisplayName(kind)} is ${phrase}` : "";
   }
   return `${projectDisplayName(kind)} is ${joinStatusBits(missing)}`;
 }
@@ -904,6 +949,16 @@ function stripUncitedEvaluativeConclusions(text: string): string {
   return kept.join("").replace(/ {2,}/g, " ").trim();
 }
 
+function workAnswerListsAllProjects(text: string): boolean {
+  return (
+    /digi/i.test(text)
+    && /\bcrm\b/i.test(text)
+    && /\bzdi\b/i.test(text)
+    && /claims operations/i.test(text)
+    && /zororo ai os/i.test(text)
+  );
+}
+
 function applyCanonicalGuards(question: string, text: string): string {
   let out = text.trim();
   if (isZdiLiveQuestion(question)) {
@@ -918,7 +973,7 @@ function applyCanonicalGuards(question: string, text: string): string {
   if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
-  if (isWorkQuestion(question) && !/\[\d+\]/.test(out)) {
+  if (isWorkQuestion(question) && !workAnswerListsAllProjects(out)) {
     out = CANONICAL_WORK_ANSWER;
   }
   if (isWorkQuestion(question) && falselyLabelsNonProductionAsProduction(out)) {

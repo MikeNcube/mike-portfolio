@@ -211,6 +211,7 @@ export function buildPrompt(
     `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words. List courses as training. Only named certificates are certifications. Never present AWS Training and Certification or AWS Skills Center as a credential.`,
     "Whenever you mention ZDI, state in one full sentence that it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live, and cite the source with [n]. Do not repeat that status.",
     "Whenever you mention Zororo AI OS, state in one full sentence that it is built, early stage, and not deployed. Do not write 'Built.' again if the sentence already says built, and never write 'Status: Built' after that.",
+    "When asked about Proactive Sentinel, lead with MITRE ATT&CK mapping and event correlation. Cite a Proactive Sentinel PROJECT block, never the interview-guide or 'How to evaluate Mike' block. Mention SHA-256 fingerprint dedup in Redis once; do not also say event dedup.",
     "Mike works remote-first.",
     "Cite supporting blocks with [n] immediately after the claim they support. Every factual answer must include at least one [n]. Do not append a '(Sources: [n])' list in the answer body.",
     "",
@@ -406,18 +407,18 @@ function staticOrSafeReply(
     return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
   }
   if (isOffTopicQuestion(question)) return refusalResult();
+  if (isWorkQuestion(question)) {
+    return polishResult(question, {
+      response: CANONICAL_WORK_ANSWER,
+      sources: workSystemSources([]),
+      via: "static",
+    }, chunks);
+  }
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
     return polishResult(question, {
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
-      via: "static",
-    }, chunks);
-  }
-  if (isWorkQuestion(question)) {
-    return polishResult(question, {
-      response: CANONICAL_WORK_ANSWER,
-      sources: workSystemSources([]),
       via: "static",
     }, chunks);
   }
@@ -671,15 +672,6 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     }
   }
 
-  const staticHit = matchStaticAnswer(question);
-  if (staticHit) {
-    return withContactEmail(question, polishResult(question, {
-      response: staticHit.answer,
-      sources: sourcesFor(staticHit),
-      via: "static",
-    }, relevant));
-  }
-
   if (isOffTopicQuestion(question)) {
     return refusalResult();
   }
@@ -688,6 +680,15 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     return withContactEmail(question, polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
       sources: workSystemSources([]),
+      via: "static",
+    }, relevant));
+  }
+
+  const staticHit = matchStaticAnswer(question);
+  if (staticHit) {
+    return withContactEmail(question, polishResult(question, {
+      response: staticHit.answer,
+      sources: sourcesFor(staticHit),
       via: "static",
     }, relevant));
   }

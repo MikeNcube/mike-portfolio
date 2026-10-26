@@ -88,6 +88,17 @@ describe("keyword retrieval fallback", () => {
     assert.doesNotMatch(hit!.text, /one of Mike's production systems/);
   });
 
+  it("retrieves Proactive Sentinel with MITRE ATT&CK mapping first", () => {
+    const hits = retrieveKeyword("Walk me through Proactive Sentinel's architecture.");
+    const hit = hits.find((h) => h.id.startsWith("proactive-sentinel"));
+    assert.ok(hit, `expected a sentinel chunk in ${hits.map((h) => h.id).join(", ")}`);
+    assert.match(hit!.text, /MITRE ATT&CK/);
+    assert.match(hit!.text, /correlat/i);
+    const overview = hits.find((h) => h.id === "proactive-sentinel-overview");
+    assert.ok(overview);
+    assert.match(overview!.text, /^Proactive Sentinel maps events to MITRE ATT&CK/);
+  });
+
   it("retrieves the multi-agent content pipeline", () => {
     const hits = retrieveKeyword("What is the multi-agent content pipeline?");
     const ids = hits.map((h) => h.id);

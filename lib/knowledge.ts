@@ -193,13 +193,19 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'proactive-sentinel-overview',
     title: 'Proactive Sentinel — multi-tenant SOC platform',
     sourceUrl: 'https://github.com/MikeNcube/proactive-sentinel',
-    text: 'Proactive Sentinel is a Python backend (not an LLM product): multi-tenant SOC for financial services. v1.0.0, deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused. Ingests events, SHA-256 dedup in Redis, MITRE ATT&CK chain correlation, automated IP blocking and audit entries. 44 passing tests.',
+    keywords: [
+      'MITRE ATT&CK',
+      'event correlation',
+      'Proactive Sentinel',
+      'SOC',
+    ],
+    text: 'Proactive Sentinel maps events to MITRE ATT&CK techniques and correlates them into chain alerts. It is a Python backend (not an LLM product): multi-tenant SOC for financial services. v1.0.0, deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused. Ingests events with a single SHA-256 fingerprint dedup in Redis, then automated IP blocking and audit entries. 44 passing tests.',
   },
   {
     id: 'proactive-sentinel-tech',
     title: 'Proactive Sentinel — engineering details',
     sourceUrl: 'https://github.com/MikeNcube/proactive-sentinel',
-    text: 'Stack: Python 3.11, Flask, JWT, AES-256-GCM PII encryption, PostgreSQL 15 + SQLAlchemy 2.0 + Alembic, Redis 7 dedup, OpenTelemetry, Railway + Docker + Gunicorn. POPIA: PII masking at ingest, immutable audit log, tenant isolation per request.',
+    text: 'Detection leads with MITRE ATT&CK mapping and event correlation in the DetectionEngine. Stack: Python 3.11, Flask, JWT, AES-256-GCM PII encryption, PostgreSQL 15 + SQLAlchemy 2.0 + Alembic, Redis 7 (SHA-256 ingest fingerprint), OpenTelemetry, Railway + Docker + Gunicorn. POPIA: PII masking at ingest, immutable audit log, tenant isolation per request.',
   },
   {
     id: 'certifications',

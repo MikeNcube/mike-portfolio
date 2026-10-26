@@ -516,6 +516,10 @@ describe("cited sources", () => {
     assert.doesNotMatch(prompt, /works remotely-first/);
     assert.doesNotMatch(prompt, /CRM \u2026/);
     assert.doesNotMatch(prompt, /CRM \.\.\. Rolling out/);
+    const sentinelPrompt = buildPrompt("Walk me through Proactive Sentinel's architecture.", SIX_CHUNKS, "developer");
+    assert.match(sentinelPrompt, /MITRE ATT&CK mapping and event correlation/);
+    assert.match(sentinelPrompt, /never the interview-guide/);
+    assert.match(sentinelPrompt, /SHA-256 fingerprint dedup/);
   });
 
   it("remaps inline citations to the returned sources list", async () => {
@@ -657,8 +661,11 @@ describe("static CV copy", () => {
     const sentinel = matchStaticAnswer("Walk me through Proactive Sentinel's architecture.");
     assert.ok(sentinel);
     assert.match(sentinel.answer, /Flask SOC/);
+    assert.match(sentinel.answer, /MITRE ATT&CK/);
+    assert.match(sentinel.answer, /correlat/);
     assert.match(sentinel.answer, /detection engine/);
     assert.match(sentinel.answer, /audit log/);
+    assert.doesNotMatch(sentinel.answer, /event dedup/i);
     assert.match(sentinel.answer, /POPIA/);
     assert.match(sentinel.answer, /44 passing tests/);
 
@@ -1050,7 +1057,7 @@ describe("production-system and ZDI status copy", () => {
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
     assert.equal(
       out,
-      "It is a fail-over standby. Current status: the claims operations platform is approved, production-ready and not the live system [1].",
+      "It is a fail-over standby. Current status: the claims operations platform is approved and production-ready, not the live system [1].",
     );
     assert.match(out, /approved/i);
     assert.match(out, /production-ready/i);
@@ -1078,7 +1085,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(
       out,
-      "It is a fail-over standby [1]. Current status: the claims operations platform is approved, production-ready and not the live system [1].",
+      "It is a fail-over standby [1]. Current status: the claims operations platform is approved and production-ready, not the live system [1].",
     );
     assert.doesNotMatch(out, /standby; it is/);
     assertNoAddedItIs("It is a fail-over standby [1].", out);
@@ -1205,11 +1212,9 @@ describe("production-system and ZDI status copy", () => {
   it("recognises AI OS early-stage and not-deployed synonyms and skips extra status", () => {
     const samples = [
       "Zororo AI OS is in development and undeployed.",
-      "Zororo AI OS is a prototype and not live.",
       "Zororo AI OS is not production-ready and not in production.",
       "Mike developed Zororo AI OS (early-stage, not yet deployed).",
       "He is building the Zororo AI OS, early stage, not deployed.",
-      "She designed Zororo AI OS; it is early-stage and not live.",
       "They created Zororo AI OS, which is early stage and undeployed.",
       "Zororo AI OS is early development and not yet deployed.",
       "Zororo AI OS is in an early phase and has not been deployed.",
@@ -1233,12 +1238,26 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(out, /(?:^|[.!?]\s+)It is\b/);
   });
 
-  it("adds claims and ZDI status in one Current status sentence, ZDI then claims", () => {
+  it("orders Current status items by mention order, claims then ZDI", () => {
     const input = "Mike built the claims operations platform and ZDI [1].";
     const out = ensureProjectStatusCopy("Tell me about these two projects", input);
     assert.match(
       out,
-      /^Mike built the claims operations platform and ZDI \[1\]\. Current status: ZDI is approved for production rollout but not yet live \[1\]; the claims operations platform is an approved, production-ready standby, not the live system \[2\]\./,
+      /^Mike built the claims operations platform and ZDI \[1\]\. Current status: the claims operations platform is an approved, production-ready standby, not the live system \[1\]; ZDI is approved for production rollout but not yet live \[2\]\./,
+    );
+    const statusAt = out.indexOf("Current status:");
+    const zdiAt = out.indexOf("ZDI is approved for production rollout but not yet live", statusAt);
+    const claimsAt = out.indexOf("the claims operations platform is an approved", statusAt);
+    assert.ok(zdiAt >= 0 && claimsAt >= 0, out);
+    assert.ok(claimsAt < zdiAt, out);
+  });
+
+  it("orders Current status items by mention order, ZDI then claims", () => {
+    const input = "Mike built ZDI and the claims operations platform [1].";
+    const out = ensureProjectStatusCopy("Tell me about these two projects", input);
+    assert.match(
+      out,
+      /^Mike built ZDI and the claims operations platform \[1\]\. Current status: ZDI is approved for production rollout but not yet live \[1\]; the claims operations platform is an approved, production-ready standby, not the live system \[2\]\./,
     );
     const statusAt = out.indexOf("Current status:");
     const zdiAt = out.indexOf("ZDI is approved for production rollout but not yet live", statusAt);
@@ -1268,7 +1287,7 @@ describe("production-system and ZDI status copy", () => {
     ];
     const input =
       "Mike built a claims operations platform that serves as a production-ready failover for the live claims system [5]; and the CRM [4].";
-    const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", input, sources);
+    const out = ensureProjectStatusCopy("Tell me about these two projects", input, sources);
     assert.match(out, /^Mike built a claims operations platform that serves as a production-ready failover for the live claims system \[5\]; and the CRM \[4\]\./);
     assert.match(out, /Current status: the claims operations platform is approved \[5\]/);
     assert.doesNotMatch(out, /Current status: the claims operations platform is an approved, production-ready standby/);
@@ -1798,6 +1817,10 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(isWorkQuestion("What has Mike built at Zororo-Phumulani?"), true);
     assert.equal(isWorkQuestion("What does Mike work on?"), true);
     assert.equal(isWorkQuestion("What production systems has Mike shipped?"), false);
+    assert.equal(isWorkQuestion("What has Mike delivered at Zororo-Phumulani?"), true);
+    assert.equal(isWorkQuestion("What did Mike deliver at Zororo?"), true);
+    assert.equal(isWorkQuestion("What projects has Mike built for his employer?"), true);
+    assert.equal(isWorkQuestion("Which systems did Mike build for Zororo-Phumulani Funeral Assurance?"), true);
     const labelled =
       "Mike's production systems are Digi App Form [1], the CRM [2], ZDI [3], and the claims operations platform [4].";
     const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", labelled);
@@ -2035,6 +2058,79 @@ describe("round 34 status cites and live repros", () => {
       [{ id: "other-notes", title: "Notes", url: "https://github.com/MikeNcube" }],
     );
     assert.match(aiOsOut, /Current status: Zororo AI OS is early-stage and not yet deployed \[2\]/);
+  });
+
+  it("does not give a ZDI follow-up to the next project, and does not treat not-live as AI OS not-deployed", () => {
+    const sources = [
+      { id: "zdi-signature-workflow", title: "ZDI — Signature", url: "https://github.com/MikeNcube" },
+      { id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" },
+    ];
+    const input =
+      "ZDI is a document intake system [1]. It is approved for production rollout but not yet live [1]. Zororo AI OS is a governed AI control plane [2].";
+    const out = ensureProjectStatusCopy("Tell me about these two projects", input, sources);
+    assert.match(out, /^ZDI is a document intake system \[1\]\. It is approved for production rollout but not yet live \[1\]\. Zororo AI OS is a governed AI control plane \[2\]\./);
+    assert.match(out, /Current status: Zororo AI OS is early-stage and not yet deployed \[2\]/);
+    assert.doesNotMatch(out, /Current status: Zororo AI OS is early-stage \[2\]/);
+    assert.doesNotMatch(out, /Current status:.*ZDI is approved/);
+    assert.equal(hasRepeatedStatus(out), false);
+  });
+
+  it("keeps AI OS follow-ups on AI OS when ZDI is named later", () => {
+    const sources = [
+      { id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" },
+      { id: "zdi-signature-workflow", title: "ZDI — Signature", url: "https://github.com/MikeNcube" },
+    ];
+    const input =
+      "Zororo AI OS is a governed AI control plane [1]. It is early-stage and not yet deployed [1]. ZDI is a document intake system [2].";
+    const out = ensureProjectStatusCopy("Tell me about these two projects", input, sources);
+    assert.match(out, /^Zororo AI OS is a governed AI control plane \[1\]\. It is early-stage and not yet deployed \[1\]\. ZDI is a document intake system \[2\]\./);
+    assert.match(out, /Current status: ZDI is approved for production rollout but not yet live \[2\]/);
+    assert.doesNotMatch(out, /Current status:.*Zororo AI OS is /);
+  });
+
+  it("does not treat AI OS 'not live' as not-deployed", () => {
+    const input = "Zororo AI OS is a prototype and not live.";
+    const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
+    assert.match(out, /Current status: Zororo AI OS is not yet deployed/);
+    assert.doesNotMatch(out, /Current status: Zororo AI OS is early-stage and not yet deployed/);
+  });
+
+  it("uses an approved, production-ready standby rather than 'and a standby'", () => {
+    const input = "The claims operations platform is not the live system.";
+    const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
+    assert.match(out, /Current status: the claims operations platform is an approved, production-ready standby \[1\]/);
+    assert.doesNotMatch(out, /approved, production-ready and a standby/);
+  });
+
+  it("serves the work canonical for Zororo deliver/build phrasings, including Funeral Assurance", async () => {
+    const questions = [
+      "What has Mike delivered at Zororo-Phumulani?",
+      "What did Mike deliver at Zororo?",
+      "What projects has Mike built for his employer?",
+      "Which systems did Mike build for Zororo-Phumulani Funeral Assurance?",
+    ];
+    for (const question of questions) {
+      assert.equal(isWorkQuestion(question), true, question);
+      const staticHit = matchStaticAnswer(question);
+      if (staticHit) {
+        assert.equal(staticHit.answer, CANONICAL_WORK_ANSWER, question);
+      }
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => SIX_CHUNKS,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => "Mike built Digi App Form.",
+      });
+      assert.equal(result.response, CANONICAL_WORK_ANSWER, question);
+      assert.match(result.response, /Digi App Form \[1\]/);
+      assert.match(result.response, /lead-management CRM \[2\]/);
+      assert.match(result.response, /ZDI is approved for production rollout but not yet live \[3\]/);
+      assert.match(result.response, /claims operations platform is an approved, production-ready standby/);
+      assert.match(result.response, /Zororo AI OS is early-stage and not yet deployed \[5\]/);
+      assert.equal(result.sources.length, 5, question);
+    }
   });
 
   it("paces eval requests so the suite stays under the production 20/10min cap", () => {

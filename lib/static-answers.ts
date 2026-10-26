@@ -62,6 +62,11 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what does mike work on at zororo",
       "what does mike work on at zororo-phumulani",
       "what has mike built",
+      "what has mike delivered at zororo-phumulani",
+      "what did mike deliver at zororo",
+      "what projects has mike built for his employer",
+      "which systems did mike build for zororo-phumulani funeral assurance",
+      "which systems did mike build for zororo-phumulani",
     ],
     answer: CANONICAL_WORK_ANSWER,
     sourceIds: [
@@ -80,7 +85,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about proactive sentinel",
     ],
     answer:
-      "Proactive Sentinel is a Flask SOC with a detection engine and an audit log [1]. Designed with POPIA in mind. 44 passing tests [2].",
+      "Proactive Sentinel maps events to MITRE ATT&CK and correlates them into chain alerts [1]. It is a Flask SOC with a detection engine, a single SHA-256 ingest fingerprint in Redis, and an audit log. Designed with POPIA in mind. 44 passing tests [2].",
     sourceIds: ["proactive-sentinel-overview", "proactive-sentinel-tech"],
   },
   {
