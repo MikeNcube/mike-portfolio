@@ -554,6 +554,53 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(out, /\[3\]\[3\]/);
   });
 
+  it("converts hyphen-like dashes to '-' and long dashes to prose separators", () => {
+    assert.equal(normaliseModelText("production\u2010ready"), "production-ready");
+    assert.equal(normaliseModelText("non\u2011breaking"), "non-breaking");
+    assert.equal(normaliseModelText("figure\u2012dash"), "figure-dash");
+    assert.equal(
+      normaliseModelText("Built \u2014 early stage, not deployed"),
+      "Built, early stage, not deployed",
+    );
+    assert.equal(normaliseModelText("The CRM \u2013 over 40 people"), "The CRM, over 40 people");
+    assert.equal(normaliseModelText("Approved \u2015 standby"), "Approved, standby");
+    assert.equal(normaliseModelText("plane\u2014not deployed"), "plane - not deployed");
+    assert.doesNotMatch(normaliseModelText("plane\u2014not deployed"), /plane-not/);
+    assert.doesNotMatch(normaliseModelText("range\u20132024"), /range-2024/);
+    assert.equal(normaliseModelText("range\u20132024"), "range - 2024");
+  });
+
+  it("does not repeat AI OS status when the answer already says not deployed", () => {
+    const out = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is a governed control plane, not deployed.",
+    );
+    assert.equal((out.match(/not deployed/gi) ?? []).length, 1);
+    assert.doesNotMatch(out, /Built\. Early stage, not deployed/);
+    assert.doesNotMatch(out, /early stage, not deployed\. Built/);
+  });
+
+  it("does not repeat ZDI status when the answer already says rolling out", () => {
+    const out = ensureProjectStatusCopy(
+      "What is ZDI?",
+      "ZDI is a signature workflow, rolling out at Zororo-Phumulani.",
+    );
+    assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
+    assert.doesNotMatch(out, /Approved for production rollout, rolling out soon, not yet live/);
+  });
+
+  it("does not repeat claims standby copy when the answer already says standby", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform is an approved, production-ready standby.",
+    );
+    assert.equal((out.match(/standby/gi) ?? []).length, 1);
+    assert.equal(
+      out,
+      "The claims operations platform is an approved, production-ready standby.",
+    );
+  });
+
   it("rewrites a model production-systems answer into the canonical split", async () => {
     const result = await answerQuestion({
       question: "What production systems has Mike shipped?",

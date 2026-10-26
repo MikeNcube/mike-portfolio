@@ -1,6 +1,6 @@
 // Canonical production-system, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r19";
+export const ANSWER_CACHE_VERSION = "r20";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -50,6 +50,25 @@ export function hasAiOsStatus(text: string): boolean {
   return t.includes("built") && t.includes("early stage") && t.includes("not deployed");
 }
 
+type StatusKind = "zdi" | "ai-os" | "claims";
+
+// Skip appending when the answer already conveys that project's status.
+function alreadyConveysStatus(kind: StatusKind, text: string): boolean {
+  const t = text.toLowerCase();
+  switch (kind) {
+    case "zdi":
+      return t.includes("rolling out") || hasZdiStatus(text);
+    case "ai-os":
+      return t.includes("not deployed") || hasAiOsStatus(text);
+    case "claims":
+      return t.includes("standby");
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
 // True when ZDI is listed in the Shipped: clause instead of Rolling out.
 export function zdiListedAsShipped(text: string): boolean {
   const lower = text.toLowerCase();
@@ -94,10 +113,10 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   if (isProductionSystemsQuestion(question) && !productionAnswerIsCanonical(out)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
-  if ((mentionsZdi(question) || mentionsZdi(out)) && !hasZdiStatus(out)) {
+  if ((mentionsZdi(question) || mentionsZdi(out)) && !alreadyConveysStatus("zdi", out)) {
     out = appendStatusSentence(out, ZDI_STATUS_SENTENCE);
   }
-  if ((mentionsAiOs(question) || mentionsAiOs(out)) && !hasAiOsStatus(out)) {
+  if ((mentionsAiOs(question) || mentionsAiOs(out)) && !alreadyConveysStatus("ai-os", out)) {
     out = appendStatusSentence(out, AI_OS_STATUS_SENTENCE);
   }
   return out;

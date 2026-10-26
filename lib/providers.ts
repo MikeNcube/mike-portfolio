@@ -301,7 +301,9 @@ export async function generateGroq(prompt: string, apiKey: string): Promise<stri
     const model = models[i];
     if (!groqModelIsOpen(model)) continue;
     try {
-      return await generateGroqOnce(prompt, apiKey, model, deadline);
+      const text = await generateGroqOnce(prompt, apiKey, model, deadline);
+      console.info(`[provider] groq model=${model}`);
+      return text;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       const action = onGroqModelFailure(err, model, i < models.length - 1);
