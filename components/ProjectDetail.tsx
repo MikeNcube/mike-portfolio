@@ -4,6 +4,7 @@ import RagDiagram from "./diagrams/RagDiagram";
 import SitewardenDiagram from "./diagrams/SitewardenDiagram";
 import CubeDiagram from "./diagrams/CubeDiagram";
 import CrmDiagram from "./diagrams/CrmDiagram";
+import ZdiDiagram from "./diagrams/ZdiDiagram";
 import ClaimsDiagram from "./diagrams/ClaimsDiagram";
 import DigiFormDiagram from "./diagrams/DigiFormDiagram";
 import SentinelDiagram from "./diagrams/SentinelDiagram";
@@ -13,6 +14,7 @@ const DIAGRAMS: Partial<Record<string, React.ReactNode>> = {
   "sitewarden":              <SitewardenDiagram />,
   "cube-agent":              <CubeDiagram />,
   "zororo-crm":              <CrmDiagram />,
+  "zdi-signature-workflow":  <ZdiDiagram />,
   "claims-pipeline":         <ClaimsDiagram />,
   "digi-app-form":           <DigiFormDiagram />,
   "proactive-sentinel":      <SentinelDiagram />,

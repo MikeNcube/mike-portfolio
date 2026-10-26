@@ -21,9 +21,10 @@ export default function About() {
                 Applied AI Engineer and Systems Architect at{" "}
                 <strong className="text-ink font-medium">Zororo-Phumulani Funeral Assurance</strong>{" "}
                 (FSP 48558), where I have been the sole AI engineer since 2022. I built
-                the lead-management CRM used by over 40 people, the claims document
-                extraction pipeline, and the regulated insurance intake platform
-                from scratch in a four-person IT team.
+                the lead-management CRM used by over 40 people, the ZDI signature
+                and approval workflow, the claims document extraction pipeline, and
+                the regulated insurance intake platform from scratch in a
+                four-person IT team.
               </p>
               <p>
                 Six-plus years in software, about three focused on generative AI.

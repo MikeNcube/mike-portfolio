@@ -60,8 +60,9 @@ export default function EvalsPage() {
             RAG assistant evaluation
           </h1>
           <p className="text-base text-ink-muted max-w-prose">
-            Ten questions covering answer correctness, citation correctness, out-of-scope refusals,
-            and prompt-injection resistance. Run against any deployment to generate results.
+            {EVAL_QUESTIONS.length} questions covering answer correctness, citation correctness,
+            out-of-scope refusals, and prompt-injection resistance. Run against any deployment
+            to generate results.
           </p>
         </div>
 
@@ -69,7 +70,7 @@ export default function EvalsPage() {
         <section className="mb-10">
           <h2 className="text-base font-semibold text-ink mb-3">What is tested</h2>
           <p className="text-sm text-ink-muted leading-relaxed max-w-prose">
-            Each of the ten questions below is tested against the live assistant. Checks include:
+            Each of the questions below is tested against the live assistant. Checks include:
             API response success, answer correctness (must-contain phrases), absence of
             hallucinations (must-not-contain phrases), correct refusal for out-of-scope and
             prompt-injection attempts, and source citation presence where expected.

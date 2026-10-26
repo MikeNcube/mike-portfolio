@@ -332,6 +332,19 @@ Live preview at `36edb33` got grounded Groq answers. Remaining issues:
 
 ---
 
+## Round 8 — ZDI Signature & Approval Workflow
+
+New flagship case study `zdi-signature-workflow` (ZDI, Zororo Document Intelligence), inserted in `WORK_ORDER` immediately after `zororo-crm`. Status **Built**. Role and outcome say **approved for production rollout at Zororo-Phumulani**; rollout starting soon. Copy does not say shipped, live, or in production. No people names, logins, approval amounts, or security findings. No public “synthetic data” claim.
+
+| Surface | Change |
+|---------|--------|
+| `/projects/zdi-signature-workflow` | Case study + HTML/CSS architecture diagram (14px labels, stacked on mobile): three apps → FastAPI API → capability check and workflow guards → config-driven route (submitted → manager → accounts → archived, return-for-correction new revision) → Signature Service → hash-chained evidence table → worker archival PDF → evidence check. Footer: “No AI in approvals · no payments executed”. |
+| `lib/knowledge.ts` + `lib/static-answers.ts` | Matching chunk and static answer for “What is ZDI?” |
+| `evals/eval.ts` | Eval case must contain `approved for production rollout` and must not claim live / shipped / in production |
+| Sitemap, OG, neighbours | Sitemap maps `allProjects`; project OG uses the tagline; neighbours cycle CRM → ZDI → claims |
+
+---
+
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.

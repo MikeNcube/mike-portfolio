@@ -6,6 +6,7 @@ const WORK_ORDER = [
   "sitewarden",
   "cube-agent",
   "zororo-crm",
+  "zdi-signature-workflow",
   "claims-pipeline",
   "digi-app-form",
   "proactive-sentinel",

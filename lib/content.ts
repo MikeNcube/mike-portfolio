@@ -136,6 +136,36 @@ export const flagshipProjects: Project[] = [
     year: "2022–present",
   },
   {
+    slug: "zdi-signature-workflow",
+    name: "ZDI — Signature & Approval Workflow",
+    tagline:
+      "Evidence-grade e-signatures and a requester → manager → Accounts approval workflow, built as the second domain of Zororo Document Intelligence. Append-only, hash-chained signing events.",
+    workSection: "platform",
+    role: "Lead architect — approved for production rollout at Zororo-Phumulani",
+    problem:
+      "Internal requisitions ran on paper and email. A signature pasted onto a PDF proves nothing about who approved what, on which version, or in what capacity — and in a regulated insurer, an approval you cannot evidence is an audit finding.",
+    built:
+      "A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link; the requester completes the form, attaches a quotation and signs. The request returns to that manager to approve and sign, return with a reason, or reject; only then can Accounts act, sign off, or return it for correction. Every signature is a row in an append-only, hash-chained signing-event table that binds the signer, their role and capacity at signing, explicit intent, the method (drawn, captured or typed), and a SHA-256 of the exact content revision. On final approval a background worker renders an archival PDF with an evidence appendix. Separate Manager, Accounts and IT workspaces plus a Management App share one backend and one routing contract, with capability-based access control and segregation of duties.",
+    outcome:
+      "Approved for production rollout at Zororo-Phumulani. Rollout starting soon. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
+    systemOverview:
+      "Requester (secure link, no login) → submit + sign → manager review (approve & sign / return / reject) → Accounts review (approve & sign / return / reject / forward to a colleague) → archive_pending → worker renders PDF, stores it, hashes it → archived. A return issues a correction link; the resubmission becomes a new revision and the route restarts, so an approval of revision 1 never carries over to revision 2. Each step writes the mutable requisition status, an append-only workflow event and an append-only audit event in the same transaction; notifications go through a transactional outbox so a mail outage cannot block an approval. An evidence check recomputes the signing events, event hashes, document hash, attachment and PDF hashes on demand.",
+    engineeringDecisions: [
+      "A signature is a record, not an image: signer, role and capacity at signing, explicit intent, method, timestamp and a SHA-256 of the canonical content are bound into one append-only, hash-chained event.",
+      "Two independent tamper-evidence layers: database triggers reject UPDATE and DELETE on evidence tables, and a global hash chain detects changes made outside the database.",
+      "Signers bind a canonical, fixed-precision form of the content, not the PDF bytes — so re-rendering never breaks verification.",
+      "When two parallel signature designs grew in separate working copies, they were reconciled in an ADR: one canonical signing-event mechanism, with the stricter evidence checklist and intent rule carried forward.",
+      "Workflow state is mutable; evidence is append-only. Corrections create a new revision and new events — history is superseded, never edited.",
+      "Routing is configuration, not department if-statements, so later approval workflows are data, not new code.",
+      "Segregation of duties uses two mechanisms: a capability table (fails closed on unknown capabilities) and workflow guards for rules a role cannot express, e.g. a requester can never approve their own request.",
+      "Honest about limits: the evidence is tamper-evident within the database's controls, not a cryptographically signed PDF; no AI touches approvals or payments.",
+    ],
+    stack: ["Python", "FastAPI", "PostgreSQL", "Alembic", "Next.js", "TypeScript", "reportlab", "Docker", "pytest", "Vitest"],
+    status: "Built",
+    domain: "Governed workflow · E-signature evidence",
+    year: "2026",
+  },
+  {
     slug: "claims-pipeline",
     name: "Claims Document Extraction",
     tagline:

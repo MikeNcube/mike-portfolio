@@ -92,6 +92,20 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "Sitewarden is a governed AI operations platform prototype. FastAPI with a LangGraph state graph: plan, analyse, self-check, write-report, await-approval, revise. Human interrupt before consequential actions, Postgres checkpoints, risk-tiered tool gateway, pgvector hybrid search. 89 tests. Prototype, not deployed.",
     sourceIds: ["sitewarden"],
   },
+  {
+    question: "What is ZDI?",
+    aliases: [
+      "tell me about zdi",
+      "zdi architecture",
+      "explain zdi",
+      "what is zororo document intelligence",
+      "what is the signature workflow",
+      "zdi signature workflow",
+    ],
+    answer:
+      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Built. Approved for production rollout at Zororo-Phumulani; rollout starting soon. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+    sourceIds: ["zdi-signature-workflow"],
+  },
 ];
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);

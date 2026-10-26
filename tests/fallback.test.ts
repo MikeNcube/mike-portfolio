@@ -9,6 +9,7 @@ import {
   shouldCacheAnswer,
 } from "../lib/answer";
 import { matchStaticAnswer } from "../lib/static-answers";
+import { getProjectBySlug, getProjectNeighbours } from "../lib/content";
 import { isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
@@ -295,5 +296,31 @@ describe("static CV copy", () => {
     assert.match(cube.answer, /coding agent/);
     assert.match(cube.answer, /prototype/i);
     assert.doesNotMatch(cube.answer, /deployed to production/i);
+
+    const zdi = matchStaticAnswer("What is ZDI?");
+    assert.ok(zdi);
+    assert.match(zdi.answer, /approved for production rollout/i);
+    assert.match(zdi.answer, /Zororo Document Intelligence/);
+    assert.match(zdi.answer, /Built/);
+    assert.doesNotMatch(zdi.answer, /\bin production\b/);
+    assert.doesNotMatch(zdi.answer, /\blive\b/i);
+    assert.doesNotMatch(zdi.answer, /\bshipped\b/i);
+  });
+});
+
+describe("ZDI project placement", () => {
+  it("sits after CRM with Built status and rollout wording", () => {
+    const zdi = getProjectBySlug("zdi-signature-workflow");
+    assert.ok(zdi);
+    assert.equal(zdi.status, "Built");
+    assert.match(zdi.role, /approved for production rollout at Zororo-Phumulani/);
+    assert.match(zdi.outcome, /approved for production rollout at Zororo-Phumulani/i);
+    assert.doesNotMatch(zdi.role, /not yet in production/i);
+    assert.doesNotMatch(zdi.outcome, /conditional go/i);
+    assert.doesNotMatch(zdi.outcome, /pilot review/i);
+    assert.doesNotMatch(zdi.tagline, /synthetic/i);
+    const { prev, next } = getProjectNeighbours("zdi-signature-workflow");
+    assert.equal(prev.slug, "zororo-crm");
+    assert.equal(next.slug, "claims-pipeline");
   });
 });

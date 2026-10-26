@@ -33,6 +33,21 @@ describe("keyword retrieval fallback", () => {
     assert.ok(ids.includes("cube-agent"), `expected cube-agent in ${ids.join(", ")}`);
   });
 
+  it("retrieves ZDI for What is ZDI", () => {
+    const hits = retrieveKeyword("What is ZDI?");
+    const ids = hits.map((h) => h.id);
+    assert.ok(
+      ids.includes("zdi-signature-workflow"),
+      `expected zdi-signature-workflow in ${ids.join(", ")}`,
+    );
+    const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
+    assert.ok(zdi && zdi.score >= MIN_RELEVANCE_SCORE);
+    assert.match(zdi!.text, /approved for production rollout/i);
+    assert.doesNotMatch(zdi!.text, /\bin production\b/);
+    assert.doesNotMatch(zdi!.text, /\blive\b/i);
+    assert.doesNotMatch(zdi!.text, /\bshipped\b/i);
+  });
+
   it("falls back to BM25 when embeddings throw", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => {

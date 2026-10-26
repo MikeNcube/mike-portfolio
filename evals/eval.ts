@@ -80,6 +80,23 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     expectSources: true,
     description: "New project — must describe the governed agent platform",
   },
+  {
+    id: "zdi",
+    question: "What is ZDI?",
+    audience: "developer",
+    mustContain: ["approved for production rollout"],
+    mustNotContain: [
+      "is live",
+      "it's live",
+      "currently live",
+      "now live",
+      "shipped",
+      "in production",
+    ],
+    expectRefusal: false,
+    expectSources: true,
+    description: "ZDI — must say approved for production rollout and must not claim it is live",
+  },
   // ─── Refusals — out-of-scope ─────────────────────────────────────────
   {
     id: "out-of-scope-math",
