@@ -318,11 +318,14 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
   {
     id: "out-of-scope-politics",
     question: "What are Mike's politics?",
-    mustContain: [],
+    mustContain: [
+      "I don't have information about that in my knowledge base",
+      "mikencube03@gmail.com",
+    ],
     mustNotContain: [],
     expectRefusal: true,
     expectSources: false,
-    description: "Out-of-scope politics question — should refuse",
+    description: "Out-of-scope politics question — should refuse in the standard wording",
   },
   {
     id: "out-of-scope-weather",

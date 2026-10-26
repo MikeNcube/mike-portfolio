@@ -13,6 +13,20 @@ import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
 import { aiOsStatusAppearsOnce, hasRepeatedStatus, punctuationIsSane } from "../lib/status-copy";
 import { citationsMatchNamedProjects } from "../lib/answer";
+import { RATE_LIMIT, RATE_WINDOW_SEC } from "../lib/rate-limit";
+
+const EVAL_REQUEST_GAP_MS = Math.ceil((RATE_WINDOW_SEC * 1000) / RATE_LIMIT) + 500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function retryAfterMs(res: Response): number {
+  const header = res.headers.get("Retry-After");
+  const sec = header ? Number(header) : NaN;
+  if (Number.isFinite(sec) && sec > 0) return Math.ceil(sec * 1000);
+  return RATE_WINDOW_SEC * 1000;
+}
 
 function computesTwoPlusTwo(text: string): boolean {
   const t = text.toLowerCase();
@@ -35,15 +49,23 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
   let fetchOk = false;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: q.question, audience: q.audience ?? "developer" }),
-    });
-    const data = await res.json();
-    response = data.response ?? data.error ?? "";
-    sources = data.sources ?? [];
-    fetchOk = res.ok;
+    const maxAttempts = 4;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const res = await fetch(`${BASE_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: q.question, audience: q.audience ?? "developer" }),
+      });
+      if (res.status === 429 && attempt < maxAttempts) {
+        await sleep(retryAfterMs(res));
+        continue;
+      }
+      const data = await res.json();
+      response = data.response ?? data.error ?? "";
+      sources = data.sources ?? [];
+      fetchOk = res.ok;
+      break;
+    }
   } catch (err) {
     response = `FETCH_ERROR: ${err}`;
   }
@@ -190,8 +212,8 @@ async function main() {
         console.log(`    × ${c.label}${c.detail ? ": " + c.detail : ""}`);
       }
     }
-    // Brief pause between requests to stay within free-tier rate limits
-    await new Promise((r) => setTimeout(r, 1200));
+    // Stay under RATE_LIMIT requests per RATE_WINDOW_SEC without changing production limits.
+    await sleep(EVAL_REQUEST_GAP_MS);
   }
 
   const passed = results.filter((r) => r.pass).length;

@@ -46,6 +46,7 @@ import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
 import { EVAL_QUESTIONS, normaliseEvalText } from "../evals/eval";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
+import { RATE_LIMIT, RATE_WINDOW_SEC } from "../lib/rate-limit";
 import type { RetrievedChunk } from "../lib/rag";
 
 function itIsSentenceCount(text: string): number {
@@ -505,6 +506,8 @@ describe("cited sources", () => {
     assert.match(prompt, /not yet live/);
     assert.match(prompt, /Cite Digi App Form, the CRM, ZDI, and claims/);
     assert.match(prompt, /Never describe ZDI or the claims operations platform as live/);
+    assert.match(prompt, /umbrella 'production systems' framing/);
+    assert.match(prompt, /several production and early-stage systems/);
     assert.match(prompt, /lab, prototype, or not production must never be described as production/);
     assert.match(prompt, /title or term the sources don't contain/);
     assert.match(prompt, /never invent a title or team size/);
@@ -1344,6 +1347,12 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(hasRepeatedStatus(AI_OS_STATUS_SENTENCE), false);
     assert.equal(hasRepeatedStatus(CANONICAL_PRODUCTION_ANSWER), false);
+    assert.equal(
+      hasRepeatedStatus(
+        "Mike built several production and early-stage systems, including the early-stage Zororo AI OS.",
+      ),
+      false,
+    );
   });
 
   it("strips uncited evaluative conclusions and keeps cited ones", () => {
@@ -1971,6 +1980,37 @@ describe("round 34 status cites and live repros", () => {
     assert.doesNotMatch(appended, /not the live system \[1\]/);
   });
 
+  it("does not append Current status when the body already says The project is early-stage and not deployed", () => {
+    const input = "The project is in early stage and not yet deployed.";
+    const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /Current status:/);
+    assert.equal(aiOsStatusAppearsOnce(out), true);
+  });
+
+  it("keeps The system / The stack follow-ups as the AI OS span so status is not duplicated", () => {
+    const input =
+      "Zororo AI OS is a governed AI control plane [1]. The stack includes Python. The system is early-stage and not yet deployed [1].";
+    const out = ensureProjectStatusCopy("Tell me about Zororo AI OS", input);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /Current status:/);
+    assert.equal(aiOsStatusAppearsOnce(out), true);
+    assert.equal(hasRepeatedStatus(out), false);
+  });
+
+  it("keeps The project follow-up and moves '. [1]' before the period", () => {
+    const input =
+      "Zororo AI OS is a governed AI control plane. The project is in early stage and not yet deployed. [1]";
+    const out = ensureProjectStatusCopy("Tell me about Zororo AI OS", input);
+    assert.doesNotMatch(out, /Current status:/);
+    assert.match(out, /deployed \[1\]\./);
+    assert.doesNotMatch(out, /\. \[1\]/);
+    assert.equal(
+      normaliseModelText("The project is in early stage and not yet deployed. [1] Current status: Zororo AI OS is early-stage and not yet deployed [1]."),
+      "The project is in early stage and not yet deployed [1]. Current status: Zororo AI OS is early-stage and not yet deployed [1].",
+    );
+  });
+
   it("cites ZDI and AI OS by source id first, and appends the canonical source when missing", () => {
     const zdiBoth = ensureProjectStatusCopy(
       "What is ZDI?",
@@ -1995,6 +2035,15 @@ describe("round 34 status cites and live repros", () => {
       [{ id: "other-notes", title: "Notes", url: "https://github.com/MikeNcube" }],
     );
     assert.match(aiOsOut, /Current status: Zororo AI OS is early-stage and not yet deployed \[2\]/);
+  });
+
+  it("paces eval requests so the suite stays under the production 20/10min cap", () => {
+    assert.equal(RATE_LIMIT, 20);
+    assert.equal(RATE_WINDOW_SEC, 10 * 60);
+    const gapMs = Math.ceil((RATE_WINDOW_SEC * 1000) / RATE_LIMIT) + 500;
+    const inWindow = Math.floor((RATE_WINDOW_SEC * 1000 - 1) / gapMs) + 1;
+    assert.ok(inWindow <= RATE_LIMIT, `gap ${gapMs}ms would send ${inWindow} requests per window`);
+    assert.ok(EVAL_QUESTIONS.length > RATE_LIMIT, "suite is larger than one window; pacing is required");
   });
 });
 

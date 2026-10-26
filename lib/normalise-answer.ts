@@ -30,5 +30,5 @@ export function normaliseModelText(text: string): string {
   );
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
   const collapsed = collapseCitationClusters(cited);
-  return collapsed.replace(/([.!?])\s*\[(\d+)\]\s*\./g, " [$2].");
+  return collapsed.replace(/([.!?])\s*\[(\d+)\](?:\s*\.)?(?=\s|$)/g, " [$2].");
 }

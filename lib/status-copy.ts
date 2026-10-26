@@ -2,7 +2,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 
-export const ANSWER_CACHE_VERSION = "r34";
+export const ANSWER_CACHE_VERSION = "r35";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -79,13 +79,9 @@ const STATUS_SOURCE_ID: Record<StatusKind, string> = {
   claims: "zororo-claims",
 };
 
-const REPEATED_STATUS_RES: RegExp[] = [
+const BACK_TO_BACK_STATUS_RES: RegExp[] = [
   /built\.\s*built/i,
   /prototype\.\s*status:\s*prototype/i,
-  /early[- ]stage[\s\S]+?early[- ]stage/i,
-  /not(?: yet)? deployed[\s\S]+?not(?: yet)? deployed/i,
-  /standby \(failover\)[\s\S]+?standby \(failover\)/i,
-  /not the live system[\s\S]+?not the live system/i,
 ];
 
 // True when the visitor asked which production systems Mike shipped.
@@ -249,7 +245,7 @@ export function hasAiOsStatus(text: string): boolean {
 // True when early-stage and not-deployed each appear once on the AI OS span (Current status excluded).
 export function aiOsStatusAppearsOnce(text: string): boolean {
   const { body, status } = splitCurrentStatus(text);
-  const span = projectSpan("ai-os", body) || body;
+  const span = stripUmbrellaStatusFraming(projectFollowSpan("ai-os", body) || body);
   const early = countMatches(span, EARLY_STAGE_MEANING_RE);
   const deployed = countMatches(span, NOT_DEPLOYED_MEANING_RE);
   if (status && mentionsAiOs(status)) {
@@ -268,10 +264,40 @@ export function hasClaimsStatus(text: string): boolean {
   );
 }
 
-// True when an answer repeats a status word back-to-back. The Current status line is excluded.
+function stripUmbrellaStatusFraming(text: string): string {
+  return text
+    .replace(/\b(?:several|many|multiple)\s+production\s+and\s+early[- ]stage\s+systems\b/gi, " ")
+    .replace(/\bearly[- ]stage\s+systems\b/gi, " ");
+}
+
+function kindStatusRepeatCount(kind: StatusKind, span: string): boolean {
+  const t = stripUmbrellaStatusFraming(span);
+  switch (kind) {
+    case "ai-os":
+      return countMatches(t, EARLY_STAGE_MEANING_RE) > 1 || countMatches(t, NOT_DEPLOYED_MEANING_RE) > 1;
+    case "zdi":
+      return countMatches(t, /\bapproved\b/g) > 1 || countMatches(t, /\bnot(?: yet)? live\b/g) > 1;
+    case "claims":
+      return (
+        countMatches(t, /standby \(failover\)/g) > 1
+        || countMatches(t, /not the live system/g) > 1
+      );
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+// True when THIS project's span repeats a status meaning. Umbrella lines are not a repeat.
 export function hasRepeatedStatus(text: string): boolean {
   const { body } = splitCurrentStatus(text);
-  return REPEATED_STATUS_RES.some((re) => re.test(body));
+  if (BACK_TO_BACK_STATUS_RES.some((re) => re.test(body))) return true;
+  for (const kind of ["zdi", "ai-os", "claims"] as const) {
+    if (!mentionsKind(kind, body)) continue;
+    if (kindStatusRepeatCount(kind, projectFollowSpan(kind, body))) return true;
+  }
+  return false;
 }
 
 function mentionsKind(kind: StatusKind, text: string): boolean {
@@ -289,35 +315,56 @@ function mentionsKind(kind: StatusKind, text: string): boolean {
   }
 }
 
+function namedStatusKinds(text: string): StatusKind[] {
+  const kinds: StatusKind[] = [];
+  for (const kind of ["zdi", "ai-os", "claims"] as const) {
+    if (mentionsKind(kind, text)) kinds.push(kind);
+  }
+  return kinds;
+}
+
 function isSameProjectFollowUp(sentence: string): boolean {
   if (sentenceProjectHits(sentence) > 0) return false;
   return (
     /^\s*it\b/i.test(sentence)
     || /^\s*the platform\b/i.test(sentence)
-    || /^\s*this (?:system|platform|project|product)\b/i.test(sentence)
+    || /^\s*the project\b/i.test(sentence)
     || /^\s*the system\b/i.test(sentence)
+    || /^\s*this (?:system|platform|project|product)\b/i.test(sentence)
   );
 }
 
-// Sentences that name this project, plus follow-ups about the same project until another is named.
-function projectSpan(kind: StatusKind, text: string): string {
+// Mentioning sentences plus continuations until another project is named.
+function projectFollowSpan(kind: StatusKind, text: string): string {
   const parts = splitSentences(text);
   const re = mentionRe(kind);
-  const kept: string[] = [];
+  const keep = parts.map(() => false);
   let following = false;
-  for (const part of parts) {
-    if (re.test(part)) {
-      kept.push(part);
-      following = sentenceProjectHits(part) === 1;
+  for (let i = 0; i < parts.length; i++) {
+    if (re.test(parts[i])) {
+      keep[i] = true;
+      following = sentenceProjectHits(parts[i]) === 1;
+      for (let j = i - 1; j >= 0; j--) {
+        if (sentenceProjectHits(parts[j]) > 0) break;
+        if (!isSameProjectFollowUp(parts[j])) break;
+        keep[j] = true;
+      }
       continue;
     }
-    if (following && isSameProjectFollowUp(part)) {
-      kept.push(part);
+    if (following && sentenceProjectHits(parts[i]) === 0) {
+      keep[i] = true;
       continue;
     }
     following = false;
   }
-  return kept.join("");
+  return parts.filter((_, i) => keep[i]).join("");
+}
+
+// Sentences that name this project, plus follow-ups until another project is named.
+function projectSpan(kind: StatusKind, text: string): string {
+  const named = namedStatusKinds(text);
+  if (named.length === 1 && named[0] === kind) return text;
+  return projectFollowSpan(kind, text);
 }
 
 function projectMentionIndexes(text: string): Array<{ index: number }> {
@@ -417,6 +464,8 @@ function clauseAroundMention(kind: StatusKind, text: string): string {
 
 // Status text for one project: its mentioning sentences, or the question's subject if unnamed.
 function statusTextForKind(kind: StatusKind, text: string, question: string): string {
+  const named = namedStatusKinds(text);
+  if (named.length === 1 && named[0] === kind) return text;
   const span = projectSpan(kind, text);
   if (!span.trim()) {
     if (!mentionsKind(kind, question)) return "";
@@ -707,26 +756,6 @@ function appendCurrentStatus(
   return `${combined} ${emailBit}`.replace(/ {2,}/g, " ").trim();
 }
 
-function sentenceHasKindStatus(kind: StatusKind, sentence: string): boolean {
-  switch (kind) {
-    case "zdi":
-      return hasApproved(sentence) || hasNotLive(sentence);
-    case "ai-os":
-      return hasEarlyStage(sentence) || hasNotDeployed(sentence);
-    case "claims":
-      return (
-        hasApproved(sentence)
-        || hasProductionReady(sentence)
-        || hasFailoverOrStandby(sentence)
-        || hasNotTheLiveSystem(sentence)
-      );
-    default: {
-      const _exhaustive: never = kind;
-      return _exhaustive;
-    }
-  }
-}
-
 function sentenceProjectHits(sentence: string): number {
   let n = 0;
   if (ZDI_RE.test(sentence)) n += 1;
@@ -736,10 +765,6 @@ function sentenceProjectHits(sentence: string): number {
     if (re.test(sentence)) n += 1;
   }
   return n;
-}
-
-function isPronounStatusSentence(sentence: string, kind: StatusKind): boolean {
-  return /^\s*it\s+(is|was|'s)\b/i.test(sentence) && sentenceHasKindStatus(kind, sentence);
 }
 
 function splitSentences(text: string): string[] {
@@ -856,6 +881,7 @@ export function sanitisePunctuation(text: string): string {
     .replace(/,(?=[A-Za-z])/g, ", ")
     .replace(/;(?=[A-Za-z])/g, "; ")
     .replace(/(^|[.!?]\s+),+\s*/g, "$1")
+    .replace(/([.!?])\s*\[(\d+)\](?:\s*\.)?(?=\s|$)/g, " [$2].")
     .replace(/ {2,}/g, " ");
   return out.trim();
 }
