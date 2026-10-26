@@ -99,6 +99,15 @@ describe("keyword retrieval fallback", () => {
     assert.match(overview!.text, /^Proactive Sentinel maps events to MITRE ATT&CK/);
   });
 
+  it("retrieves RAG injection-defence facts for jailbreak-proof questions", () => {
+    const hits = retrieveKeyword("How does Mike defend against prompt injection in his RAG systems?");
+    const hit = hits.find((h) => h.id === "rag-injection-defence");
+    assert.ok(hit, `expected rag-injection-defence in ${hits.map((h) => h.id).join(", ")}`);
+    assert.match(hit!.text, /retrieval gate/i);
+    assert.match(hit!.text, /word-boundary/i);
+    assert.match(hit!.text, /0\.35/);
+  });
+
   it("retrieves the multi-agent content pipeline", () => {
     const hits = retrieveKeyword("What is the multi-agent content pipeline?");
     const ids = hits.map((h) => h.id);

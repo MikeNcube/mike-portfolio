@@ -69,8 +69,20 @@ export function isRefusal(text: string): boolean {
   return DECLINE_PHRASES.some((p) => t.includes(p));
 }
 
+const INJECTION_DEFENCE_QUESTION_RE =
+  /\b(?:defend(?:s|ing|ed)?|defen[cs]e|protect(?:s|ing|ed)?|prevent(?:s|ing|ed)?|handle(?:s|d)?|handling|harden(?:s|ing|ed)?|jailbreak-proof)\b/i;
+
+const INJECTION_THREAT_RE = /\bprompt injection\b|\bjailbreak/i;
+
+// True when the visitor asked how Mike defends RAG against jailbreaks / prompt injection.
+export function isInjectionDefenceQuestion(question: string): boolean {
+  const t = normaliseModelText(question);
+  return INJECTION_DEFENCE_QUESTION_RE.test(t) && INJECTION_THREAT_RE.test(t);
+}
+
 // True when the visitor is trying to jailbreak or role-play the assistant.
 export function isJailbreakPrompt(question: string): boolean {
+  if (isInjectionDefenceQuestion(question)) return false;
   const normalised = normaliseModelText(question);
   if (DAN_RE.test(normalised)) return true;
   const t = normalised.toLowerCase();

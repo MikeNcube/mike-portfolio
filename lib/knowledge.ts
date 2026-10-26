@@ -239,6 +239,20 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     text: "This assistant is a RAG pipeline on Mike's Next.js portfolio. It answers questions grounded in a curated knowledge base, cites its sources, and refuses questions outside that scope. The grounding prompt is server-side, so the assistant cannot be instructed to ignore it via the chat input. Email: mikencube03@gmail.com.",
   },
   {
+    id: 'rag-injection-defence',
+    title: 'RAG prompt-injection and jailbreak defences',
+    sourceUrl: 'https://github.com/MikeNcube/mike-portfolio',
+    keywords: [
+      'prompt injection',
+      'jailbreak',
+      'jailbreak-proof',
+      'guardrails',
+      'retrieval gate',
+      'word-boundary',
+    ],
+    text: "Mike's portfolio RAG defends against prompt injection and jailbreaks with stacked gates. A retrieval gate discards chunks below 0.35 cosine similarity so generation is not fed weak matches. Jailbreak and role-play attempts are matched with word-boundary phrases (ignore previous instructions, reveal the system prompt, DAN, jailbreak mode) in lib/refusal.ts and refused before retrieval. Out-of-scope questions are refused. Factual answers must include inline [n] citations. The grounding prompt is server-side, so the chat input cannot override it. Source: lib/refusal.ts, lib/rag.ts, lib/answer.ts, app/api/chat/route.ts.",
+  },
+  {
     id: 'recommender-pipeline',
     title: 'Recommender data pipeline (reference)',
     sourceUrl: 'https://github.com/MikeNcube/End-to-End-Recommender-System-Data-Pipeline',

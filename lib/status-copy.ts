@@ -2,7 +2,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 
-export const ANSWER_CACHE_VERSION = "r36";
+export const ANSWER_CACHE_VERSION = "r37";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -34,7 +34,7 @@ const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike ship|shipped at zororo)\b/i;
 
 const WORK_CORE_RE =
-  /\bwhat (?:does mike work on|has mike built|did mike build)\b/i;
+  /^\s*what (?:does mike work on|has mike built|did mike build)(.*)$/i;
 
 const WORK_WH_RE = /\b(?:what|which)\b/i;
 
@@ -43,6 +43,9 @@ const WORK_ACTION_RE =
 
 const WORK_SCOPE_RE =
   /\b(?:zororo(?:-phumulani)?|employer|his company|at work)\b/i;
+
+const WORK_TECH_OR_PROJECT_RE =
+  /\b(?:rag|aws|python|langchain|langgraph|proactive sentinel|sentinel|fastapi|flask|next\.?js|typescript|react|gemini|groq|redis|postgres(?:ql)?|docker|bedrock|sitewarden|cube(?:\s+agent)?|anthropic|claude|openai)\b/i;
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
@@ -97,10 +100,40 @@ export function isProductionSystemsQuestion(question: string): boolean {
   return PRODUCTION_QUESTION_RE.test(question);
 }
 
-// True when the visitor asked what Mike works on / has built (not the production-systems list).
+function stripWorkScopeWords(text: string): string {
+  return text
+    .replace(/\b(?:at\s+)?zororo(?:-phumulani)?(?:\s+funeral(?:\s+assurance)?)?\b/gi, " ")
+    .replace(/\b(?:for\s+)?(?:his\s+)?(?:employer|company)\b/gi, " ")
+    .replace(/\bat work\b/gi, " ")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim();
+}
+
+function remainderAfterWorkCore(question: string): string | null {
+  const m = question.match(WORK_CORE_RE);
+  if (!m) return null;
+  return (m[1] ?? "").replace(/[?!.\s]+$/g, "").trim();
+}
+
+// True when "what has Mike built / did Mike build" names a tech, tool, cloud, or other project.
+export function isTopicalTechBuildQuestion(question: string): boolean {
+  const rest = remainderAfterWorkCore(question);
+  if (rest !== null) {
+    if (!rest) return false;
+    return stripWorkScopeWords(rest).length > 0;
+  }
+  if (!(WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question))) return false;
+  if (WORK_SCOPE_RE.test(question) && !WORK_TECH_OR_PROJECT_RE.test(question)) return false;
+  return WORK_TECH_OR_PROJECT_RE.test(question);
+}
+
+// True when the visitor asked what Mike works on / has built at Zororo (not a tech/project topic).
 export function isWorkQuestion(question: string): boolean {
   if (isProductionSystemsQuestion(question)) return false;
-  if (WORK_CORE_RE.test(question)) return true;
+  if (isTopicalTechBuildQuestion(question)) return false;
+  if (isAwsQuestion(question)) return false;
+  const rest = remainderAfterWorkCore(question);
+  if (rest !== null && rest.length === 0) return true;
   return WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question) && WORK_SCOPE_RE.test(question);
 }
 
@@ -124,8 +157,9 @@ export function mentionsClaims(text: string): boolean {
   return CLAIMS_RE.test(text);
 }
 
-// True when the visitor asked about AWS experience, stack, or labs.
+// True when the visitor asked about AWS experience, stack, or labs (not "built using AWS").
 export function isAwsQuestion(question: string): boolean {
+  if (isTopicalTechBuildQuestion(question)) return false;
   return AWS_QUESTION_RE.test(question);
 }
 

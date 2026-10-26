@@ -43,6 +43,22 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
   },
   {
+    question: "How does Mike defend against prompt injection in his RAG systems?",
+    aliases: [
+      "how does mike defend against prompt injection",
+      "can you jailbreak-proof a rag chatbot how does mike handle it",
+      "jailbreak-proof a rag chatbot",
+      "prompt injection in his rag",
+      "how does mike handle prompt injection",
+      "how does mike handle jailbreaks",
+      "rag jailbreak defences",
+      "rag prompt injection",
+    ],
+    answer:
+      "Mike's portfolio RAG uses a retrieval gate that discards chunks below 0.35 cosine similarity [1]. Jailbreak and role-play attempts are matched with word-boundary phrases and refused before retrieval [1]. Factual answers must include inline [n] citations, and out-of-scope questions are refused [2]. The grounding prompt is server-side, so the chat input cannot override it [2].",
+    sourceIds: ["rag-injection-defence", "this-assistant"],
+  },
+  {
     question: "What production systems has Mike shipped?",
     aliases: [
       "what has mike shipped",
@@ -229,7 +245,64 @@ function contentTokens(text: string): Set<string> {
   return new Set(tokenize(text).filter((t) => !NAME_TOKENS.has(t)));
 }
 
+const PROJECT_STATIC_MENTIONS: Array<{ mention: RegExp; question: string }> = [
+  { mention: /\b(?:zdi|zororo document intelligence)\b/i, question: "What is ZDI?" },
+  { mention: /\bzororo ai os\b/i, question: "What is Zororo AI OS?" },
+  {
+    mention: /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b/i,
+    question: "What is the claims operations platform?",
+  },
+  { mention: /\bcube(?:\s+agent)?\b/i, question: "What is Cube?" },
+  { mention: /\bsitewarden\b/i, question: "What is Sitewarden?" },
+  {
+    mention: /\bproactive sentinel\b/i,
+    question: "Walk me through Proactive Sentinel's architecture.",
+  },
+];
+
+function remapAnswerCites(answer: string, offset: number): string {
+  if (offset === 0) return answer;
+  return answer.replace(/\[(\d+)\]/g, (_, raw: string) => `[${Number(raw) + offset}]`);
+}
+
+// Stitch one static answer per named project, in mention order, when the question names two or more.
+export function matchMultiProjectAnswer(question: string): StaticAnswer | null {
+  const hits: Array<{ index: number; item: StaticAnswer }> = [];
+  for (const { mention, question: canonical } of PROJECT_STATIC_MENTIONS) {
+    mention.lastIndex = 0;
+    const m = mention.exec(question);
+    if (!m) continue;
+    const item = STATIC_ANSWERS.find((a) => a.question === canonical);
+    if (!item) continue;
+    hits.push({ index: m.index, item });
+  }
+  if (hits.length < 2) return null;
+  hits.sort((a, b) => a.index - b.index);
+  const seen = new Set<string>();
+  const items: StaticAnswer[] = [];
+  for (const hit of hits) {
+    if (seen.has(hit.item.question)) continue;
+    seen.add(hit.item.question);
+    items.push(hit.item);
+  }
+  if (items.length < 2) return null;
+  const sourceIds: string[] = [];
+  const parts: string[] = [];
+  for (const item of items) {
+    parts.push(remapAnswerCites(item.answer, sourceIds.length));
+    sourceIds.push(...item.sourceIds);
+  }
+  return {
+    question,
+    aliases: [],
+    answer: parts.join(" "),
+    sourceIds,
+  };
+}
+
 export function matchStaticAnswer(question: string): StaticAnswer | null {
+  const multi = matchMultiProjectAnswer(question);
+  if (multi) return multi;
   const qNorm = normaliseQuestion(question);
   for (const item of STATIC_ANSWERS) {
     const candidates = [item.question, ...item.aliases];

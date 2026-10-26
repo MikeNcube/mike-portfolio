@@ -18,7 +18,7 @@ import {
   shouldCacheAnswer,
 } from "../lib/answer";
 import { normaliseModelText } from "../lib/normalise-answer";
-import { matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
+import { matchMultiProjectAnswer, matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
   aiOsStatusAppearsOnce,
@@ -33,7 +33,9 @@ import {
   collapseDuplicateCitesInSentences,
   ensureProjectStatusCopy,
   hasRepeatedStatus,
+  isAwsQuestion,
   isTechLeadCrmQuestion,
+  isTopicalTechBuildQuestion,
   isWorkQuestion,
   sourcesWithCanonicalStatus,
   punctuationFailures,
@@ -42,7 +44,7 @@ import {
   ZDI_STATUS_SENTENCE,
   zdiListedAsShipped,
 } from "../lib/status-copy";
-import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
+import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "../lib/refusal";
 import { EVAL_QUESTIONS, normaliseEvalText } from "../evals/eval";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
@@ -345,6 +347,22 @@ describe("refusal detection", () => {
     assert.equal(isJailbreakPrompt("Can Mike act as a solutions architect?"), false);
     assert.equal(isJailbreakPrompt("Has Mike worked with Dan?"), false);
     assert.equal(isJailbreakPrompt("How does the fact assistant work?"), false);
+    assert.equal(
+      isJailbreakPrompt("How does Mike defend against prompt injection in his RAG systems?"),
+      false,
+    );
+    assert.equal(
+      isJailbreakPrompt("Can you jailbreak-proof a RAG chatbot? How does Mike handle it?"),
+      false,
+    );
+    assert.equal(
+      isInjectionDefenceQuestion("How does Mike defend against prompt injection in his RAG systems?"),
+      true,
+    );
+    assert.equal(
+      isInjectionDefenceQuestion("Can you jailbreak-proof a RAG chatbot? How does Mike handle it?"),
+      true,
+    );
   });
 });
 
@@ -1821,6 +1839,13 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(isWorkQuestion("What did Mike deliver at Zororo?"), true);
     assert.equal(isWorkQuestion("What projects has Mike built for his employer?"), true);
     assert.equal(isWorkQuestion("Which systems did Mike build for Zororo-Phumulani Funeral Assurance?"), true);
+    assert.equal(isWorkQuestion("What has Mike built?"), true);
+    assert.equal(isWorkQuestion("What has Mike built with RAG?"), false);
+    assert.equal(isWorkQuestion("What has Mike built using AWS?"), false);
+    assert.equal(isWorkQuestion("What has Mike built with Python?"), false);
+    assert.equal(isWorkQuestion("What has Mike built for Proactive Sentinel?"), false);
+    assert.equal(isAwsQuestion("What has Mike built using AWS?"), false);
+    assert.equal(isTopicalTechBuildQuestion("What has Mike built with RAG?"), true);
     const labelled =
       "Mike's production systems are Digi App Form [1], the CRM [2], ZDI [3], and the claims operations platform [4].";
     const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", labelled);
@@ -2140,6 +2165,191 @@ describe("round 34 status cites and live repros", () => {
     const inWindow = Math.floor((RATE_WINDOW_SEC * 1000 - 1) / gapMs) + 1;
     assert.ok(inWindow <= RATE_LIMIT, `gap ${gapMs}ms would send ${inWindow} requests per window`);
     assert.ok(EVAL_QUESTIONS.length > RATE_LIMIT, "suite is larger than one window; pacing is required");
+  });
+});
+
+describe("round 37 topical work questions and injection defence", () => {
+  it("keeps topical RAG, AWS, Python, and Sentinel answers instead of the work canonical", async () => {
+    const cases: Array<{ question: string; answer: string; chunk: RetrievedChunk }> = [
+      {
+        question: "What has Mike built with RAG?",
+        answer: "The live RAG assistant retrieves top-6 chunks by cosine similarity and cites sources [1].",
+        chunk: {
+          id: "portfolio-rag-assistant",
+          title: "Portfolio RAG assistant",
+          sourceUrl: "https://github.com/MikeNcube/mike-portfolio",
+          text: "The portfolio RAG assistant retrieves top-6 chunks by cosine similarity.",
+          score: 0.9,
+        },
+      },
+      {
+        question: "What has Mike built using AWS?",
+        answer: "The resilient web tier on AWS is labelled lab, not production [1].",
+        chunk: {
+          id: "aws-web-tier",
+          title: "Resilient web tier on AWS (lab)",
+          sourceUrl: "https://github.com/MikeNcube/Resilient-Web-Tier-on-AWS-ALB-Auto-Scaling",
+          text: "AWS lab: ALB, EC2 Auto Scaling. Labelled lab, not production.",
+          score: 0.9,
+        },
+      },
+      {
+        question: "What has Mike built with Python?",
+        answer: "Proactive Sentinel is a Python Flask SOC with MITRE ATT&CK mapping [1].",
+        chunk: {
+          id: "proactive-sentinel-overview",
+          title: "Proactive Sentinel",
+          sourceUrl: "https://github.com/MikeNcube/proactive-sentinel",
+          text: "Proactive Sentinel maps events to MITRE ATT&CK techniques.",
+          score: 0.9,
+        },
+      },
+      {
+        question: "What has Mike built for Proactive Sentinel?",
+        answer: "Proactive Sentinel maps events to MITRE ATT&CK and correlates them into chain alerts [1].",
+        chunk: {
+          id: "proactive-sentinel-overview",
+          title: "Proactive Sentinel",
+          sourceUrl: "https://github.com/MikeNcube/proactive-sentinel",
+          text: "Proactive Sentinel maps events to MITRE ATT&CK techniques.",
+          score: 0.9,
+        },
+      },
+    ];
+    for (const { question, answer, chunk } of cases) {
+      assert.equal(isWorkQuestion(question), false, question);
+      assert.equal(isTopicalTechBuildQuestion(question), true, question);
+      const guarded = ensureProjectStatusCopy(question, answer, [
+        { id: chunk.id, title: chunk.title, url: chunk.sourceUrl },
+      ]);
+      assert.equal(guarded, answer, question);
+      assert.doesNotMatch(guarded, /Digi App Form/);
+      assert.match(guarded, /\[1\]/);
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => [chunk],
+        generateGemini: async () => answer,
+      });
+      assert.equal(result.via, "gemini", question);
+      assert.doesNotMatch(result.response, /Digi App Form/, question);
+      assert.notEqual(result.response, CANONICAL_WORK_ANSWER, question);
+      assert.notEqual(result.response, CANONICAL_AWS_ANSWER, question);
+      assert.match(result.response, /\[1\]/, question);
+      assert.ok(result.sources.length > 0, question);
+    }
+  });
+
+  it("still uses the work canonical for Zororo-scoped build/deliver questions", async () => {
+    const questions = [
+      "What has Mike delivered at Zororo-Phumulani?",
+      "What did Mike deliver at Zororo?",
+      "What projects has Mike built for his employer?",
+      "Which systems did Mike build for Zororo-Phumulani Funeral Assurance?",
+    ];
+    for (const question of questions) {
+      assert.equal(isWorkQuestion(question), true, question);
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => SIX_CHUNKS,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => "Mike built Digi App Form [1].",
+      });
+      assert.equal(result.response, CANONICAL_WORK_ANSWER, question);
+      assert.match(result.response, /Digi App Form \[1\]/);
+      assert.match(result.response, /lead-management CRM \[2\]/);
+      assert.match(result.response, /ZDI is approved for production rollout but not yet live \[3\]/);
+      assert.match(result.response, /claims operations platform is an approved, production-ready standby/);
+      assert.match(result.response, /Zororo AI OS is early-stage and not yet deployed \[5\]/);
+    }
+  });
+
+  it("serves a cited injection-defence static when no model is available", async () => {
+    const questions = [
+      "How does Mike defend against prompt injection in his RAG systems?",
+      "Can you jailbreak-proof a RAG chatbot? How does Mike handle it?",
+    ];
+    for (const question of questions) {
+      assert.equal(isJailbreakPrompt(question), false, question);
+      assert.equal(isInjectionDefenceQuestion(question), true, question);
+      const hit = matchStaticAnswer(question);
+      assert.ok(hit, question);
+      assert.match(hit.answer, /0\.35/);
+      assert.match(hit.answer, /word-boundary/);
+      assert.match(hit.answer, /cite|\[n\]/i);
+      assert.match(hit.answer, /server-side/);
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => SIX_CHUNKS,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => {
+          throw new Error("429");
+        },
+      });
+      assert.equal(isRefusal(result.response), false, question);
+      assert.notEqual(result.response, EMAIL_FALLBACK, question);
+      assert.match(result.response, /0\.35/);
+      assert.match(result.response, /word-boundary/);
+      assert.match(result.response, /\[1\]/);
+      assert.ok(result.sources.length > 0, question);
+      assert.ok(
+        result.sources.some((s) => s.id === "rag-injection-defence" || /injection|assistant|RAG/i.test(s.title)),
+        question,
+      );
+    }
+  });
+
+  it("describes ZDI and Zororo AI OS in mention order with status and citation", async () => {
+    const question = "Tell me about ZDI and Zororo AI OS.";
+    const multi = matchMultiProjectAnswer(question);
+    assert.ok(multi);
+    const zdiAt = multi.answer.indexOf("ZDI");
+    const aiAt = multi.answer.indexOf("Zororo AI OS");
+    assert.ok(zdiAt >= 0 && aiAt >= 0, multi.answer);
+    assert.ok(zdiAt < aiAt, multi.answer);
+    assert.match(multi.answer, /not yet live/);
+    assert.match(multi.answer, /not deployed/);
+    assert.match(multi.answer, /\[1\]/);
+    assert.match(multi.answer, /\[2\]/);
+    const result = await answerQuestion({
+      question,
+      retrieveFn: async () => [
+        {
+          id: "zdi-signature-workflow",
+          title: "ZDI — Signature",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow.",
+          score: 0.9,
+        },
+        {
+          id: "zororo-ai-os",
+          title: "Zororo AI OS",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Zororo AI OS is a governed AI control plane. It is built, early stage, and not deployed.",
+          score: 0.85,
+        },
+      ],
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+      generateGroq: async () => {
+        throw new Error("429");
+      },
+    });
+    assert.notEqual(result.response, EMAIL_FALLBACK);
+    const outZdi = result.response.indexOf("ZDI");
+    const outAi = result.response.indexOf("Zororo AI OS");
+    assert.ok(outZdi >= 0 && outAi >= 0, result.response);
+    assert.ok(outZdi < outAi, result.response);
+    assert.match(result.response, /not yet live/);
+    assert.match(result.response, /not deployed|not yet deployed/);
+    assert.match(result.response, /\[1\]/);
+    assert.match(result.response, /\[2\]/);
+    assert.equal(result.sources[0]?.id, "zdi-signature-workflow");
+    assert.equal(result.sources[1]?.id, "zororo-ai-os");
   });
 });
 
