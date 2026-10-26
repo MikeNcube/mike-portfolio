@@ -319,6 +319,18 @@ Live preview at `84cc0b6` answered every question from static or email — no mo
 
 ---
 
+## Round 7 — refusals, cited sources, grounding
+
+Live preview at `36edb33` got grounded Groq answers. Remaining issues:
+
+1. Role-play refusals like “I'm sorry, but I can't comply with that.” were not treated as refusals, so all retrieved sources were attached. `isRefusal` now covers common decline phrasings; refusals return no sources.
+2. The API returns only sources the answer cites with `[n]`. If it cites none, it falls back to the top 2 retrieved chunks.
+3. Inline `(Sources: [2], [3])` is stripped from the answer body. Inline `[n]` markers stay.
+4. Each context block is prefixed `PROJECT: <title>`. The prompt forbids carrying stack/metrics from one project block into another (the CRM/Alembic mix came from a Sentinel chunk).
+5. Digi App Form content and knowledge-base chunks stay as they are.
+
+---
+
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.
