@@ -18,6 +18,7 @@ import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
+  CANONICAL_ZDI_LIVE_ANSWER,
   CLAIMS_STATUS_SENTENCE,
   claimsTechLeadTitle,
   ensureProjectStatusCopy,
@@ -404,7 +405,8 @@ describe("cited sources", () => {
     assert.match(prompt, /Never carry tools or details from one PROJECT block into another/);
     assert.match(prompt, /Never list ZDI under Shipped/);
     assert.match(prompt, /not yet live/);
-    assert.match(prompt, /Cite the claims-standby sentence/);
+    assert.match(prompt, /Cite Digi App Form, the CRM, ZDI, and claims/);
+    assert.match(prompt, /Never describe ZDI or the claims operations platform as live/);
     assert.match(prompt, /lab, prototype, or not production must never be described as production/);
     assert.match(prompt, /title or term the sources don't contain/);
     assert.match(prompt, /never invent a title or team size/);
@@ -536,14 +538,15 @@ describe("static CV copy", () => {
     const hit = matchStaticAnswer("What production systems has Mike shipped?");
     assert.ok(hit);
     assert.match(hit.answer, /^Shipped:/);
-    assert.match(hit.answer, /Digi App Form and the Zororo CRM/);
+    assert.match(hit.answer, /Digi App Form \[1\] and the Zororo CRM \[2\]/);
     assert.match(hit.answer, /40/);
-    assert.match(hit.answer, /Rolling out:\s*ZDI \(approved for production rollout/);
+    assert.match(hit.answer, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
     assert.match(hit.answer, /not yet live/i);
     assert.match(hit.answer, /claims operations platform/i);
-    assert.match(hit.answer, /production-ready standby/i);
+    assert.match(hit.answer, /production-ready standby \(failover\), not the live system \[4\]/);
     assert.equal(zdiListedAsShipped(hit.answer), false);
     assert.doesNotMatch(hit.answer, /claims extraction/i);
+    assert.equal(hit.sourceIds.length, 4);
   });
 
   it("limits Sentinel and availability to CV wording", () => {
@@ -601,7 +604,7 @@ describe("static CV copy", () => {
 
     const zdi = matchStaticAnswer("What is ZDI?");
     assert.ok(zdi);
-    assert.match(zdi.answer, /approved for production rollout/i);
+    assert.match(zdi.answer, /^ZDI \(approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\)/);
     assert.match(zdi.answer, /Zororo Document Intelligence/);
     assert.match(zdi.answer, /Rolling out/);
     assert.match(zdi.answer, /rolling out soon/i);
@@ -610,6 +613,13 @@ describe("static CV copy", () => {
     assert.doesNotMatch(zdi.answer, /\bis live\b/i);
     assert.doesNotMatch(zdi.answer, /\bcurrently live\b/i);
     assert.doesNotMatch(zdi.answer, /\bshipped\b/i);
+    assert.doesNotMatch(zdi.answer, /one of Mike's production systems/i);
+
+    const zdiLive = matchStaticAnswer("Is ZDI live?");
+    assert.ok(zdiLive);
+    assert.equal(zdiLive.answer, CANONICAL_ZDI_LIVE_ANSWER);
+    assert.match(zdiLive.answer, /not yet live/i);
+    assert.doesNotMatch(zdiLive.answer, /\bis live\b/i);
 
     const aiOs = matchStaticAnswer("What is Zororo AI OS?");
     assert.ok(aiOs);
@@ -619,10 +629,14 @@ describe("static CV copy", () => {
 
     const claimsOps = matchStaticAnswer("What is the claims operations platform?");
     assert.ok(claimsOps);
-    assert.match(claimsOps.answer, /Approved, production-ready standby/);
+    assert.match(
+      claimsOps.answer,
+      /^The claims operations platform is an approved, production-ready standby \(failover\), not the live system/,
+    );
     assert.match(claimsOps.answer, /failover/);
     assert.match(claimsOps.answer, /current claims system/);
     assert.doesNotMatch(claimsOps.answer, /is the live system/);
+    assert.doesNotMatch(claimsOps.answer, /one of Mike's production systems/i);
 
     const social = matchStaticAnswer("What is the multi-agent content pipeline?");
     assert.ok(social);
@@ -727,8 +741,8 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(out, CANONICAL_PRODUCTION_ANSWER);
     assert.equal(zdiListedAsShipped(out), false);
-    assert.match(out, /Rolling out:\s*ZDI \(approved for production rollout/);
-    assert.match(out, /production-ready standby/);
+    assert.match(out, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
+    assert.match(out, /production-ready standby \(failover\), not the live system \[4\]/);
   });
 
   it("appends ZDI status when an answer names ZDI without it", () => {
@@ -820,7 +834,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       out,
-      /ZDI is a signature workflow\. Approved for production rollout, rolling out soon, not yet live\. It uses FastAPI/,
+      /ZDI is a signature workflow\. Approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\. It uses FastAPI/,
     );
     assert.doesNotMatch(out, /phones\. Approved/);
   });
@@ -844,7 +858,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.match(
       platform,
-      /The claims platform handles funeral-case processing\. Approved, production-ready standby \(failover\)\. It has a staff dashboard/,
+      /The claims platform handles funeral-case processing\. Approved, production-ready standby \(failover\), not the live system\. It has a staff dashboard/,
     );
     const system = ensureProjectStatusCopy(
       "What is the claims system?",
@@ -869,9 +883,9 @@ describe("production-system and ZDI status copy", () => {
       "ZDI is currently rolling out and not yet live.",
     );
     assert.match(out, /currently rolling out and not yet live/);
-    assert.match(out, /Approved for production rollout, rolling out soon, not yet live/);
+    assert.match(out, /Approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live/);
     assert.equal(
-      (out.match(/Approved for production rollout, rolling out soon, not yet live/g) ?? []).length,
+      (out.match(/Approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live/g) ?? []).length,
       1,
     );
   });
@@ -881,7 +895,7 @@ describe("production-system and ZDI status copy", () => {
       "What is the claims operations platform?",
       "It is a fail-over standby [1].",
     );
-    assert.match(out, /Approved, production-ready standby \(failover\)\. \[1\]$/);
+    assert.match(out, /Approved, production-ready standby \(failover\), not the live system\. \[1\]$/);
     assert.doesNotMatch(out, /\[1\]\.\s*Approved/);
   });
 
@@ -947,6 +961,8 @@ describe("production-system and ZDI status copy", () => {
     meaningPass("rag-pipeline", "Embedding then retrieval by similarity.");
     meaningPass("production-systems", CANONICAL_PRODUCTION_ANSWER);
     meaningPass("zororo-ai-os", AI_OS_STATUS_SENTENCE);
+    meaningPass("zdi-live", CANONICAL_ZDI_LIVE_ANSWER);
+    meaningPass("zdi-live", "ZDI is not yet live at Zororo-Phumulani.");
 
     const contractEval = EVAL_QUESTIONS.find((item) => item.id === "contract-or-full-time");
     assert.ok(contractEval);
@@ -1029,14 +1045,35 @@ describe("production-system and ZDI status copy", () => {
     assert.ok(normaliseEvalText("Approved \u2011 standby").includes("approved - standby"));
   });
 
-  it("cites the claims-standby sentence on a production-systems static answer", async () => {
+  it("cites Digi, CRM, ZDI, and claims on a production-systems static answer", async () => {
     const result = await answerQuestion({
       question: "What production systems has Mike shipped?",
       retrieveFn: async () => [],
     });
     assert.equal(result.via, "static");
     assert.doesNotMatch(result.response, /\u2026/);
-    assert.match(result.response, /production-ready standby \[\d+\]/);
-    assert.ok(result.sources.some((s) => /claims operations platform/i.test(s.title)));
+    assert.equal(result.response, CANONICAL_PRODUCTION_ANSWER);
+    assert.match(result.response, /Digi App Form \[1\]/);
+    assert.match(result.response, /Zororo CRM \[2\]/);
+    assert.match(result.response, /ZDI \[3\]/);
+    assert.match(result.response, /not the live system \[4\]/);
+    assert.equal(result.sources.length, 4);
+    assert.match(result.sources[0].title, /Digi App Form/i);
+    assert.match(result.sources[1].title, /CRM/i);
+    assert.match(result.sources[2].title, /ZDI/i);
+    assert.match(result.sources[3].title, /claims operations platform/i);
+  });
+
+  it("says ZDI is not yet live when asked if it is live", async () => {
+    const result = await answerQuestion({
+      question: "Is ZDI live?",
+      retrieveFn: async () => SIX_CHUNKS,
+      generateGemini: async () => "Yes, ZDI is live [1].",
+    });
+    assert.equal(isRefusal(result.response), false);
+    assert.equal(result.response, CANONICAL_ZDI_LIVE_ANSWER);
+    assert.match(result.response, /not yet live/i);
+    assert.doesNotMatch(result.response, /\bis live\b/i);
+    assert.ok(result.sources.length >= 1);
   });
 });

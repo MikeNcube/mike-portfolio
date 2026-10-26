@@ -1,17 +1,20 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r24";
+export const ANSWER_CACHE_VERSION = "r25";
 
 export const CANONICAL_PRODUCTION_ANSWER =
-  "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
+  "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [4].";
 
 export const ZDI_STATUS_SENTENCE =
-  "Approved for production rollout, rolling out soon, not yet live.";
+  "Approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live.";
 
 export const AI_OS_STATUS_SENTENCE = "Built. Early stage, not deployed.";
 
 export const CLAIMS_STATUS_SENTENCE =
-  "Approved, production-ready standby (failover).";
+  "Approved, production-ready standby (failover), not the live system.";
+
+export const CANONICAL_ZDI_LIVE_ANSWER =
+  "No. ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live).";
 
 export const CANONICAL_AWS_ANSWER =
   "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock. The resilient web tier on AWS is labelled lab, not production. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series.";
@@ -23,6 +26,8 @@ const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike (?:ship|build)|shipped at zororo)\b/i;
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
+
+const ZDI_LIVE_QUESTION_RE = /\bis zdi\b.{0,24}\blive\b/i;
 
 const AI_OS_RE = /\bzororo ai os\b/i;
 
@@ -48,6 +53,11 @@ export function isProductionSystemsQuestion(question: string): boolean {
 // True when the text names ZDI or Zororo Document Intelligence.
 export function mentionsZdi(text: string): boolean {
   return ZDI_RE.test(text);
+}
+
+// True when the visitor asked whether ZDI is live.
+export function isZdiLiveQuestion(question: string): boolean {
+  return ZDI_LIVE_QUESTION_RE.test(question);
 }
 
 // True when the text names Zororo AI OS.
@@ -152,7 +162,9 @@ function productionAnswerIsCanonical(text: string): boolean {
   return (
     /^shipped:/i.test(text) &&
     /rolling out:\s*zdi/i.test(text) &&
+    /not yet live/i.test(text) &&
     /claims operations platform/i.test(text) &&
+    /not the live system/i.test(text) &&
     !zdiListedAsShipped(text)
   );
 }
@@ -238,6 +250,9 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
 // Force AWS copy, the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
 export function ensureProjectStatusCopy(question: string, text: string): string {
   let out = text.trim();
+  if (isZdiLiveQuestion(question)) {
+    out = CANONICAL_ZDI_LIVE_ANSWER;
+  }
   if (isTechLeadCrmQuestion(question) && !techLeadAnswerIsCanonical(out)) {
     out = CANONICAL_TECH_LEAD_CRM_ANSWER;
   }

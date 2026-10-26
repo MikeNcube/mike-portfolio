@@ -53,9 +53,11 @@ describe("keyword retrieval fallback", () => {
     );
     const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
     assert.ok(zdi && zdi.score >= MIN_RELEVANCE_SCORE);
+    assert.match(zdi!.text, /^ZDI \(approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\)/);
     assert.match(zdi!.text, /approved for production rollout/i);
     assert.match(zdi!.text, /rolling out soon/i);
     assert.match(zdi!.text, /not yet live/i);
+    assert.doesNotMatch(zdi!.text, /one of Mike's production systems/);
     assert.doesNotMatch(zdi!.text, /\bin production\b/);
     assert.doesNotMatch(zdi!.text, /\bis live\b/i);
     assert.doesNotMatch(zdi!.text, /\bcurrently live\b/i);
@@ -78,10 +80,12 @@ describe("keyword retrieval fallback", () => {
     assert.ok(ids.includes("zororo-claims"), `expected zororo-claims in ${ids.join(", ")}`);
     const hit = hits.find((h) => h.id === "zororo-claims");
     assert.ok(hit);
-    assert.match(hit!.text, /Approved, production-ready standby/);
+    assert.match(hit!.text, /approved, production-ready standby/i);
     assert.match(hit!.text, /failover/);
     assert.match(hit!.text, /current claims system/);
-    assert.match(hit!.text, /It is not the live system/);
+    assert.match(hit!.text, /not the live system/);
+    assert.match(hit!.text, /^The claims operations platform is an approved, production-ready standby/);
+    assert.doesNotMatch(hit!.text, /one of Mike's production systems/);
   });
 
   it("retrieves the multi-agent content pipeline", () => {

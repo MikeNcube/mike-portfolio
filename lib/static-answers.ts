@@ -7,6 +7,7 @@ import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
+  CANONICAL_ZDI_LIVE_ANSWER,
 } from "./status-copy";
 
 export type StaticAnswer = {
@@ -132,7 +133,17 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "zdi signature workflow",
     ],
     answer:
-      "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. Approved for production rollout at Zororo-Phumulani; rolling out soon, not yet live. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+      "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+    sourceIds: ["zdi-signature-workflow"],
+  },
+  {
+    question: "Is ZDI live?",
+    aliases: [
+      "is zdi live",
+      "is zdi in production",
+      "is zororo document intelligence live",
+    ],
+    answer: CANONICAL_ZDI_LIVE_ANSWER,
     sourceIds: ["zdi-signature-workflow"],
   },
   {
@@ -156,7 +167,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "claims standby",
     ],
     answer:
-      "The claims operations platform is a role-based platform for funeral-case processing: claims, cash services and courtesy services. Status: Approved · standby. Approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani. It takes over if the current claims system fails. It is not the live system.",
+      "The claims operations platform is an approved, production-ready standby (failover), not the live system. A role-based platform for funeral-case processing: claims, cash services and courtesy services. Status: Approved · standby. It takes over if the current claims system fails.",
     sourceIds: ["zororo-claims"],
   },
   {

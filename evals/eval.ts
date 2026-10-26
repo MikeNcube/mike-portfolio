@@ -160,6 +160,23 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     description: "ZDI — approved, rolling out, and not yet live (model wording or canonical)",
   },
   {
+    id: "zdi-live",
+    question: "Is ZDI live?",
+    audience: "recruiter",
+    meaningChecks: [
+      { label: "not_live", anyOf: ["not yet live", "not live"] },
+    ],
+    mustNotContain: [
+      "is live",
+      "it's live",
+      "currently live",
+      "now live",
+    ],
+    expectRefusal: false,
+    expectSources: true,
+    description: "ZDI is not yet live — must not read as a live system",
+  },
+  {
     id: "zororo-ai-os",
     question: "What is Zororo AI OS?",
     audience: "developer",

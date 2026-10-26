@@ -18,6 +18,7 @@ import {
   ensureProjectStatusCopy,
   isProductionSystemsQuestion,
   isTechLeadCrmQuestion,
+  isZdiLiveQuestion,
 } from "./status-copy";
 
 export const CONTACT_EMAIL = "mikencube03@gmail.com";
@@ -80,10 +81,11 @@ export function buildPrompt(
     "Never invent projects, employers, metrics, dates, titles, or team sizes.",
     "When a question uses a title or term the sources don't contain (for example 'tech lead'), don't refuse. Say the sources don't use that term, then state what the sources DO say about Mike's role on that project, with citations. Use only facts that appear in the knowledge base or CV, and never invent a title or team size.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
-    `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite the claims-standby sentence with [n] from the claims operations platform context block.`,
+    `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite Digi App Form, the CRM, ZDI, and claims with [n] matching the context blocks.`,
+    "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
     "Content labelled lab, prototype, or not production must never be described as production.",
     `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words.`,
-    "Whenever you mention ZDI, state that it is approved for production rollout, rolling out soon, and not yet live.",
+    "Whenever you mention ZDI, state that it is approved for production rollout at Zororo-Phumulani, rolling out soon, and not yet live.",
     "Whenever you mention Zororo AI OS, state that it is Built, early stage, and not deployed.",
     "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: [n])' list in the answer body.",
     "",
@@ -229,16 +231,6 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
   return { ...result, response: ensureContactEmail(result.response) };
 }
 
-function ensureClaimsSource(
-  sources: Array<{ title: string; url: string }>,
-  chunks: RetrievedChunk[],
-): Array<{ title: string; url: string }> {
-  if (sources.some((s) => /claims operations platform/i.test(s.title))) return sources;
-  const chunk = chunks.find((c) => c.id === "zororo-claims");
-  if (!chunk || !chunk.sourceUrl.startsWith("http")) return sources;
-  return [...sources, { title: chunk.title, url: chunk.sourceUrl }];
-}
-
 function ensureCrmSource(
   sources: Array<{ title: string; url: string }>,
   chunks: RetrievedChunk[],
@@ -249,32 +241,52 @@ function ensureCrmSource(
   return [{ title: chunk.title, url: chunk.sourceUrl }, ...sources];
 }
 
-function citeClaimsStandby(
-  response: string,
-  sources: Array<{ title: string; url: string }>,
-): string {
-  if (/standby\s*\[\d+\]/i.test(response)) return response;
-  const idx = sources.findIndex((s) => /claims operations platform/i.test(s.title));
-  if (idx < 0) return response;
-  return response.replace(
-    /(the claims operations platform is an approved, production-ready standby)/i,
-    `$1 [${idx + 1}]`,
-  );
+function productionSystemSources(
+  resultSources: Array<{ title: string; url: string }>,
+): Array<{ title: string; url: string }> {
+  const hit = matchStaticAnswer("What production systems has Mike shipped?");
+  if (hit) {
+    const sourced = sourcesFor(hit);
+    if (sourced.length > 0) return sourced;
+  }
+  return resultSources;
 }
 
-// Apply production-system split, ZDI/AI OS status, and the claims-standby citation.
+function ensureZdiSource(
+  sources: Array<{ title: string; url: string }>,
+  chunks: RetrievedChunk[],
+): Array<{ title: string; url: string }> {
+  if (sources.some((s) => /\bzdi\b|document intelligence/i.test(s.title))) return sources;
+  const chunk = chunks.find(
+    (c) => c.id === "zdi-signature-workflow" || /\bzdi\b/i.test(c.title),
+  );
+  if (chunk && chunk.sourceUrl.startsWith("http")) {
+    return [{ title: chunk.title, url: chunk.sourceUrl }, ...sources];
+  }
+  const hit = matchStaticAnswer("Is ZDI live?");
+  if (hit) {
+    const sourced = sourcesFor(hit);
+    if (sourced.length > 0) return sourced;
+  }
+  return sources;
+}
+
+// Apply production-system split, ZDI/AI OS status, and per-item production citations.
 function polishResult(
   question: string,
   result: AnswerResult,
   chunks: RetrievedChunk[],
 ): AnswerResult {
   const response = ensureProjectStatusCopy(question, result.response);
+  if (isZdiLiveQuestion(question)) {
+    return { ...result, response, sources: ensureZdiSource(result.sources, chunks) };
+  }
   if (isTechLeadCrmQuestion(question)) {
     return { ...result, response, sources: ensureCrmSource(result.sources, chunks) };
   }
   if (!isProductionSystemsQuestion(question)) return { ...result, response };
-  const sources = ensureClaimsSource(result.sources, chunks);
-  return { ...result, response: citeClaimsStandby(response, sources), sources };
+  const sources = productionSystemSources(result.sources);
+  return { ...result, response, sources };
 }
 
 async function tryGenerate(
