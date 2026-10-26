@@ -27,6 +27,16 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'stack',
     title: "Mike's tech stack",
     sourceUrl: 'https://github.com/MikeNcube',
+    keywords: [
+      'AWS',
+      'S3',
+      'EC2',
+      'IAM',
+      'CloudWatch',
+      'Bedrock',
+      'stack',
+      'tech stack',
+    ],
     text: 'AI/LLM: RAG with Gemini embeddings, cosine retrieval, similarity gating, grounded generation with citations. LangGraph (prototype: state graphs with human approval gates). Anthropic Claude API, OpenAI API. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask, JWT auth, server-side session revocation. Data: PostgreSQL, pgvector hybrid search, Redis, Celery, SQLAlchemy, Alembic. Cloud: AWS (S3, EC2, IAM, CloudWatch, Bedrock). Infra: Docker, GitHub Actions, pytest, Railway.',
   },
   {
@@ -192,6 +202,13 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'certifications',
     title: 'Training and certifications',
     sourceUrl: 'https://github.com/MikeNcube',
+    keywords: [
+      'AWS',
+      'certification',
+      'training',
+      'AI Practitioner',
+      'AWS Skills Center',
+    ],
     text: 'AWS Training and Certification, AWS Skills Center, Becoming an AI Practitioner Series, Sep 2026: Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models. DeepLearning.AI: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, LangChain for LLM Application Development. No formal degree — capability evidenced by shipped systems and public GitHub portfolio.',
   },
   {
@@ -222,6 +239,14 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'aws-web-tier',
     title: 'Resilient web tier on AWS (lab)',
     sourceUrl: 'https://github.com/MikeNcube/Resilient-Web-Tier-on-AWS-ALB-Auto-Scaling',
+    keywords: [
+      'AWS',
+      'lab',
+      'EC2',
+      'CloudWatch',
+      'not production',
+      'lab, not production',
+    ],
     text: 'AWS lab: ALB, EC2 Auto Scaling, multi-AZ Flask, CloudWatch. Labelled lab, not production.',
   },
 ];

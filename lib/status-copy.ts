@@ -1,6 +1,6 @@
-// Canonical production-system, ZDI, and Zororo AI OS status copy, plus a post-check.
+// Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r22";
+export const ANSWER_CACHE_VERSION = "r23";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -13,6 +13,9 @@ export const AI_OS_STATUS_SENTENCE = "Built. Early stage, not deployed.";
 export const CLAIMS_STATUS_SENTENCE =
   "Approved, production-ready standby (failover).";
 
+export const CANONICAL_AWS_ANSWER =
+  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock. The resilient web tier on AWS is labelled lab, not production. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series.";
+
 const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike (?:ship|build)|shipped at zororo)\b/i;
 
@@ -22,6 +25,10 @@ const AI_OS_RE = /\bzororo ai os\b/i;
 
 const CLAIMS_RE =
   /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b|\bclaims system\b/i;
+
+const AWS_QUESTION_RE = /\baws\b/i;
+
+const AWS_OVERCLAIM_RE = /\bextensive(?:ly)?\b|\bproduction-grade\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
 
@@ -43,6 +50,25 @@ export function mentionsAiOs(text: string): boolean {
 // True when the text names the claims operations platform.
 export function mentionsClaims(text: string): boolean {
   return CLAIMS_RE.test(text);
+}
+
+// True when the visitor asked about AWS experience, stack, or labs.
+export function isAwsQuestion(question: string): boolean {
+  return AWS_QUESTION_RE.test(question);
+}
+
+// True when an AWS answer names the CV services, the lab label, and training, with no overclaim.
+export function awsAnswerIsCanonical(text: string): boolean {
+  return (
+    /\bS3\b/i.test(text)
+    && /\bEC2\b/i.test(text)
+    && /\bIAM\b/i.test(text)
+    && /\bCloudWatch\b/i.test(text)
+    && /\bBedrock\b/i.test(text)
+    && /lab, not production/i.test(text)
+    && /AWS Training and Certification/i.test(text)
+    && !AWS_OVERCLAIM_RE.test(text)
+  );
 }
 
 // True when ZDI status covers approved, rolling out, and not (yet) live.
@@ -181,9 +207,12 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
   return `${head}${injected}${gap}${rest}`.replace(/ {2,}/g, " ").trim();
 }
 
-// Force the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
+// Force AWS copy, the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
 export function ensureProjectStatusCopy(question: string, text: string): string {
   let out = text.trim();
+  if (isAwsQuestion(question) && !awsAnswerIsCanonical(out)) {
+    out = CANONICAL_AWS_ANSWER;
+  }
   if (isProductionSystemsQuestion(question) && !productionAnswerIsCanonical(out)) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }

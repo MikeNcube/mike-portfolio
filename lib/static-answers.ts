@@ -3,7 +3,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { tokenize } from "./bm25";
-import { CANONICAL_PRODUCTION_ANSWER } from "./status-copy";
+import { CANONICAL_AWS_ANSWER, CANONICAL_PRODUCTION_ANSWER } from "./status-copy";
 
 export type StaticAnswer = {
   question: string;
@@ -64,10 +64,25 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "is mike hiring",
       "can i hire mike",
       "availability",
+      "is mike open to contract as well as full-time",
+      "is mike open to contract",
+      "full-time or contract",
     ],
     answer:
       "Yes, Mike is available. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
+  },
+  {
+    question: "What AWS experience does Mike have?",
+    aliases: [
+      "what aws experience does mike have",
+      "does mike work with aws",
+      "tell me about mike's aws skills",
+      "aws experience",
+      "mike aws",
+    ],
+    answer: CANONICAL_AWS_ANSWER,
+    sourceIds: ["stack", "aws-web-tier", "certifications"],
   },
   {
     question: "What is Cube?",

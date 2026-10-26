@@ -13,6 +13,7 @@ import { normaliseModelText } from "./normalise-answer";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 import {
+  CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   ensureProjectStatusCopy,
   isProductionSystemsQuestion,
@@ -26,7 +27,7 @@ export const EMAIL_FALLBACK =
 export const SAFE_TOPIC_REPLY = "I can only answer questions about Mike's work.";
 
 const CONTACT_QUESTION_RE =
-  /\b(available|availability|hiring|hire|contact|email|reach)\b/i;
+  /\b(available|availability|hiring|hire|contact|email|reach|contract|full[ -]?time)\b/i;
 
 export function isContactQuestion(question: string): boolean {
   return CONTACT_QUESTION_RE.test(question);
@@ -78,6 +79,8 @@ export function buildPrompt(
     "Never invent projects, employers, metrics, or dates.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
     `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite the claims-standby sentence with [n] from the claims operations platform context block.`,
+    "Content labelled lab, prototype, or not production must never be described as production.",
+    `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words.`,
     "Whenever you mention ZDI, state that it is approved for production rollout, rolling out soon, and not yet live.",
     "Whenever you mention Zororo AI OS, state that it is Built, early stage, and not deployed.",
     "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: [n])' list in the answer body.",
