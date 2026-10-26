@@ -346,9 +346,7 @@ function finaliseModelText(
 function groundGroqAnswer(raw: string, chunks: RetrievedChunk[]): AnswerResult | null {
   const normalised = normaliseModelText(raw);
   const stripped = stripSourceFooter(normalised);
-  if (isRefusal(normalised) || isRefusal(stripped)) {
-    return { response: remapCitations(stripped, chunks, []), sources: [], via: "groq" };
-  }
+  if (isRefusal(normalised) || isRefusal(stripped)) return null;
   if (citedIndexes(stripped).length === 0) return null;
   const finalised = finaliseModelText(raw, chunks, { allowTopFallback: false });
   if (finalised.sources.length === 0) return null;
@@ -568,9 +566,6 @@ function staticOrSafeReply(
   chunks: RetrievedChunk[],
   modelText?: string,
 ): AnswerResult {
-  if (modelText && isRefusal(modelText)) {
-    return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
-  }
   if (isOffTopicQuestion(question)) return refusalResult();
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
@@ -600,6 +595,9 @@ function staticOrSafeReply(
   const retrieved = citedFallbackFromChunks(question, chunks);
   if (retrieved) {
     return polishResult(question, retrieved, chunks);
+  }
+  if (modelText && isRefusal(modelText)) {
+    return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
   }
   return refusalResult();
 }
@@ -845,6 +843,9 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
         if (geminiAvailable()) {
           const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
           if (geminiText) {
+            if (isRefusal(geminiText)) {
+              return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
+            }
             return withContactEmail(question, polishResult(question, {
               ...finaliseModelText(geminiText, relevant),
               via: "gemini",

@@ -7,7 +7,7 @@ import {
   splitIntoSentences,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r40";
+export const ANSWER_CACHE_VERSION = "r41";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 

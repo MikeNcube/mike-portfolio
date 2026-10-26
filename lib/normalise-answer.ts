@@ -133,11 +133,12 @@ export function insertMissingSentenceSpaces(text: string): string {
 
 export function moveTrailingCitesBeforeStop(text: string): string {
   return text.replace(
-    /([.!?])\s*((?:\[\d+\]\s*)+)(?:\.)?(?=\s|$)/g,
-    (_m, _punct: string, cites: string) => {
+    /(…|\.\.\.|[.!?])\s*((?:\[\d+\]\s*)+)(?:\.)?(?=\s|$)/g,
+    (_m, punct: string, cites: string) => {
       const nums = [...cites.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
       const unique = [...new Set(nums)].sort((a, b) => a - b);
-      return ` ${unique.map((n) => `[${n}]`).join("")}.`;
+      const end = punct === "..." ? "…" : punct;
+      return ` ${unique.map((n) => `[${n}]`).join("")}${end}`;
     },
   );
 }

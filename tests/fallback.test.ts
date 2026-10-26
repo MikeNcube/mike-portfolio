@@ -18,7 +18,7 @@ import {
   selectCitedSources,
   shouldCacheAnswer,
 } from "../lib/answer";
-import { normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
+import { moveTrailingCitesBeforeStop, normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
 import { matchMultiProjectAnswer, matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
@@ -598,16 +598,18 @@ describe("cited sources", () => {
     assert.doesNotMatch(result.response, /\[2\]/);
   });
 
-  it("does not attach sources to a curly-apostrophe refusal", async () => {
+  it("replaces a curly-apostrophe Gemini refusal with the static Cube answer", async () => {
     const result = await answerQuestion({
       question: "What is Cube?",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
         "I\u2019m sorry, but I can\u2019t provide that. \u30101\u3011",
     });
-    assert.equal(result.via, "gemini");
-    assert.equal(isRefusal(result.response), true);
-    assert.equal(result.sources.length, 0);
+    assert.equal(result.via, "static");
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /coding agent/i);
+    assert.doesNotMatch(result.response, /can.t provide/i);
+    assert.ok(result.sources.length > 0);
   });
 
   it("collapses duplicate adjacent citations", async () => {
@@ -1969,16 +1971,16 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(citedFallbackFromChunks("What database does the CRM use?", weak), null);
   });
 
-  it("does not replace a Groq refusal with retrieved-chunk patchwork", async () => {
+  it("keeps a Groq refusal when there is no static match and no relevant fallback", async () => {
     const result = await answerQuestion({
       question: "What database does the CRM use?",
       retrieveFn: async () => [
         {
-          id: "zororo-crm",
-          title: "Lead-management CRM",
+          id: "positioning",
+          title: "Who Mike is",
           sourceUrl: "https://github.com/MikeNcube",
-          text: "Shipped live production system at Zororo-Phumulani: lead-management CRM used by over 40 people.",
-          score: 0.9,
+          text: "Mike S Ncube is an Applied AI Engineer at Zororo-Phumulani Funeral Assurance.",
+          score: 0.91,
         },
       ],
       generateGemini: async () => {
@@ -2783,6 +2785,104 @@ describe("round 40 dotted names, truncation, and cert fallback", () => {
     assert.doesNotMatch(out, /Projects Digi/);
   });
 });
+
+describe("round 41 ready answers beat model refusals, and cite punctuation", () => {
+  const certChunk = {
+    id: "certifications",
+    title: "Training and certifications",
+    sourceUrl: "https://github.com/MikeNcube",
+    text: "Training (courses, not credentials): Becoming an AI Practitioner Series, Sep 2026: Introduction to AI. DeepLearning.AI: Retrieval-Augmented Generation (RAG). AWS Training and Certification and AWS Skills Center are training providers, not certificates. No formal degree.",
+    score: 0.95,
+  };
+
+  it("serves the static certifications answer when Groq refuses", async () => {
+    const result = await answerQuestion({
+      question: "What certifications does Mike hold?",
+      retrieveFn: async () => [certChunk],
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+      generateGroq: async () => "I don't have information on any certifications Mike holds.",
+    });
+    assert.equal(result.via, "static");
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /no named certifications/i);
+    assert.doesNotMatch(result.response, /I don't have information/);
+    assert.ok(result.sources.length > 0);
+    assert.equal(shouldCacheAnswer(result), false);
+  });
+
+  it("serves the static certifications answer when Gemini refuses", async () => {
+    const result = await answerQuestion({
+      question: "What certifications does Mike hold?",
+      retrieveFn: async () => [certChunk],
+      generateGemini: async () => "I do not have that information in the context.",
+    });
+    assert.equal(result.via, "static");
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /no named certifications/i);
+    assert.doesNotMatch(result.response, /I do not have that information/);
+    assert.equal(shouldCacheAnswer(result), false);
+  });
+
+  it("replaces a Groq refusal with the chunk fallback when it has relevant content", async () => {
+    const result = await answerQuestion({
+      question: "What database does the CRM use?",
+      retrieveFn: async () => [
+        {
+          id: "zororo-crm",
+          title: "Lead-management CRM",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Shipped live production system at Zororo-Phumulani: lead-management CRM used by over 40 people.",
+          score: 0.9,
+        },
+      ],
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+      generateGroq: async () => EMAIL_FALLBACK,
+    });
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /lead-management CRM used by over 40 people/);
+    assert.ok(result.sources.length > 0);
+    assert.equal(shouldCacheAnswer(result), false);
+  });
+
+  it("does not cache a model refusal even if sources were attached", () => {
+    assert.equal(
+      shouldCacheAnswer({
+        via: "groq",
+        response: "I don't have information about that in my knowledge base.",
+        sources: [{ id: "certifications", title: "Training", url: "https://github.com/MikeNcube" }],
+      }),
+      false,
+    );
+    assert.equal(
+      shouldCacheAnswer({
+        via: "gemini",
+        response: "I do not have that information.",
+        sources: [{ id: "certifications", title: "Training", url: "https://github.com/MikeNcube" }],
+      }),
+      false,
+    );
+  });
+
+  it("moves trailing cites before the original stop, including ?, !, and …", () => {
+    assert.equal(moveTrailingCitesBeforeStop("Event correlation. [1][2]"), "Event correlation [1][2].");
+    assert.equal(moveTrailingCitesBeforeStop("Is ZDI live? [1]"), "Is ZDI live [1]?");
+    assert.equal(moveTrailingCitesBeforeStop("Shipped! [1]"), "Shipped [1]!");
+    assert.equal(moveTrailingCitesBeforeStop("Truncated at manager… [1]"), "Truncated at manager [1]…");
+    assert.equal(moveTrailingCitesBeforeStop("Truncated at manager... [1]."), "Truncated at manager [1]…");
+    assert.equal(normaliseModelText("Is ZDI live? [1]"), "Is ZDI live [1]?");
+    assert.equal(normaliseModelText("Shipped! [1]"), "Shipped [1]!");
+    assert.doesNotMatch(normaliseModelText("Is ZDI live? [1]"), /Is ZDI live \[1\]\./);
+    assert.equal(
+      sanitisePunctuation("Is ZDI live? [1]"),
+      "Is ZDI live [1]?",
+    );
+  });
+});
+
 
 
 
