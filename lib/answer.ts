@@ -16,14 +16,17 @@ import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
+  CANONICAL_WORK_ANSWER,
   CANONICAL_ZDI_LIVE_ANSWER,
   ensureProjectStatusCopy,
   hasRepeatedStatus,
   isAwsQuestion,
   isProductionSystemsQuestion,
   isTechLeadCrmQuestion,
+  isWorkQuestion,
   isZdiLiveQuestion,
   productionAnswerIsCanonical,
+  punctuationIsSane,
 } from "./status-copy";
 
 export const CONTACT_EMAIL = "mikencube03@gmail.com";
@@ -185,6 +188,7 @@ export function buildPrompt(
     "Never add uncited evaluative conclusions such as 'this shows he can…'. If you state a conclusion, cite it with [n]; otherwise omit it.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
     `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite Digi App Form, the CRM, ZDI, and claims with [n] matching the context blocks.`,
+    "Never call ZDI, the claims operations platform, or Zororo AI OS production systems. Production systems are Digi App Form and the CRM. ZDI is rolling out; the claims platform is on standby; Zororo AI OS is early-stage and not deployed.",
     "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
     "Content labelled lab, prototype, or not production must never be described as production.",
     `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words. List courses as training. Only named certificates are certifications. Never present AWS Training and Certification or AWS Skills Center as a credential.`,
@@ -293,6 +297,7 @@ export function shouldCacheAnswer(result: AnswerResult): boolean {
     return false;
   }
   if (/^shipped:/i.test(result.response) && result.sources.length !== 4) return false;
+  if (!punctuationIsSane(result.response)) return false;
   return true;
 }
 
@@ -324,6 +329,29 @@ function groundGroqAnswer(raw: string, chunks: RetrievedChunk[]): AnswerResult |
   return { ...finalised, via: "groq" };
 }
 
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  const m = trimmed.match(/^[^.!?]+[.!?]/);
+  const sentence = (m ? m[0] : trimmed).trim();
+  if (sentence.length <= 220) return sentence;
+  return `${sentence.slice(0, 217).trim()}.`;
+}
+
+// Short cited answer from the top retrieved HTTP passages when the model cannot be used.
+export function citedFallbackFromChunks(chunks: RetrievedChunk[]): AnswerResult | null {
+  const top = chunks.filter((c) => c.sourceUrl.startsWith("http")).slice(0, 3);
+  if (top.length === 0) return null;
+  const response = top
+    .map((chunk, i) => {
+      const sentence = firstSentence(chunk.text).replace(/[.!?]$/, "");
+      return `${sentence} [${i + 1}].`;
+    })
+    .join(" ");
+  const sources = top.map((c) => ({ id: c.id, title: c.title, url: c.sourceUrl }));
+  return { response, sources, via: "static" };
+}
+
 function staticOrSafeReply(question: string, chunks: RetrievedChunk[]): AnswerResult {
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
@@ -332,6 +360,17 @@ function staticOrSafeReply(question: string, chunks: RetrievedChunk[]): AnswerRe
       sources: sourcesFor(staticHit),
       via: "static",
     }, chunks);
+  }
+  if (isWorkQuestion(question)) {
+    return polishResult(question, {
+      response: CANONICAL_WORK_ANSWER,
+      sources: workSystemSources([]),
+      via: "static",
+    }, chunks);
+  }
+  const retrieved = citedFallbackFromChunks(chunks);
+  if (retrieved) {
+    return polishResult(question, retrieved, chunks);
   }
   return { response: SAFE_TOPIC_REPLY, sources: [], via: "email" };
 }
@@ -355,6 +394,17 @@ function productionSystemSources(
   resultSources: AnswerSource[],
 ): AnswerSource[] {
   const hit = matchStaticAnswer("What production systems has Mike shipped?");
+  if (hit) {
+    const sourced = sourcesFor(hit);
+    if (sourced.length > 0) return sourced;
+  }
+  return resultSources;
+}
+
+function workSystemSources(
+  resultSources: AnswerSource[],
+): AnswerSource[] {
+  const hit = matchStaticAnswer("What has Mike built at Zororo-Phumulani?");
   if (hit) {
     const sourced = sourcesFor(hit);
     if (sourced.length > 0) return sourced;
@@ -468,6 +518,13 @@ function polishResult(
   } else if (isProductionSystemsQuestion(question)) {
     out = CANONICAL_PRODUCTION_ANSWER;
     sources = productionSystemSources(from);
+  } else if (isWorkQuestion(question) && out === CANONICAL_WORK_ANSWER) {
+    ({ text: out, sources } = applySourceList(
+      out,
+      from,
+      workSystemSources(from),
+      true,
+    ));
   }
 
   if (
@@ -563,6 +620,21 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
       sources: sourcesFor(staticHit),
       via: "static",
     }, relevant));
+  }
+
+  if (isWorkQuestion(question)) {
+    return withContactEmail(question, polishResult(question, {
+      response: CANONICAL_WORK_ANSWER,
+      sources: workSystemSources([]),
+      via: "static",
+    }, relevant));
+  }
+
+  if (relevant.length > 0) {
+    const retrieved = citedFallbackFromChunks(relevant);
+    if (retrieved) {
+      return withContactEmail(question, polishResult(question, retrieved, relevant));
+    }
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };

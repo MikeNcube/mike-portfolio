@@ -11,7 +11,7 @@
 import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
-import { aiOsStatusAppearsOnce, hasRepeatedStatus } from "../lib/status-copy";
+import { aiOsStatusAppearsOnce, hasRepeatedStatus, punctuationIsSane } from "../lib/status-copy";
 import { citationsMatchNamedProjects } from "../lib/answer";
 
 function computesTwoPlusTwo(text: string): boolean {
@@ -140,6 +140,12 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
       label: "citations_match_named_projects",
       pass: aligned.pass,
       detail: aligned.failures.join("; ") || undefined,
+    });
+    const sane = punctuationIsSane(response);
+    checks.push({
+      label: "punctuation_sane",
+      pass: sane,
+      detail: sane ? undefined : "punctuation garble (,X ;X ]., ].; . , .. leading comma, or unbalanced parentheses)",
     });
     if (q.id === "production-systems") {
       const expected = ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"];

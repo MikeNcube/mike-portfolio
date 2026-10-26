@@ -7,6 +7,7 @@ import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
+  CANONICAL_WORK_ANSWER,
   CANONICAL_ZDI_LIVE_ANSWER,
 } from "./status-copy";
 
@@ -46,10 +47,30 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     aliases: [
       "what has mike shipped",
       "production systems",
-      "what did mike build at zororo",
+      "what did mike ship at zororo",
     ],
     answer: CANONICAL_PRODUCTION_ANSWER,
     sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
+  },
+  {
+    question: "What has Mike built at Zororo-Phumulani?",
+    aliases: [
+      "what has mike built at zororo",
+      "what did mike build at zororo",
+      "what did mike build at zororo-phumulani",
+      "what does mike work on",
+      "what does mike work on at zororo",
+      "what does mike work on at zororo-phumulani",
+      "what has mike built",
+    ],
+    answer: CANONICAL_WORK_ANSWER,
+    sourceIds: [
+      "digi-app-form",
+      "zororo-crm",
+      "zdi-signature-workflow",
+      "zororo-claims",
+      "zororo-ai-os",
+    ],
   },
   {
     question: "Walk me through Proactive Sentinel's architecture.",
