@@ -137,6 +137,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about mike's aws skills",
       "aws experience",
       "mike aws",
+      "what has mike built using aws",
+      "what has mike built with aws",
     ],
     answer: CANONICAL_AWS_ANSWER,
     sourceIds: ["stack", "aws-web-tier", "certifications"],

@@ -74,17 +74,21 @@ const INJECTION_DEFENCE_QUESTION_RE =
 
 const INJECTION_THREAT_RE = /\bprompt injection\b|\bjailbreak/i;
 
+function hasJailbreakAttack(question: string): boolean {
+  const normalised = normaliseModelText(question);
+  if (DAN_RE.test(normalised)) return true;
+  const t = normalised.toLowerCase();
+  return JAILBREAK_RES.some((re) => re.test(t));
+}
+
 // True when the visitor asked how Mike defends RAG against jailbreaks / prompt injection.
 export function isInjectionDefenceQuestion(question: string): boolean {
+  if (hasJailbreakAttack(question)) return false;
   const t = normaliseModelText(question);
   return INJECTION_DEFENCE_QUESTION_RE.test(t) && INJECTION_THREAT_RE.test(t);
 }
 
 // True when the visitor is trying to jailbreak or role-play the assistant.
 export function isJailbreakPrompt(question: string): boolean {
-  if (isInjectionDefenceQuestion(question)) return false;
-  const normalised = normaliseModelText(question);
-  if (DAN_RE.test(normalised)) return true;
-  const t = normalised.toLowerCase();
-  return JAILBREAK_RES.some((re) => re.test(t));
+  return hasJailbreakAttack(question);
 }

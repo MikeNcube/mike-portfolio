@@ -2,7 +2,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 
-export const ANSWER_CACHE_VERSION = "r37";
+export const ANSWER_CACHE_VERSION = "r38";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -34,7 +34,7 @@ const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike ship|shipped at zororo)\b/i;
 
 const WORK_CORE_RE =
-  /^\s*what (?:does mike work on|has mike built|did mike build)(.*)$/i;
+  /(?:^|[.!?,]\s*)(?:so |hey,? |and )?what (?:does mike work on|has mike built|did mike build)(.*)$/i;
 
 const WORK_WH_RE = /\b(?:what|which)\b/i;
 
@@ -46,6 +46,9 @@ const WORK_SCOPE_RE =
 
 const WORK_TECH_OR_PROJECT_RE =
   /\b(?:rag|aws|python|langchain|langgraph|proactive sentinel|sentinel|fastapi|flask|next\.?js|typescript|react|gemini|groq|redis|postgres(?:ql)?|docker|bedrock|sitewarden|cube(?:\s+agent)?|anthropic|claude|openai)\b/i;
+
+const WORK_FILLER_RE =
+  /\b(?:recently|so far|lately|to date|before|already|overall|in total|in general|professionally|at all)\b/gi;
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
@@ -109,6 +112,14 @@ function stripWorkScopeWords(text: string): string {
     .trim();
 }
 
+function stripWorkFillerWords(text: string): string {
+  return text.replace(WORK_FILLER_RE, " ").replace(/[^a-z0-9]+/gi, " ").trim();
+}
+
+function meaningfulWorkRemainder(text: string): string {
+  return stripWorkFillerWords(stripWorkScopeWords(text));
+}
+
 function remainderAfterWorkCore(question: string): string | null {
   const m = question.match(WORK_CORE_RE);
   if (!m) return null;
@@ -119,8 +130,7 @@ function remainderAfterWorkCore(question: string): string | null {
 export function isTopicalTechBuildQuestion(question: string): boolean {
   const rest = remainderAfterWorkCore(question);
   if (rest !== null) {
-    if (!rest) return false;
-    return stripWorkScopeWords(rest).length > 0;
+    return meaningfulWorkRemainder(rest).length > 0;
   }
   if (!(WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question))) return false;
   if (WORK_SCOPE_RE.test(question) && !WORK_TECH_OR_PROJECT_RE.test(question)) return false;
@@ -130,10 +140,10 @@ export function isTopicalTechBuildQuestion(question: string): boolean {
 // True when the visitor asked what Mike works on / has built at Zororo (not a tech/project topic).
 export function isWorkQuestion(question: string): boolean {
   if (isProductionSystemsQuestion(question)) return false;
-  if (isTopicalTechBuildQuestion(question)) return false;
   if (isAwsQuestion(question)) return false;
+  if (isTopicalTechBuildQuestion(question)) return false;
   const rest = remainderAfterWorkCore(question);
-  if (rest !== null && rest.length === 0) return true;
+  if (rest !== null && meaningfulWorkRemainder(rest).length === 0) return true;
   return WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question) && WORK_SCOPE_RE.test(question);
 }
 
@@ -157,9 +167,8 @@ export function mentionsClaims(text: string): boolean {
   return CLAIMS_RE.test(text);
 }
 
-// True when the visitor asked about AWS experience, stack, or labs (not "built using AWS").
+// True when the visitor asked about AWS experience, stack, labs, or what Mike built using AWS.
 export function isAwsQuestion(question: string): boolean {
-  if (isTopicalTechBuildQuestion(question)) return false;
   return AWS_QUESTION_RE.test(question);
 }
 
@@ -871,6 +880,14 @@ function mentionRe(kind: StatusKind): RegExp {
   }
 }
 
+function normaliseCiteClusters(text: string): string {
+  return text.replace(/(?:\[\d+\])(?:\s*\[\d+\])+/g, (cluster) => {
+    const nums = [...cluster.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const unique = [...new Set(nums)].sort((a, b) => a - b);
+    return unique.map((n) => `[${n}]`).join("");
+  });
+}
+
 function collapseDuplicateCitesInSentence(sentence: string): string {
   const nums = [...sentence.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
   if (nums.length < 2) return sentence;
@@ -883,9 +900,9 @@ function collapseDuplicateCitesInSentence(sentence: string): string {
   return attachCites(stripped, `[${nums[0]}]`);
 }
 
-// Collapse identical [n] repeats in one sentence to a single cite at the sentence end.
+// Collapse identical [n] repeats in one sentence; sort adjacent clusters to [1][2].
 export function collapseDuplicateCitesInSentences(text: string): string {
-  return splitSentences(text).map(collapseDuplicateCitesInSentence).join("");
+  return splitSentences(normaliseCiteClusters(text)).map(collapseDuplicateCitesInSentence).join("");
 }
 
 function productionLabelHaystack(sentence: string): string {

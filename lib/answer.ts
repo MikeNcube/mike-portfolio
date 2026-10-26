@@ -8,7 +8,7 @@ import {
   retrieve,
   type RetrievedChunk,
 } from "./rag";
-import { isJailbreakPrompt, isRefusal } from "./refusal";
+import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
 import { normaliseModelText } from "./normalise-answer";
 import { tokenize } from "./bm25";
 import { geminiAvailable, groqAvailable } from "./providers";
@@ -39,6 +39,13 @@ export const EMAIL_FALLBACK =
 export const SAFE_TOPIC_REPLY = "I can only answer questions about Mike's work.";
 
 export const CITED_FALLBACK_MIN_SCORE = 0.5;
+
+const PADDING_CHUNK_IDS = new Set([
+  "positioning",
+  "employer",
+  "availability",
+  "interview-guide",
+]);
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
 
@@ -356,6 +363,12 @@ function firstSentence(text: string): string {
   return `${sentence.slice(0, 217).trim()}.`;
 }
 
+function sentenceMatching(text: string, re: RegExp): string {
+  const parts = text.match(/[^.!?]+[.!?]+(?:\s*\[\d+\])*\s*|[^.!?]+$/g) ?? [text];
+  const hit = parts.find((part) => re.test(part));
+  return firstSentence((hit ?? parts[0]).trim());
+}
+
 function questionContentWords(question: string): string[] {
   return tokenize(question).filter((t) => !NAME_TOKENS.has(t));
 }
@@ -373,6 +386,24 @@ function refusalResult(response = EMAIL_FALLBACK): AnswerResult {
   return { response, sources: [], via: "email" };
 }
 
+function injectionDefenceReply(chunks: RetrievedChunk[]): AnswerResult {
+  const hit = matchStaticAnswer("How does Mike defend against prompt injection in his RAG systems?");
+  if (!hit) return refusalResult();
+  return polishResult(hit.question, {
+    response: hit.answer,
+    sources: sourcesFor(hit),
+    via: "static",
+  }, chunks);
+}
+
+function pythonFallbackChunks(chunks: RetrievedChunk[]): RetrievedChunk[] {
+  return chunks.filter(
+    (c) =>
+      !PADDING_CHUNK_IDS.has(c.id ?? "")
+      && /\bpython\b/i.test(`${c.title}\n${c.text}`),
+  );
+}
+
 // Short cited answer from retrieved passages only when the question is on-topic and relevant.
 export function citedFallbackFromChunks(
   question: string,
@@ -383,14 +414,21 @@ export function citedFallbackFromChunks(
   if (http.length === 0) return null;
   const topScore = Math.max(...http.map((c) => c.score));
   if (topScore < CITED_FALLBACK_MIN_SCORE) return null;
-  const matching = http.filter((c) =>
-    passageHasQuestionWords(question, `${c.title}\n${c.text}`),
-  );
+  const pythonQuestion = /\bpython\b/i.test(question);
+  const matching = pythonQuestion
+    ? pythonFallbackChunks(http)
+    : http.filter((c) =>
+        !PADDING_CHUNK_IDS.has(c.id ?? "")
+        && passageHasQuestionWords(question, `${c.title}\n${c.text}`),
+      );
   const top = matching.slice(0, 3);
   if (top.length === 0) return null;
   const response = top
     .map((chunk, i) => {
-      const sentence = firstSentence(chunk.text).replace(/[.!?]$/, "");
+      const raw = pythonQuestion
+        ? sentenceMatching(chunk.text, /\bpython\b/i)
+        : firstSentence(chunk.text);
+      const sentence = raw.replace(/[.!?]$/, "");
       return `${sentence} [${i + 1}].`;
     })
     .join(" ");
@@ -407,10 +445,20 @@ function staticOrSafeReply(
     return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
   }
   if (isOffTopicQuestion(question)) return refusalResult();
+  if (isInjectionDefenceQuestion(question)) {
+    return injectionDefenceReply(chunks);
+  }
   if (isWorkQuestion(question)) {
     return polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
       sources: workSystemSources([]),
+      via: "static",
+    }, chunks);
+  }
+  if (isAwsQuestion(question)) {
+    return polishResult(question, {
+      response: CANONICAL_AWS_ANSWER,
+      sources: awsSources([]),
       via: "static",
     }, chunks);
   }
@@ -626,6 +674,9 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   if (isJailbreakPrompt(question) || isOffTopicQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
   }
+  if (isInjectionDefenceQuestion(question)) {
+    return withContactEmail(question, injectionDefenceReply([]));
+  }
 
   const audience = input.audience ?? "developer";
   const retrieveFn = input.retrieveFn ?? retrieve;
@@ -680,6 +731,14 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     return withContactEmail(question, polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
       sources: workSystemSources([]),
+      via: "static",
+    }, relevant));
+  }
+
+  if (isAwsQuestion(question)) {
+    return withContactEmail(question, polishResult(question, {
+      response: CANONICAL_AWS_ANSWER,
+      sources: awsSources([]),
       via: "static",
     }, relevant));
   }
