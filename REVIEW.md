@@ -347,6 +347,20 @@ Homepage **Production systems** group, in order: Digi App Form (Shipped), lead-m
 
 ---
 
+## Round 9 — three private projects
+
+Added under **More work**, after ZDI and before the portfolio RAG, all private repos (no GitHub link; **Private repo** marker on the card and case study):
+
+| Project | Slug | Status |
+|---------|------|--------|
+| Zororo AI OS | `zororo-ai-os` | Built (early stage, not deployed). 310 tests. |
+| Claims operations platform | `zororo-claims` | **Approved · standby** — approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani. Not the live system. |
+| Multi-agent content pipeline | `ai-social-agent` | Prototype. Local Ollama; human approval before scheduling. |
+
+“What production systems has Mike shipped?” names Digi and the CRM as live, ZDI as rolling out, and the claims operations platform as approved and on standby.
+
+---
+
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.

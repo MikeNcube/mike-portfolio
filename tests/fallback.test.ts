@@ -269,7 +269,10 @@ describe("static CV copy", () => {
     assert.match(hit.answer, /live production/);
     assert.match(hit.answer, /ZDI/);
     assert.match(hit.answer, /rolling out/i);
-    assert.doesNotMatch(hit.answer, /claims/i);
+    assert.match(hit.answer, /claims operations platform/i);
+    assert.match(hit.answer, /standby/i);
+    assert.match(hit.answer, /failover/i);
+    assert.doesNotMatch(hit.answer, /claims extraction/i);
   });
 
   it("limits Sentinel and availability to CV wording", () => {
@@ -308,6 +311,24 @@ describe("static CV copy", () => {
     assert.doesNotMatch(zdi.answer, /\bin production\b/);
     assert.doesNotMatch(zdi.answer, /\blive\b/i);
     assert.doesNotMatch(zdi.answer, /\bshipped\b/i);
+
+    const aiOs = matchStaticAnswer("What is Zororo AI OS?");
+    assert.ok(aiOs);
+    assert.match(aiOs.answer, /Built/);
+    assert.match(aiOs.answer, /not deployed/);
+    assert.match(aiOs.answer, /310/);
+
+    const claimsOps = matchStaticAnswer("What is the claims operations platform?");
+    assert.ok(claimsOps);
+    assert.match(claimsOps.answer, /Approved, production-ready standby/);
+    assert.match(claimsOps.answer, /failover/);
+    assert.match(claimsOps.answer, /current claims system/);
+    assert.doesNotMatch(claimsOps.answer, /is the live system/);
+
+    const social = matchStaticAnswer("What is the multi-agent content pipeline?");
+    assert.ok(social);
+    assert.match(social.answer, /Prototype/);
+    assert.match(social.answer, /Ollama/);
   });
 });
 
@@ -328,7 +349,39 @@ describe("ZDI project placement", () => {
     assert.doesNotMatch(zdi.tagline, /synthetic/i);
     const { prev, next } = getProjectNeighbours("zdi-signature-workflow");
     assert.equal(prev.slug, "zororo-crm");
-    assert.equal(next.slug, "portfolio-rag-assistant");
+    assert.equal(next.slug, "zororo-ai-os");
     assert.equal(getProjectNeighbours("digi-app-form").next.slug, "zororo-crm");
+  });
+});
+
+describe("private More work projects", () => {
+  it("places AI OS, claims ops, and the content pipeline after ZDI with private repos", () => {
+    const aiOs = getProjectBySlug("zororo-ai-os");
+    const claims = getProjectBySlug("zororo-claims");
+    const social = getProjectBySlug("ai-social-agent");
+    assert.ok(aiOs && claims && social);
+    assert.equal(aiOs.status, "Built");
+    assert.equal(aiOs.privateRepo, true);
+    assert.equal(aiOs.repoUrl, undefined);
+    assert.match(aiOs.outcome, /not deployed/);
+    assert.match(aiOs.outcome, /310/);
+    assert.equal(claims.status, "Approved · standby");
+    assert.equal(claims.privateRepo, true);
+    assert.equal(claims.repoUrl, undefined);
+    assert.match(
+      claims.role,
+      /Approved, production-ready standby \(failover\) for the company's live claims system at Zororo-Phumulani/,
+    );
+    assert.match(
+      claims.outcome,
+      /Approved, production-ready standby \(failover\) for the company's live claims system at Zororo-Phumulani/,
+    );
+    assert.equal(social.status, "Prototype");
+    assert.equal(social.privateRepo, true);
+    assert.equal(social.repoUrl, undefined);
+    assert.equal(getProjectNeighbours("zororo-ai-os").prev.slug, "zdi-signature-workflow");
+    assert.equal(getProjectNeighbours("zororo-ai-os").next.slug, "zororo-claims");
+    assert.equal(getProjectNeighbours("zororo-claims").next.slug, "ai-social-agent");
+    assert.equal(getProjectNeighbours("ai-social-agent").next.slug, "portfolio-rag-assistant");
   });
 });

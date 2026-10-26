@@ -5,6 +5,7 @@ export type ProjectStatus =
   | "Live demo"
   | "Shipped"
   | "Rolling out"
+  | "Approved · standby"
   | "Prototype"
   | "Paused"
   | "Reference"
@@ -15,6 +16,9 @@ export const WORK_ORDER = [
   "digi-app-form",
   "zororo-crm",
   "zdi-signature-workflow",
+  "zororo-ai-os",
+  "zororo-claims",
+  "ai-social-agent",
   "portfolio-rag-assistant",
   "sitewarden",
   "cube-agent",
@@ -44,6 +48,7 @@ export type Project = {
   domain: string;
   year: string;
   repoUrl?: string;
+  privateRepo?: boolean;
   demoUrl?: string;
   demoLabel?: string;
   systemOverview?: string;
@@ -182,6 +187,92 @@ export const flagshipProjects: Project[] = [
     status: "Rolling out",
     domain: "Governed workflow · E-signature evidence",
     year: "2026",
+  },
+  {
+    slug: "zororo-ai-os",
+    name: "Zororo AI OS",
+    tagline:
+      "Governed AI control plane: every event passes Presidio PII detection, an OPA policy check, risk scoring, then ALLOW / MONITOR / APPROVE / BLOCK, with a hash-chained audit log.",
+    workSection: "platform",
+    role: "Sole builder — early stage, not deployed",
+    problem:
+      "Claims, policy changes, LLM queries and tool calls each need the same governed path. If any control fails, the event must not proceed.",
+    built:
+      "A fixed pipeline every event passes: PII detection with Microsoft Presidio, plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits; an OPA (Rego) policy check; risk scoring from fixed rules plus anomaly statistics; a decision of ALLOW / MONITOR / APPROVE / BLOCK; then a tamper-evident, hash-chained audit log. If any step fails, the event is blocked by default. An MCP gateway uses capability tokens and replay protection.",
+    outcome:
+      "Built. Early stage, not deployed. README reports 310 passing tests, including pytest and Rego policy tests. LangGraph and pgvector are planned. Private repo.",
+    systemOverview:
+      "Every event (claims, policy changes, LLM queries, tool calls) enters one pipeline: PII detection → OPA policy check → risk scoring → ALLOW / MONITOR / APPROVE / BLOCK → hash-chained audit log. Fail closed. MCP gateway: capability tokens and replay protection.",
+    engineeringDecisions: [
+      "One fixed pipeline for every event type, so claims, policy changes, LLM queries and tool calls share the same controls.",
+      "PII detection uses Microsoft Presidio plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits.",
+      "OPA (Rego) is the policy check; pytest and Rego policy tests are both in the suite.",
+      "Risk scoring combines fixed rules with anomaly statistics, then emits ALLOW, MONITOR, APPROVE or BLOCK.",
+      "The audit log is tamper-evident and hash-chained.",
+      "If any step fails, the event is blocked by default.",
+      "The MCP gateway uses capability tokens and replay protection.",
+      "LangGraph and pgvector are planned; they are not in the running system.",
+    ],
+    stack: ["Python 3.12", "FastAPI", "Presidio", "OPA/Rego", "Pydantic", "Terraform", "pytest"],
+    status: "Built",
+    domain: "Governed AI · Control plane",
+    year: "2026",
+    privateRepo: true,
+  },
+  {
+    slug: "zororo-claims",
+    name: "Claims operations platform",
+    tagline:
+      "Role-based platform for funeral-case processing: claims, cash services and courtesy services. Approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani.",
+    workSection: "platform",
+    role: "Approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani",
+    problem:
+      "Funeral-case processing needs role-based claims, cash services and courtesy services, with department hand-offs and a standby if the current claims system fails.",
+    built:
+      "A role-based platform for funeral-case processing: claims, cash services and courtesy services. A case state machine with hand-offs between departments, plus role- and shift-based routing. PII encrypted at the app layer and masked by default on list views, with an audit log of who read PII. Access is enforced at both the middleware and API layers. A public case-tracking link and compliance exports. POPIA-aware design.",
+    outcome:
+      "Approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani. Private repo.",
+    systemOverview:
+      "Roles and shifts route into a case state machine with department hand-offs across claims, cash services and courtesy services. PII is encrypted at the app layer, masked by default on list views, and every PII read is audited. Middleware and API layers both enforce access. A public case-tracking link and compliance exports sit beside the staff workspace.",
+    engineeringDecisions: [
+      "The platform is a failover for the current claims system, not a replacement that is live today.",
+      "A case state machine plus role- and shift-based routing handles department hand-offs.",
+      "PII is encrypted at the app layer and masked by default on list views; who read PII is written to an audit log.",
+      "Access is enforced at both the middleware and API layers.",
+      "A public case-tracking link and compliance exports support POPIA-aware operations.",
+    ],
+    stack: ["Next.js", "TypeScript", "NextAuth", "Prisma", "PostgreSQL", "Docker"],
+    status: "Approved · standby",
+    domain: "Insurance · Case operations",
+    year: "2026",
+    privateRepo: true,
+  },
+  {
+    slug: "ai-social-agent",
+    name: "Multi-agent content pipeline",
+    tagline:
+      "Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. Local Ollama; nothing is scheduled until a human approves it.",
+    workSection: "ai-proof",
+    role: "Sole builder — prototype",
+    problem:
+      "Research signals need to become platform-ready posts without API spend, and without publishing until a human approves.",
+    built:
+      "Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. Runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",
+    outcome:
+      "Prototype. Local Ollama at zero API cost. Nothing is scheduled until a human approves it. Versioned prompt templates; evals are in progress. Private repo.",
+    systemOverview:
+      "Signals from GitHub, ArXiv and O'Reilly feed a research agent, then a strategy agent, then a content agent. Output waits in a FastAPI dashboard. A human must approve before anything is scheduled. Local Ollama. Versioned prompt templates.",
+    engineeringDecisions: [
+      "Three specialised agents (research, strategy, content) rather than one mixed prompt.",
+      "Local Ollama keeps API cost at zero.",
+      "Nothing is scheduled until a human approves it in the FastAPI dashboard.",
+      "Prompt templates are versioned. Evals are in progress.",
+    ],
+    stack: ["Python", "FastAPI", "Jinja2", "Ollama", "Docker", "n8n"],
+    status: "Prototype",
+    domain: "Agents · Content pipeline",
+    year: "2026",
+    privateRepo: true,
   },
   {
     slug: "claims-pipeline",

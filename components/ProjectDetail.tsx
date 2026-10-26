@@ -8,6 +8,9 @@ import ZdiDiagram from "./diagrams/ZdiDiagram";
 import ClaimsDiagram from "./diagrams/ClaimsDiagram";
 import DigiFormDiagram from "./diagrams/DigiFormDiagram";
 import SentinelDiagram from "./diagrams/SentinelDiagram";
+import AiOsDiagram from "./diagrams/AiOsDiagram";
+import ClaimsOpsDiagram from "./diagrams/ClaimsOpsDiagram";
+import SocialAgentDiagram from "./diagrams/SocialAgentDiagram";
 
 const DIAGRAMS: Partial<Record<string, React.ReactNode>> = {
   "portfolio-rag-assistant": <RagDiagram />,
@@ -15,6 +18,9 @@ const DIAGRAMS: Partial<Record<string, React.ReactNode>> = {
   "cube-agent":              <CubeDiagram />,
   "zororo-crm":              <CrmDiagram />,
   "zdi-signature-workflow":  <ZdiDiagram />,
+  "zororo-ai-os":            <AiOsDiagram />,
+  "zororo-claims":           <ClaimsOpsDiagram />,
+  "ai-social-agent":         <SocialAgentDiagram />,
   "claims-pipeline":         <ClaimsDiagram />,
   "digi-app-form":           <DigiFormDiagram />,
   "proactive-sentinel":      <SentinelDiagram />,
@@ -29,11 +35,12 @@ type Props = { project: Project; prev: Project; next: Project };
 
 function statusColor(status: Project["status"]): string {
   switch (status) {
-    case "Live demo":    return "text-signal";
-    case "Shipped":      return "text-signal";
-    case "Rolling out":  return "text-signal";
-    case "Prototype":    return "text-accent";
-    case "Built":        return "text-accent";
+    case "Live demo":            return "text-signal";
+    case "Shipped":              return "text-signal";
+    case "Rolling out":          return "text-signal";
+    case "Approved · standby":   return "text-accent";
+    case "Prototype":            return "text-accent";
+    case "Built":                return "text-accent";
     case "Paused":     return "text-ink-muted";
     case "Reference":  return "text-ink-muted";
     case "Lab":        return "text-ink-muted";
@@ -70,6 +77,12 @@ export default function ProjectDetail({ project, prev, next }: Props) {
             </span>
             <span className="text-ink-faint" aria-hidden>·</span>
             <span className="text-sm text-ink-muted">{project.domain}</span>
+            {project.privateRepo && (
+              <>
+                <span className="text-ink-faint" aria-hidden>·</span>
+                <span className="font-mono text-sm text-ink-muted">Private repo</span>
+              </>
+            )}
           </div>
           <h1
             className="font-display-hero font-medium text-ink text-balance mb-4"
@@ -102,7 +115,9 @@ export default function ProjectDetail({ project, prev, next }: Props) {
               </dl>
 
               <div className="pt-3 border-t border-ink/[0.07] space-y-2">
-                {project.repoUrl ? (
+                {project.privateRepo ? (
+                  <p className="font-mono text-sm text-ink-muted">Private repo</p>
+                ) : project.repoUrl ? (
                   <a
                     href={project.repoUrl}
                     target="_blank"

@@ -8,12 +8,13 @@ import {
 
 function statusLabel(status: Project["status"]): string {
   switch (status) {
-    case "Live demo":    return "live";
-    case "Shipped":      return "shipped";
-    case "Rolling out":  return "Rolling out";
-    case "Prototype":    return "prototype";
-    case "Paused":       return "paused";
-    case "Built":        return "built";
+    case "Live demo":            return "live";
+    case "Shipped":              return "shipped";
+    case "Rolling out":          return "Rolling out";
+    case "Approved · standby":   return "Approved · standby";
+    case "Prototype":            return "prototype";
+    case "Paused":               return "paused";
+    case "Built":                return "built";
     case "Reference":    return "reference";
     case "Lab":          return "lab";
     default: {
@@ -25,11 +26,12 @@ function statusLabel(status: Project["status"]): string {
 
 function statusClass(status: Project["status"]): string {
   switch (status) {
-    case "Live demo":    return "text-signal";
-    case "Shipped":      return "text-signal";
-    case "Rolling out":  return "text-signal";
-    case "Prototype":    return "text-accent";
-    case "Built":        return "text-accent";
+    case "Live demo":            return "text-signal";
+    case "Shipped":              return "text-signal";
+    case "Rolling out":          return "text-signal";
+    case "Approved · standby":   return "text-accent";
+    case "Prototype":            return "text-accent";
+    case "Built":                return "text-accent";
     case "Paused":       return "text-ink-muted";
     case "Reference":    return "text-ink-muted";
     case "Lab":          return "text-ink-muted";
@@ -73,6 +75,9 @@ function ProjectRow({ project }: { project: Project }) {
             <span className={`font-mono text-micro ${statusClass(project.status)}`}>
               {statusLabel(project.status)}
             </span>
+            {project.privateRepo && (
+              <span className="font-mono text-micro text-ink-muted">Private repo</span>
+            )}
           </div>
           <p className="mt-0.5 text-sm text-ink-muted text-pretty">
             {project.tagline.split(/\./)[0]}.
@@ -83,7 +88,9 @@ function ProjectRow({ project }: { project: Project }) {
         </div>
 
         <div className="hidden sm:flex items-center gap-4 shrink-0">
-          {project.repoUrl && (
+          {project.privateRepo ? (
+            <span className="text-sm text-ink-muted">Private repo</span>
+          ) : project.repoUrl ? (
             <a
               href={project.repoUrl}
               target="_blank"
@@ -92,7 +99,7 @@ function ProjectRow({ project }: { project: Project }) {
             >
               GitHub
             </a>
-          )}
+          ) : null}
           <Link
             href={`/projects/${project.slug}`}
             className="text-sm text-ink-muted hover:text-ink transition-colors"

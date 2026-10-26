@@ -43,8 +43,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what did mike build at zororo",
     ],
     answer:
-      "At Zororo-Phumulani he shipped Digi App Form and the lead-management CRM used by over 40 people across around 10 roles; both are live production systems. ZDI (Zororo Document Intelligence) is approved for production rollout and rolling out.",
-    sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow"],
+      "At Zororo-Phumulani he shipped Digi App Form and the lead-management CRM used by over 40 people across around 10 roles; both are live production systems. ZDI (Zororo Document Intelligence) is approved for production rollout and rolling out. The claims operations platform is approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani.",
+    sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
   },
   {
     question: "Walk me through Proactive Sentinel's architecture.",
@@ -105,6 +105,42 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     answer:
       "ZDI (Zororo Document Intelligence) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. Approved for production rollout at Zororo-Phumulani; rollout starting soon. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
     sourceIds: ["zdi-signature-workflow"],
+  },
+  {
+    question: "What is Zororo AI OS?",
+    aliases: [
+      "tell me about zororo ai os",
+      "zororo ai os architecture",
+      "explain zororo ai os",
+      "what is the governed ai control plane",
+    ],
+    answer:
+      "Zororo AI OS is a governed AI control plane. Status: Built. Early stage, not deployed. Every event passes Presidio PII detection, an OPA (Rego) policy check, risk scoring, then ALLOW / MONITOR / APPROVE / BLOCK, and a hash-chained audit log. If any step fails, the event is blocked by default. README reports 310 passing tests. LangGraph and pgvector are planned.",
+    sourceIds: ["zororo-ai-os"],
+  },
+  {
+    question: "What is the claims operations platform?",
+    aliases: [
+      "tell me about zororo-claims",
+      "claims operations platform",
+      "what is zororo claims",
+      "claims standby",
+    ],
+    answer:
+      "The claims operations platform is a role-based platform for funeral-case processing: claims, cash services and courtesy services. Status: Approved · standby. Approved, production-ready standby (failover) for the company's live claims system at Zororo-Phumulani. It takes over if the current claims system fails. It is not the live system.",
+    sourceIds: ["zororo-claims"],
+  },
+  {
+    question: "What is the multi-agent content pipeline?",
+    aliases: [
+      "tell me about the multi-agent content pipeline",
+      "what is ai-social-agent",
+      "multi-agent content pipeline",
+      "explain the content pipeline",
+    ],
+    answer:
+      "The multi-agent content pipeline is a prototype. Status: Prototype. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. It runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",
+    sourceIds: ["ai-social-agent"],
   },
 ];
 

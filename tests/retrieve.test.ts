@@ -32,6 +32,10 @@ describe("keyword retrieval fallback", () => {
     const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
     assert.ok(zdi);
     assert.match(zdi!.text, /rolling out/i);
+    assert.ok(
+      ids.includes("zororo-claims"),
+      `expected zororo-claims in ${ids.join(", ")}`,
+    );
   });
 
   it("retrieves Cube for What is Cube", () => {
@@ -53,6 +57,37 @@ describe("keyword retrieval fallback", () => {
     assert.doesNotMatch(zdi!.text, /\bin production\b/);
     assert.doesNotMatch(zdi!.text, /\blive\b/i);
     assert.doesNotMatch(zdi!.text, /\bshipped\b/i);
+  });
+
+  it("retrieves Zororo AI OS for What is Zororo AI OS", () => {
+    const hits = retrieveKeyword("What is Zororo AI OS?");
+    const ids = hits.map((h) => h.id);
+    assert.ok(ids.includes("zororo-ai-os"), `expected zororo-ai-os in ${ids.join(", ")}`);
+    const hit = hits.find((h) => h.id === "zororo-ai-os");
+    assert.ok(hit);
+    assert.match(hit!.text, /not deployed/);
+    assert.match(hit!.text, /310/);
+  });
+
+  it("retrieves claims operations as failover standby", () => {
+    const hits = retrieveKeyword("What is the claims operations platform?");
+    const ids = hits.map((h) => h.id);
+    assert.ok(ids.includes("zororo-claims"), `expected zororo-claims in ${ids.join(", ")}`);
+    const hit = hits.find((h) => h.id === "zororo-claims");
+    assert.ok(hit);
+    assert.match(hit!.text, /Approved, production-ready standby/);
+    assert.match(hit!.text, /failover/);
+    assert.match(hit!.text, /current claims system/);
+    assert.match(hit!.text, /It is not the live system/);
+  });
+
+  it("retrieves the multi-agent content pipeline", () => {
+    const hits = retrieveKeyword("What is the multi-agent content pipeline?");
+    const ids = hits.map((h) => h.id);
+    assert.ok(ids.includes("ai-social-agent"), `expected ai-social-agent in ${ids.join(", ")}`);
+    const hit = hits.find((h) => h.id === "ai-social-agent");
+    assert.ok(hit);
+    assert.match(hit!.text, /Prototype/);
   });
 
   it("falls back to BM25 when embeddings throw", async () => {
