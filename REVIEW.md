@@ -280,21 +280,36 @@ Lighthouse (Chrome headless):
 The chat route no longer returns 502 when a model is down. The answer chain is:
 
 1. **Retrieve** — Gemini embeddings + cosine, gate 0.35. If the embedding call errors, **BM25 keyword search** over the same `KNOWLEDGE_CHUNKS`.
-2. **Gemini 2.5 Flash** (`GEMINI_API_KEY`) — same grounded prompt, 12s provider budget, capped 429/5xx retries.
+2. **Gemini 2.5 Flash** (`GEMINI_API_KEY`) — same grounded prompt, 12s provider budget. 5xx retries stay; 429 opens a 60s circuit (Round 5).
 3. **Groq `llama-3.3-70b-versatile`** (`GROQ_API_KEY`) — OpenAI-compatible `https://api.groq.com/openai/v1/chat/completions`, same prompt, gate, and citations, 12s budget.
 4. **Static CV answers** — closest suggested question from `lib/static-answers.ts` (facts only from the CV and knowledge base). Used when neither key is set or both providers fail.
 5. **Email fallback** — `EMAIL_FALLBACK` in `lib/answer.ts`, last resort only.
 
 Abuse guards: 20 requests / IP / 10 minutes (Upstash Redis when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, otherwise in-memory). Questions over 500 characters are rejected with a clear 400. `/api/health` reports `{ gemini, groq, upstash }` booleans and `knowledgeBaseChunks` — never key values.
 
-Tests: `npm test` (`tests/fallback.test.ts`, `tests/retrieve.test.ts`). CI: `.github/workflows/ci.yml` runs lint, typecheck, tests, and build on pull requests.
+Tests: `npm test` (`tests/fallback.test.ts`, `tests/retrieve.test.ts`, `tests/providers.test.ts`). CI: `.github/workflows/ci.yml` runs lint, typecheck, tests, and build on pull requests.
+
+---
+
+## Round 5 — preview fixes
+
+Live preview (`331f593`) showed static matching, caching, retrieval, and eval bugs. Fixes:
+
+1. Cache **only** successful grounded Gemini/Groq answers with sources. Static, email, and “not in my knowledge base” replies are never cached. Cache key is the normalised question.
+2. Static matching ignores name tokens (`mike`, `ncube`), requires Jaccard ≥ 0.6 and at least two overlapping content tokens, otherwise refuses politely (email fallback). “What are Mike’s hobbies?” no longer matches “Who is Mike”.
+3. Refusals and out-of-scope answers return **no sources**.
+4. CRM and claims chunks now include “shipped production system” keywords. Retrieval merges cosine + BM25. Unit test: “What production systems has Mike shipped?” returns `zororo-crm` (40+ users, ~10 roles) and `claims-pipeline`.
+5. Per-IP limit uses Upstash when configured. Each instance also has a 2-call concurrency cap and a 30-call/10-minute generation cap so a burst cannot burn the Gemini quota.
+6. Gemini **429** opens a 60s circuit (no per-request retry). Groq **401** is logged as an invalid key and skipped for 10 minutes. Responses include `via` and header `x-answered-by: gemini|groq|static|email`.
+7. Eval refusal check no longer treats “Email …” next to real content as a refusal.
+8. Static copy is CV-only: no “Remote-first”; production systems = CRM + claims (no Digi App Form); Sentinel = Flask SOC, detection engine, audit log, POPIA, 44 passing tests; availability has no em-dash, no “full-time or contract”, no target roles; Sitewarden says “before consequential actions”.
 
 ---
 
 ## What Mike must do
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.
-2. **Confirm `GROQ_API_KEY`** is set for Production and Preview (already present). No paid Groq plan is required; `llama-3.3-70b-versatile` is on the free tier.
+2. **Replace the Preview `GROQ_API_KEY`**. Live preview returned 401 (invalid key); Groq is skipped for 10 minutes after that. Production may already be fine. No paid Groq plan is required; `llama-3.3-70b-versatile` is on the free tier.
 3. **Upstash Redis** is used for the per-IP rate limit when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` exist (already configured in Production). Preview falls back to in-memory.
 4. **Replace `/public/Mike_Org.jpeg`** with a 1200×630 export for correct OG image on Twitter/LinkedIn previews.
 5. **Run evals against the preview URL** (after re-linking Vercel) and commit the generated `evals/results.json`:

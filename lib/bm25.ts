@@ -10,7 +10,7 @@ const STOP = new Set([
   "with", "at", "by", "from", "as", "it", "its", "this", "that", "these",
   "those", "i", "you", "he", "she", "we", "they", "me", "him", "her",
   "my", "your", "our", "their", "what", "which", "who", "whom", "how",
-  "do", "does", "did", "can", "could", "would", "should", "will", "just",
+  "do", "does", "did", "has", "have", "had", "can", "could", "would", "should", "will", "just",
   "about", "into", "over", "after", "before", "than", "too", "very",
 ]);
 

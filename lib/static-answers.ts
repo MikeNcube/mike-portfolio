@@ -1,5 +1,5 @@
 // Pre-written answers for the closest suggested question.
-// Facts only from the CV and lib/knowledge.ts. Never invent.
+// Facts only from the CV. Never invent. Name tokens are ignored when scoring.
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { tokenize } from "./bm25";
@@ -21,7 +21,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "introduce mike ncube",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa. He has been the sole AI engineer in a four-person IT team since 2022. Six-plus years in software, about three focused on generative AI. Remote-first. Email mikencube03@gmail.com.",
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa. He has been the sole AI engineer in a four-person IT team since 2022. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -32,7 +32,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does retrieval work",
     ],
     answer:
-      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 4 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq llama-3.3-70b-versatile, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts.",
+      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq llama-3.3-70b-versatile, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts.",
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
   },
   {
@@ -43,8 +43,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what did mike build at zororo",
     ],
     answer:
-      "At Zororo-Phumulani he shipped the lead-management CRM used by over 40 people across around 10 roles, and Digi App Form, the regulated funeral-assurance intake app. The claims document extraction pipeline is built and pending management approval. FastAPI, PostgreSQL, Redis, Celery, Flask, Docker.",
-    sourceIds: ["zororo-crm", "digi-app-form", "claims-pipeline"],
+      "At Zororo-Phumulani he shipped the lead-management CRM used by over 40 people across around 10 roles. The claims document extraction pipeline is built and pending management approval.",
+    sourceIds: ["zororo-crm", "claims-pipeline"],
   },
   {
     question: "Walk me through Proactive Sentinel's architecture.",
@@ -54,7 +54,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about proactive sentinel",
     ],
     answer:
-      "Proactive Sentinel is a Python Flask SOC platform, not an LLM product. Events are ingested, SHA-256 deduplicated in Redis, correlated with MITRE ATT&CK, then a severity-tiered dispatcher can flag, block an attacker IP, and write an audit entry. PostgreSQL 15, Redis 7, OpenTelemetry, Docker, Railway. 44 passing tests. v1.0.0, currently paused.",
+      "Proactive Sentinel is a Flask SOC with a detection engine and an audit log. Designed with POPIA in mind. 44 passing tests.",
     sourceIds: ["proactive-sentinel-overview", "proactive-sentinel-tech"],
   },
   {
@@ -66,7 +66,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "availability",
     ],
     answer:
-      "Yes — Mike is available for full-time or contract, remote-first from South Africa. Target roles include Applied AI Engineer and Generative AI Engineer. Email mikencube03@gmail.com.",
+      "Yes, Mike is available. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
   },
   {
@@ -77,12 +77,14 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "explain sitewarden",
     ],
     answer:
-      "Sitewarden is a governed AI operations platform prototype. FastAPI with a LangGraph state graph: plan, analyse, self-check, write-report, await-approval, revise. Human interrupt before writes, Postgres checkpoints, risk-tiered tool gateway, pgvector hybrid search. 89 tests. Prototype, not deployed.",
+      "Sitewarden is a governed AI operations platform prototype. FastAPI with a LangGraph state graph: plan, analyse, self-check, write-report, await-approval, revise. Human interrupt before consequential actions, Postgres checkpoints, risk-tiered tool gateway, pgvector hybrid search. 89 tests. Prototype, not deployed.",
     sourceIds: ["sitewarden"],
   },
 ];
 
-const MATCH_THRESHOLD = 0.5;
+const NAME_TOKENS = new Set(["mike", "ncube"]);
+const MATCH_THRESHOLD = 0.6;
+const MIN_OVERLAP = 2;
 
 function jaccard(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
@@ -91,25 +93,38 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return inter / new Set([...a, ...b]).size;
 }
 
-function norm(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export function normaliseQuestion(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function contentTokens(text: string): Set<string> {
+  return new Set(tokenize(text).filter((t) => !NAME_TOKENS.has(t)));
 }
 
 export function matchStaticAnswer(question: string): StaticAnswer | null {
-  const qNorm = norm(question);
-  const qTokens = new Set(tokenize(question));
-  let best: { answer: StaticAnswer; score: number } | null = null;
-
+  const qNorm = normaliseQuestion(question);
   for (const item of STATIC_ANSWERS) {
     const candidates = [item.question, ...item.aliases];
-    for (const c of candidates) {
-      if (norm(c) === qNorm) return item;
-      const score = jaccard(qTokens, new Set(tokenize(c)));
-      if (!best || score > best.score) best = { answer: item, score };
+    if (candidates.some((c) => normaliseQuestion(c) === qNorm)) return item;
+  }
+
+  const qTokens = contentTokens(question);
+  if (qTokens.size === 0) return null;
+
+  let best: { answer: StaticAnswer; score: number; overlap: number } | null = null;
+  for (const item of STATIC_ANSWERS) {
+    for (const c of [item.question, ...item.aliases]) {
+      const cTokens = contentTokens(c);
+      let overlap = 0;
+      for (const t of qTokens) if (cTokens.has(t)) overlap += 1;
+      const score = jaccard(qTokens, cTokens);
+      if (!best || score > best.score) best = { answer: item, score, overlap };
     }
   }
 
-  if (best && best.score >= MATCH_THRESHOLD) return best.answer;
+  if (best && best.score >= MATCH_THRESHOLD && best.overlap >= MIN_OVERLAP) {
+    return best.answer;
+  }
   return null;
 }
 

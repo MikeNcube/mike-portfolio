@@ -11,6 +11,12 @@ const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMB
 const EMBED_DIMENSIONS = 768;
 
 export const MIN_RELEVANCE_SCORE = 0.35;
+const DEFAULT_K = 6;
+
+export function chunkIndexText(chunk: KnowledgeChunk): string {
+  const keywords = chunk.keywords?.join(" ") ?? "";
+  return `${chunk.title}\n${keywords}\n${chunk.text}`;
+}
 
 export type RetrievedChunk = KnowledgeChunk & { score: number };
 
@@ -19,7 +25,7 @@ let kbEmbeddingsPromise: Promise<number[][]> | null = null;
 function getKnowledgeBaseEmbeddings(apiKey: string): Promise<number[][]> {
   if (!kbEmbeddingsPromise) {
     kbEmbeddingsPromise = embedBatch(
-      KNOWLEDGE_CHUNKS.map((c) => `${c.title}\n${c.text}`),
+      KNOWLEDGE_CHUNKS.map(chunkIndexText),
       apiKey,
       "RETRIEVAL_DOCUMENT",
     ).catch((err) => {
@@ -101,8 +107,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return denom === 0 ? 0 : dot / denom;
 }
 
-export function retrieveKeyword(query: string, k = 4): RetrievedChunk[] {
-  const docs = KNOWLEDGE_CHUNKS.map((c) => `${c.title}\n${c.text}`);
+export function retrieveKeyword(query: string, k = DEFAULT_K): RetrievedChunk[] {
+  const docs = KNOWLEDGE_CHUNKS.map(chunkIndexText);
   const raw = bm25Scores(query, docs);
   const max = Math.max(...raw, 0);
   if (max <= 0) return [];
@@ -129,19 +135,30 @@ async function retrieveCosine(query: string, apiKey: string, k: number): Promise
     .slice(0, k);
 }
 
+function mergeHits(a: RetrievedChunk[], b: RetrievedChunk[], k: number): RetrievedChunk[] {
+  const map = new Map<string, RetrievedChunk>();
+  for (const hit of [...a, ...b]) {
+    const prev = map.get(hit.id);
+    if (!prev || hit.score > prev.score) map.set(hit.id, hit);
+  }
+  return [...map.values()].sort((x, y) => y.score - x.score).slice(0, k);
+}
+
 export async function retrieve(
   query: string,
   apiKey: string | undefined,
-  k = 4,
+  k = DEFAULT_K,
 ): Promise<RetrievedChunk[]> {
+  const keywordHits = retrieveKeyword(query, k);
   if (apiKey) {
     try {
-      return await retrieveCosine(query, apiKey, k);
+      const cosineHits = await retrieveCosine(query, apiKey, k);
+      return mergeHits(cosineHits, keywordHits, k);
     } catch (err) {
       console.error("embedding failed, falling back to keyword search:", err);
     }
   }
-  return retrieveKeyword(query, k);
+  return keywordHits;
 }
 
 export function filterToLinkSources(

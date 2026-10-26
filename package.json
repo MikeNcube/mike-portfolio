@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/fallback.test.ts tests/retrieve.test.ts"
+    "test": "tsx --test tests/fallback.test.ts tests/retrieve.test.ts tests/providers.test.ts"
   },
   "dependencies": {
     "next": "14.2.15",

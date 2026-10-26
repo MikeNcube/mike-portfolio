@@ -8,6 +8,9 @@ import {
   retrieve,
   type RetrievedChunk,
 } from "./rag";
+import { isRefusal } from "./refusal";
+import { geminiAvailable, groqAvailable } from "./providers";
+import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 
 export const EMAIL_FALLBACK =
   "I don't have information about that in my knowledge base — it covers Mike's projects, skills, and experience. Email him at mikencube03@gmail.com for anything else.";
@@ -54,6 +57,19 @@ export function buildPrompt(
   ].join("\n");
 }
 
+export function shouldCacheAnswer(result: AnswerResult): boolean {
+  return (
+    (result.via === "gemini" || result.via === "groq")
+    && result.sources.length > 0
+    && !isRefusal(result.response)
+  );
+}
+
+function sourcesForGrounded(text: string, chunks: RetrievedChunk[]): Array<{ title: string; url: string }> {
+  if (isRefusal(text)) return [];
+  return filterToLinkSources(chunks);
+}
+
 async function tryGenerate(
   generate: GenerateFn | undefined,
   prompt: string,
@@ -64,7 +80,7 @@ async function tryGenerate(
     const text = (await generate(prompt)).trim();
     return text.length > 0 ? text : null;
   } catch (err) {
-    console.error(`${label} generation failed:`, err);
+    console.error(`[provider] ${label} generation failed:`, err);
     return null;
   }
 }
@@ -85,22 +101,45 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
 
   let chunks: RetrievedChunk[] = [];
   try {
-    chunks = await retrieveFn(question, input.geminiKey, 4);
+    chunks = await retrieveFn(question, input.geminiKey, 6);
   } catch (err) {
     console.error("retrieve failed:", err);
   }
 
   const relevant = chunks.filter((c) => c.score >= MIN_RELEVANCE_SCORE);
-  const sources = filterToLinkSources(relevant);
 
   if (relevant.length > 0) {
     const prompt = buildPrompt(question, relevant, audience);
+    const wantLlm = Boolean(input.generateGemini || input.generateGroq);
+    const slot = wantLlm ? acquireGenerationSlot() : false;
 
-    const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
-    if (geminiText) return { response: geminiText, sources, via: "gemini" };
-
-    const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
-    if (groqText) return { response: groqText, sources, via: "groq" };
+    try {
+      const canCall = slot && allowInstanceGeneration();
+      if (canCall) {
+        if (geminiAvailable()) {
+          const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
+          if (geminiText) {
+            return {
+              response: geminiText,
+              sources: sourcesForGrounded(geminiText, relevant),
+              via: "gemini",
+            };
+          }
+        }
+        if (groqAvailable()) {
+          const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
+          if (groqText) {
+            return {
+              response: groqText,
+              sources: sourcesForGrounded(groqText, relevant),
+              via: "groq",
+            };
+          }
+        }
+      }
+    } finally {
+      if (slot) releaseGenerationSlot();
+    }
   }
 
   const staticHit = matchStaticAnswer(question);

@@ -10,6 +10,7 @@
 
 import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, type EvalResult } from "./eval";
+import { isRefusal } from "../lib/refusal";
 
 function computesTwoPlusTwo(text: string): boolean {
   const t = text.toLowerCase();
@@ -52,13 +53,12 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
   // 1. API returned successfully
   checks.push({ label: "api_ok", pass: fetchOk, detail: fetchOk ? undefined : response });
 
-  // 2. Refusal check
-  const refusalSignals = ["i don't have", "i do not have", "not have information", "email", "outside"];
-  const looksLikeRefusal = refusalSignals.some((s) => lowerResp.includes(s));
+  // 2. Refusal check — email next to real content is not a refusal
+  const refused = isRefusal(response);
   if (q.expectRefusal !== undefined) {
     checks.push({
       label: q.expectRefusal ? "is_refusal" : "not_refusal",
-      pass: q.expectRefusal ? looksLikeRefusal : !looksLikeRefusal,
+      pass: q.expectRefusal ? refused : !refused,
     });
   }
 

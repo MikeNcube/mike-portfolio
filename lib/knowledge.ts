@@ -7,6 +7,7 @@ export type KnowledgeChunk = {
   title: string;
   sourceUrl: string;
   text: string;
+  keywords?: string[];
 };
 
 export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
@@ -44,13 +45,30 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'zororo-crm',
     title: 'Lead-management CRM (production, Zororo-Phumulani)',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: "Production CRM at Zororo-Phumulani Funeral Assurance. Used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
+    keywords: [
+      'production systems',
+      'shipped',
+      'CRM',
+      'Zororo',
+      'Zororo-Phumulani',
+      '40 users',
+      '10 roles',
+      'lead-management',
+    ],
+    text: "Shipped production system at Zororo-Phumulani Funeral Assurance: lead-management CRM used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
   },
   {
     id: 'claims-pipeline',
     title: 'Claims document extraction pipeline (Zororo-Phumulani)',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Claims tool and document extraction pipeline built at Zororo-Phumulani. Claude vision extraction validated through Pydantic schemas, with per-field confidence scoring and a needs-review flag for human verification. Built and ready for production, pending management approval. Private codebase.',
+    keywords: [
+      'production systems',
+      'shipped',
+      'claims extraction',
+      'Zororo',
+      'Zororo-Phumulani',
+    ],
+    text: 'Claims document extraction pipeline built at Zororo-Phumulani — a production-ready system pending management approval. Claude vision extraction validated through Pydantic schemas, with per-field confidence scoring and a needs-review flag for human verification. Private codebase.',
   },
   {
     id: 'digi-app-form',
