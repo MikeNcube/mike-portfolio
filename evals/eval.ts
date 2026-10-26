@@ -189,7 +189,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     audience: "developer",
     meaningChecks: [
       { label: "built", anyOf: ["Built"] },
-      { label: "early_stage", anyOf: ["early stage"] },
+      { label: "early_stage", anyOf: ["early stage", "early-stage"] },
       { label: "not_deployed", anyOf: ["not deployed", "not yet deployed"] },
     ],
     mustNotContain: ["is live", "shipped", "in production"],
@@ -205,7 +205,17 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
       { label: "approved", anyOf: ["approved"] },
       { label: "standby_or_failover", anyOf: ["standby", "failover", "fail-over"] },
       { label: "production_ready", anyOf: ["production-ready", "production ready"] },
-      { label: "not_live_system", anyOf: ["not the live system", "not the current live system"] },
+      {
+        label: "not_live_system",
+        anyOf: [
+          "not the live system",
+          "not the current live system",
+          "not the live claims system",
+          "rather than the live claims system",
+          "rather than the live (claims) system",
+          "not the live system itself",
+        ],
+      },
     ],
     mustNotContain: ["is the live system"],
     expectRefusal: false,
