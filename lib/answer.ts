@@ -8,7 +8,7 @@ import {
   retrieve,
   type RetrievedChunk,
 } from "./rag";
-import { isRefusal } from "./refusal";
+import { isJailbreakPrompt, isRefusal } from "./refusal";
 import { normaliseModelText } from "./normalise-answer";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
@@ -22,6 +22,8 @@ export const CONTACT_EMAIL = "mikencube03@gmail.com";
 
 export const EMAIL_FALLBACK =
   "I don't have information about that in my knowledge base — it covers Mike's projects, skills, and experience. Email him at mikencube03@gmail.com for anything else.";
+
+export const SAFE_TOPIC_REPLY = "I can only answer questions about Mike's work.";
 
 const CONTACT_QUESTION_RE =
   /\b(available|availability|hiring|hire|contact|email|reach)\b/i;
@@ -112,6 +114,7 @@ export function stripSourceFooter(text: string): string {
 export function selectCitedSources(
   text: string,
   chunks: RetrievedChunk[],
+  options?: { allowTopFallback?: boolean },
 ): Array<{ title: string; url: string }> {
   const normalised = normaliseModelText(text);
   const body = stripSourceFooter(normalised);
@@ -130,6 +133,7 @@ export function selectCitedSources(
 
   for (const n of citedIndexes(body)) add(chunks[n - 1]);
   if (picked.length > 0) return picked;
+  if (options?.allowTopFallback === false) return [];
 
   for (const chunk of chunks) {
     add(chunk);
@@ -175,15 +179,44 @@ export function shouldCacheAnswer(result: AnswerResult): boolean {
   );
 }
 
-function finaliseModelText(raw: string, chunks: RetrievedChunk[]): {
+function finaliseModelText(
+  raw: string,
+  chunks: RetrievedChunk[],
+  options?: { allowTopFallback?: boolean },
+): {
   response: string;
   sources: Array<{ title: string; url: string }>;
 } {
   const normalised = normaliseModelText(raw);
   const stripped = stripSourceFooter(normalised);
-  const sources = selectCitedSources(normalised, chunks);
+  const sources = selectCitedSources(normalised, chunks, options);
   const response = remapCitations(stripped, chunks, sources);
   return { response, sources };
+}
+
+// Groq must cite [n] or refuse. Uncited non-refusals are not used.
+function groundGroqAnswer(raw: string, chunks: RetrievedChunk[]): AnswerResult | null {
+  const normalised = normaliseModelText(raw);
+  const stripped = stripSourceFooter(normalised);
+  if (isRefusal(normalised) || isRefusal(stripped)) {
+    return { response: remapCitations(stripped, chunks, []), sources: [], via: "groq" };
+  }
+  if (citedIndexes(stripped).length === 0) return null;
+  const finalised = finaliseModelText(raw, chunks, { allowTopFallback: false });
+  if (finalised.sources.length === 0) return null;
+  return { ...finalised, via: "groq" };
+}
+
+function staticOrSafeReply(question: string, chunks: RetrievedChunk[]): AnswerResult {
+  const staticHit = matchStaticAnswer(question);
+  if (staticHit) {
+    return polishResult(question, {
+      response: staticHit.answer,
+      sources: sourcesFor(staticHit),
+      via: "static",
+    }, chunks);
+  }
+  return { response: SAFE_TOPIC_REPLY, sources: [], via: "email" };
 }
 
 function withContactEmail(question: string, result: AnswerResult): AnswerResult {
@@ -252,6 +285,10 @@ export type AnswerInput = {
 
 export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> {
   const question = input.question.trim();
+  if (isJailbreakPrompt(question)) {
+    return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
+
   const audience = input.audience ?? "developer";
   const retrieveFn = input.retrieveFn ?? retrieve;
 
@@ -284,10 +321,11 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
-            return withContactEmail(question, polishResult(question, {
-              ...finaliseModelText(groqText, relevant),
-              via: "groq",
-            }, relevant));
+            const grounded = groundGroqAnswer(groqText, relevant);
+            if (grounded) {
+              return withContactEmail(question, polishResult(question, grounded, relevant));
+            }
+            return withContactEmail(question, staticOrSafeReply(question, relevant));
           }
         }
       }

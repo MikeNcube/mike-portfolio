@@ -1,6 +1,6 @@
 // Canonical production-system, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r21";
+export const ANSWER_CACHE_VERSION = "r22";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -20,7 +20,8 @@ const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
 const AI_OS_RE = /\bzororo ai os\b/i;
 
-const CLAIMS_RE = /\bclaims operations\b|\bzororo-claims\b/i;
+const CLAIMS_RE =
+  /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b|\bclaims system\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
 
@@ -51,7 +52,7 @@ export function hasZdiStatus(text: string): boolean {
 
 // True when Zororo AI OS is built and not (yet) deployed.
 export function hasAiOsStatus(text: string): boolean {
-  return /built/i.test(text) && /not (yet )?deployed/i.test(text);
+  return /built/i.test(text) && /early stage/i.test(text) && /not (yet )?deployed/i.test(text);
 }
 
 // True when claims ops is approved, production-ready, and standby/failover.
@@ -119,6 +120,67 @@ function appendStatusSentence(text: string, sentence: string): string {
   return /[.!?]$/.test(core) ? `${core} ${cites}` : `${core}. ${cites}`;
 }
 
+function splitSentences(text: string): string[] {
+  const parts: string[] = [];
+  const re = /[^.!?]+(?:[.!?]+(?:\s*\[\d+\])*)\s*|[^.!?]+$/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (match[0]) parts.push(match[0]);
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
+function mentionRe(kind: StatusKind): RegExp {
+  switch (kind) {
+    case "zdi":
+      return ZDI_RE;
+    case "ai-os":
+      return AI_OS_RE;
+    case "claims":
+      return CLAIMS_RE;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function canonicalSentence(kind: StatusKind): string {
+  switch (kind) {
+    case "zdi":
+      return ZDI_STATUS_SENTENCE;
+    case "ai-os":
+      return AI_OS_STATUS_SENTENCE;
+    case "claims":
+      return CLAIMS_STATUS_SENTENCE;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+// Insert the status sentence right after the sentence that names the project.
+function insertStatusAfterMention(text: string, kind: StatusKind): string {
+  const sentence = canonicalSentence(kind);
+  const re = mentionRe(kind);
+  const parts = splitSentences(text);
+  const idx = parts.findIndex((part) => re.test(part));
+  if (idx < 0) return appendStatusSentence(text, sentence);
+
+  const { body, cites } = peelTrailingCitations(parts[idx].trim());
+  const sep = /[.!?]$/.test(body) ? " " : ". ";
+  const core = `${body}${sep}${sentence}`;
+  const injected = cites
+    ? (/[.!?]$/.test(core) ? `${core} ${cites}` : `${core}. ${cites}`)
+    : core;
+  const head = parts.slice(0, idx).join("");
+  const rest = parts.slice(idx + 1).join("").trim();
+  if (!rest) return `${head}${injected}`.trim();
+  const gap = /[.!?]$/.test(injected) ? " " : ". ";
+  return `${head}${injected}${gap}${rest}`.replace(/ {2,}/g, " ").trim();
+}
+
 // Force the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
 export function ensureProjectStatusCopy(question: string, text: string): string {
   let out = text.trim();
@@ -126,13 +188,13 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
     out = CANONICAL_PRODUCTION_ANSWER;
   }
   if ((mentionsZdi(question) || mentionsZdi(out)) && !alreadyConveysStatus("zdi", out)) {
-    out = appendStatusSentence(out, ZDI_STATUS_SENTENCE);
+    out = insertStatusAfterMention(out, "zdi");
   }
   if ((mentionsAiOs(question) || mentionsAiOs(out)) && !alreadyConveysStatus("ai-os", out)) {
-    out = appendStatusSentence(out, AI_OS_STATUS_SENTENCE);
+    out = insertStatusAfterMention(out, "ai-os");
   }
   if ((mentionsClaims(question) || mentionsClaims(out)) && !alreadyConveysStatus("claims", out)) {
-    out = appendStatusSentence(out, CLAIMS_STATUS_SENTENCE);
+    out = insertStatusAfterMention(out, "claims");
   }
   return out;
 }

@@ -44,9 +44,36 @@ const DECLINE_PHRASES = [
   "i have to decline",
   "i cannot do that",
   "i can't do that",
+  "i can only answer questions about",
 ] as const;
+
+const JAILBREAK_NEEDLES = [
+  "ignore instructions",
+  "ignore all previous instructions",
+  "ignore previous instructions",
+  "ignore these instructions",
+  "ignore the instructions",
+  "pretend you are",
+  "act as",
+  "no restrictions",
+  "developer mode",
+  "you are now",
+  "roleplay",
+  "role play",
+  "role-play",
+] as const;
+
+const IGNORE_INSTRUCTIONS_RE = /ignore\b.{0,40}\binstructions\b/i;
+const DAN_RE = /\bdan\b/i;
 
 export function isRefusal(text: string): boolean {
   const t = normaliseModelText(text).toLowerCase();
   return DECLINE_PHRASES.some((p) => t.includes(p));
+}
+
+// True when the visitor is trying to jailbreak or role-play the assistant.
+export function isJailbreakPrompt(question: string): boolean {
+  const t = normaliseModelText(question).toLowerCase();
+  if (IGNORE_INSTRUCTIONS_RE.test(t) || DAN_RE.test(t)) return true;
+  return JAILBREAK_NEEDLES.some((n) => t.includes(n));
 }
