@@ -98,7 +98,7 @@ function stripMarkdown(text: string): string {
   out = out.replace(/`([^`]+)`/g, "$1");
   out = out.replace(/\*\*([^*]+)\*\*/g, "$1");
   out = out.replace(/__([^_]+)__/g, "$1");
-  out = out.replace(/^[ \t]*#{1,6}[ \t]+(.+)$/gm, "$1");
+  out = out.replace(/^[ \t]*#{1,6}[ \t]+(.+)$/gm, (_m, title: string) => asSentence(title));
   out = out.replace(/^[ \t]*[-*+][ \t]+(.+)$/gm, (_m, item: string) => asSentence(item));
   out = out.replace(/^[ \t]*\d+\.[ \t]+(.+)$/gm, (_m, item: string) => asSentence(item));
   out = out.replace(/\*\*/g, "").replace(/__/g, "");
@@ -106,10 +106,40 @@ function stripMarkdown(text: string): string {
   return out.replace(/\n+/g, " ").replace(/ {2,}/g, " ").trim();
 }
 
+const DOTTED_NAME_RE =
+  /\b(?:deeplearning\.ai|node\.js|next\.js|vue\.js|nuxt\.js|express\.js|asp\.net|d3\.js|three\.js|socket\.io)\b/gi;
+
+function protectDottedNames(text: string): { text: string; names: string[] } {
+  const names: string[] = [];
+  const out = text.replace(DOTTED_NAME_RE, (match) => {
+    names.push(match);
+    return `\u0000DOT${names.length - 1}\u0000`;
+  });
+  return { text: out, names };
+}
+
+function restoreDottedNames(text: string, names: string[]): string {
+  return text.replace(/\u0000DOT(\d+)\u0000/g, (_m, idx: string) => names[Number(idx)] ?? "");
+}
+
+// Space after ]. before a capital. Only treat lowercase-word{2,}.Capital+lowercase as a missing sentence space.
 export function insertMissingSentenceSpaces(text: string): string {
-  return text
+  const protectedNames = protectDottedNames(text);
+  const spaced = protectedNames.text
     .replace(/\]\.(?=[A-Z])/g, "]. ")
-    .replace(/([a-z0-9)])\.(?=[A-Z])/g, "$1. ");
+    .replace(/\b([a-z]{2,})\.(?=[A-Z][a-z])/g, "$1. ");
+  return restoreDottedNames(spaced, protectedNames.names);
+}
+
+export function moveTrailingCitesBeforeStop(text: string): string {
+  return text.replace(
+    /([.!?])\s*((?:\[\d+\]\s*)+)(?:\.)?(?=\s|$)/g,
+    (_m, _punct: string, cites: string) => {
+      const nums = [...cites.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+      const unique = [...new Set(nums)].sort((a, b) => a - b);
+      return ` ${unique.map((n) => `[${n}]`).join("")}.`;
+    },
+  );
 }
 
 // Straighten quotes, map hyphen-like dashes, fold full-width [n], drop repeated cites.
@@ -120,5 +150,5 @@ export function normaliseModelText(text: string): string {
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
   const plain = insertMissingSentenceSpaces(stripMarkdown(cited));
   const collapsed = collapseCitationClusters(plain);
-  return collapsed.replace(/([.!?])\s*\[(\d+)\](?:\s*\.)?(?=\s|$)/g, " [$2].");
+  return moveTrailingCitesBeforeStop(collapsed);
 }

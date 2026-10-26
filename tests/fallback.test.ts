@@ -4,6 +4,7 @@ import {
   answerQuestion,
   buildPrompt,
   citedFallbackFromChunks,
+  firstSentence,
   CITED_FALLBACK_MIN_SCORE,
   citationsMatchNamedProjects,
   isOffTopicQuestion,
@@ -747,6 +748,9 @@ describe("static CV copy", () => {
 
     const zdi = matchStaticAnswer("What is ZDI?");
     assert.ok(zdi);
+    assert.equal(matchStaticAnswer("what does zdi do")?.answer, zdi.answer);
+    assert.equal(matchStaticAnswer("What does ZDI do?")?.answer, zdi.answer);
+    assert.equal(matchStaticAnswer("what does zororo document intelligence do")?.answer, zdi.answer);
     assert.match(zdi.answer, /^ZDI \(approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\)/);
     assert.match(zdi.answer, /Zororo Document Intelligence \[1\]/);
     assert.match(zdi.answer, /rolling out soon/i);
@@ -2563,12 +2567,18 @@ describe("round 39 sentence splitter, tech fallbacks, and fact guards", () => {
       },
     ]);
     assert.ok(fallback);
-    assert.match(fallback.response, /Zororo AI OS uses Python 3\.12 and FastAPI/);
+    assert.match(
+      fallback.response,
+      /Zororo AI OS uses Python 3\.12, FastAPI, Presidio, OPA\/Rego, Pydantic, Terraform, and pytest/,
+    );
     assert.doesNotMatch(fallback.response, /Python 3 \[/);
     assert.doesNotMatch(fallback.response, /\bStack:/);
     assert.doesNotMatch(fallback.response, /\bBackend:/);
     assert.doesNotMatch(fallback.response, /\bStatus:/);
-    assert.match(fallback.response, /Mike's tech stack uses Python and FastAPI/);
+    assert.match(
+      fallback.response,
+      /Mike's tech stack uses Python, FastAPI, Flask, JWT auth, and server-side session revocation/,
+    );
   });
 
   it("dedupes repeated fallback sentences", () => {
@@ -2682,5 +2692,97 @@ describe("round 39 sentence splitter, tech fallbacks, and fact guards", () => {
     assert.doesNotMatch(result.response, /\*\*/);
   });
 });
+
+describe("round 40 dotted names, truncation, and cert fallback", () => {
+  it("does not insert a space inside DeepLearning.AI, Node.JS, Next.js, or Python 3.12", () => {
+    assert.equal(
+      normaliseModelText("Courses include DeepLearning.AI and Node.JS."),
+      "Courses include DeepLearning.AI and Node.JS.",
+    );
+    assert.equal(
+      normaliseModelText("Built with Next.js and Python 3.12."),
+      "Built with Next.js and Python 3.12.",
+    );
+    assert.doesNotMatch(normaliseModelText("DeepLearning.AI: RAG"), /DeepLearning\. AI/);
+    assert.doesNotMatch(normaliseModelText("Node.JS backend"), /Node\. JS/);
+    assert.equal(normaliseModelText("Shipped Digi [1].Rolling out ZDI."), "Shipped Digi [1]. Rolling out ZDI.");
+  });
+
+  it("truncates a long first sentence at a word or clause boundary with an ellipsis", () => {
+    const long =
+      "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is Zororo Document Intelligence, a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence.";
+    const cut = firstSentence(long);
+    assert.ok(cut.length <= 221, cut);
+    assert.match(cut, /…$/);
+    assert.doesNotMatch(cut, /Accou/);
+    assert.doesNotMatch(cut, /\b[A-Za-z]{1,3}…$/);
+    assert.match(cut, /manager…$/);
+    const fallback = citedFallbackFromChunks("What is the ZDI workflow detail?", [
+      {
+        id: "zdi-long",
+        title: "ZDI — Signature",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: long,
+        score: 0.95,
+      },
+    ]);
+    assert.ok(fallback);
+    assert.match(fallback.response, /… \[1\]\./);
+    assert.doesNotMatch(fallback.response, /Accou/);
+  });
+
+  it("rewrites certification fallbacks into courses vs credentials, including DeepLearning.AI", () => {
+    const chunk = {
+      id: "certifications",
+      title: "Training and certifications",
+      sourceUrl: "https://github.com/MikeNcube",
+      text: "Training (courses, not credentials): Becoming an AI Practitioner Series, Sep 2026: Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models. DeepLearning.AI: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, LangChain for LLM Application Development. AWS Training and Certification and AWS Skills Center are training providers, not certificates. No formal degree — capability evidenced by shipped systems and public GitHub portfolio.",
+      score: 0.95,
+    };
+    const fallback = citedFallbackFromChunks("What certifications does Mike hold?", [chunk]);
+    assert.ok(fallback);
+    assert.doesNotMatch(fallback.response, /Training \(courses, not credentials\)/);
+    assert.match(fallback.response, /no named certifications/i);
+    assert.match(fallback.response, /DeepLearning\.AI/);
+    assert.doesNotMatch(fallback.response, /DeepLearning\. AI/);
+    assert.match(fallback.response, /Becoming an AI Practitioner Series/);
+    assert.match(fallback.response, /training providers, not certificates/);
+    const hit = matchStaticAnswer("What certifications does Mike hold?");
+    assert.ok(hit);
+    assert.match(hit.answer, /DeepLearning\.AI/);
+    assert.match(hit.answer, /no named certifications/);
+  });
+
+  it("does not treat honest AI OS not-deployed phrasing as a contradiction", () => {
+    assert.equal(
+      hasProjectFactContradiction("Zororo AI OS has not been deployed yet."),
+      false,
+    );
+    assert.equal(
+      hasProjectFactContradiction("Zororo AI OS is not yet in production."),
+      false,
+    );
+    assert.equal(
+      hasProjectFactContradiction("Zororo AI OS is deployed to production [1]."),
+      true,
+    );
+  });
+
+  it("moves trailing citation clusters before the final full stop", () => {
+    assert.equal(normaliseModelText("Event correlation. [1][2]"), "Event correlation [1][2].");
+    assert.equal(
+      normaliseModelText("Mike is based in South Africa. [1]."),
+      "Mike is based in South Africa [1].",
+    );
+  });
+
+  it("keeps a markdown heading as its own sentence", () => {
+    const out = normaliseModelText("# Projects\n- Digi App Form\n- CRM");
+    assert.match(out, /Projects\./);
+    assert.match(out, /Digi App Form\./);
+    assert.doesNotMatch(out, /Projects Digi/);
+  });
+});
+
 
 

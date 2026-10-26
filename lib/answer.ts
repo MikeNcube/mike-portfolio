@@ -355,12 +355,30 @@ function groundGroqAnswer(raw: string, chunks: RetrievedChunk[]): AnswerResult |
   return { ...finalised, via: "groq" };
 }
 
-function firstSentence(text: string): string {
+const FIRST_SENTENCE_LIMIT = 220;
+
+function truncateAtWordBoundary(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  const head = text.slice(0, limit);
+  const delimiters = [", ", "; ", ": ", " — ", " – ", " → ", " - "];
+  let clause = -1;
+  for (const delim of delimiters) {
+    const idx = head.lastIndexOf(delim);
+    if (idx > clause) clause = idx;
+  }
+  const minClause = Math.floor(limit * 0.45);
+  let cut = clause >= minClause ? clause : head.lastIndexOf(" ");
+  if (cut < 1) cut = limit;
+  const trimmed = head.slice(0, cut).replace(/[\s,;:.\-—–→…]+$/u, "").trim();
+  return `${trimmed || head.trim()}…`;
+}
+
+export function firstSentence(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return "";
   const sentence = (splitIntoSentences(trimmed)[0] ?? trimmed).trim();
-  if (sentence.length <= 220) return sentence;
-  return `${sentence.slice(0, 217).trim()}.`;
+  if (sentence.length <= FIRST_SENTENCE_LIMIT) return sentence;
+  return truncateAtWordBoundary(sentence, FIRST_SENTENCE_LIMIT);
 }
 
 const TECH_LABEL_RE =
@@ -372,10 +390,53 @@ function projectNameFromTitle(title: string): string {
   return head.replace(/\s*\([^)]*\)\s*$/, "").trim() || title.trim();
 }
 
+function joinList(items: string[]): string {
+  const parts = items.map((p) => p.trim()).filter(Boolean);
+  if (parts.length <= 1) return parts[0] ?? "";
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+}
+
 function joinTechList(body: string): string {
   const parts = body.split(/,\s*/).map((p) => p.trim()).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0]} and ${parts.slice(1).join(", ")}`;
-  return body.trim();
+  if (parts.length <= 1) return body.trim();
+  return joinList(parts);
+}
+
+function isCertificationChunk(chunk: RetrievedChunk): boolean {
+  return chunk.id === "certifications" || /training and certifications/i.test(chunk.title);
+}
+
+function rewriteCertificationPassage(text: string): string {
+  const practitioner = text.match(
+    /Becoming an AI Practitioner Series(?:,\s*Sep 2026)?(?::\s*[^.]*)?/i,
+  );
+  const deepLearning = text.match(/DeepLearning\.AI:\s*([^.]+)/i);
+  const providers = text.match(/AWS Training and Certification[^.]+/i);
+  const noDegree = /\bno formal degree\b/i.test(text);
+
+  const parts: string[] = [];
+  if (noDegree || providers) {
+    parts.push(
+      noDegree
+        ? "Mike has no named certifications and no formal degree."
+        : "Mike has no named certifications.",
+    );
+  }
+  const courses: string[] = [];
+  if (practitioner) {
+    courses.push(practitioner[0].replace(/,\s*Sep 2026/i, "").trim());
+  }
+  if (deepLearning) {
+    courses.push(`DeepLearning.AI courses in ${deepLearning[1].replace(/\.\s*$/, "").trim()}`);
+  }
+  if (courses.length > 0) {
+    parts.push(`His courses include ${joinList(courses)}.`);
+  }
+  if (providers) {
+    parts.push(`${providers[0].replace(/\.\s*$/, "")}.`);
+  }
+  return parts.join(" ");
 }
 
 function rewriteFallbackSentence(raw: string, title: string): string {
@@ -407,6 +468,13 @@ function fallbackSentenceFromChunk(
   question: string,
   pythonQuestion: boolean,
 ): string {
+  if (
+    isCertificationChunk(chunk)
+    || (/\bcertif|\bcourses?\b|\btraining\b/i.test(question) && /deeplearning\.ai/i.test(chunk.text))
+  ) {
+    const cert = rewriteCertificationPassage(chunk.text);
+    if (cert) return cert;
+  }
   const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
   const contentWords = questionContentWords(question);
   const ranked = [...parts].sort((a, b) => {

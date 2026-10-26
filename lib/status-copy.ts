@@ -1,9 +1,13 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
-import { splitIntoSentences } from "./normalise-answer";
+import {
+  insertMissingSentenceSpaces,
+  moveTrailingCitesBeforeStop,
+  splitIntoSentences,
+} from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r39";
+export const ANSWER_CACHE_VERSION = "r40";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -971,12 +975,10 @@ export function sanitisePunctuation(text: string): string {
     .replace(/(^|[^.])\.\.($|[^.])/g, "$1.$2")
     .replace(/,(?=[A-Za-z])/g, ", ")
     .replace(/;(?=[A-Za-z])/g, "; ")
-    .replace(/(^|[.!?]\s+),+\s*/g, "$1")
-    .replace(/([.!?])\s*\[(\d+)\](?:\s*\.)?(?=\s|$)/g, " [$2].")
-    .replace(/\]\.(?=[A-Z])/g, "]. ")
-    .replace(/([a-z0-9)])\.(?=[A-Z])/g, "$1. ")
-    .replace(/ {2,}/g, " ");
-  return out.trim();
+    .replace(/(^|[.!?]\s+),+\s*/g, "$1");
+  out = moveTrailingCitesBeforeStop(out);
+  out = insertMissingSentenceSpaces(out);
+  return out.replace(/ {2,}/g, " ").trim();
 }
 
 // Drop a second "Built." or "Status: Prototype." when the equivalent is already said.
@@ -1004,7 +1006,10 @@ function stripKnownNegations(sentence: string): string {
     .replace(/\bno ai\b/gi, " ")
     .replace(/not(?: yet)? (?:the )?live/gi, " ")
     .replace(/rather than the(?: current)? live/gi, " ")
-    .replace(/not(?: yet)? deployed/gi, " ")
+    .replace(/\bhas(?: not|n't) been deployed(?: yet)?\b/gi, " ")
+    .replace(/\bnot(?: yet)? deployed\b/gi, " ")
+    .replace(/\bundeployed\b/gi, " ")
+    .replace(/\bnot(?: yet)? in production\b/gi, " ")
     .replace(/not production/gi, " ");
 }
 

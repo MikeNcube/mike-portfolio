@@ -150,6 +150,19 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     sourceIds: ["stack", "aws-web-tier", "certifications"],
   },
   {
+    question: "What certifications does Mike hold?",
+    aliases: [
+      "what certifications does mike have",
+      "does mike have any certifications",
+      "mike certifications",
+      "what courses has mike taken",
+      "what training courses does mike have",
+    ],
+    answer:
+      "Mike has no named certifications and no formal degree [1]. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",
+    sourceIds: ["certifications"],
+  },
+  {
     question: "What is Cube?",
     aliases: [
       "tell me about cube",
@@ -181,6 +194,10 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is zororo document intelligence",
       "what is the signature workflow",
       "zdi signature workflow",
+      "what does zdi do",
+      "what does the zdi do",
+      "what does zororo document intelligence do",
+      "what does the signature workflow do",
     ],
     answer:
       "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence [1]. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
