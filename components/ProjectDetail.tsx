@@ -1,5 +1,22 @@
 import Link from "next/link";
 import type { Project } from "@/lib/content";
+import RagDiagram from "./diagrams/RagDiagram";
+import SitewardenDiagram from "./diagrams/SitewardenDiagram";
+import CubeDiagram from "./diagrams/CubeDiagram";
+import CrmDiagram from "./diagrams/CrmDiagram";
+import ClaimsDiagram from "./diagrams/ClaimsDiagram";
+import DigiFormDiagram from "./diagrams/DigiFormDiagram";
+import SentinelDiagram from "./diagrams/SentinelDiagram";
+
+const DIAGRAMS: Partial<Record<string, React.ReactNode>> = {
+  "portfolio-rag-assistant": <RagDiagram />,
+  "sitewarden":              <SitewardenDiagram />,
+  "cube-agent":              <CubeDiagram />,
+  "zororo-crm":              <CrmDiagram />,
+  "claims-pipeline":         <ClaimsDiagram />,
+  "digi-app-form":           <DigiFormDiagram />,
+  "proactive-sentinel":      <SentinelDiagram />,
+};
 
 type Props = {
   project: Project;
@@ -65,23 +82,18 @@ export default function ProjectDetail({ project, prev, next }: Props) {
 
           {/* Sidebar metadata */}
           <aside className="lg:sticky lg:top-24">
-            <div className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
-              <Row label="Status" value={project.status} />
-              <Row label="Domain" value={project.domain} />
-              <Row label="Year" value={project.year} />
+          <dl className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
+            <Row label="Status" value={project.status} />
+            <Row label="Domain" value={project.domain} />
+            <Row label="Year" value={project.year} />
 
               <div className="pt-3 border-t border-ink/[0.07]">
                 {project.repoUrl ? (
-                  <a
-                    href={project.repoUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="link text-sm"
-                  >
+                  <a href={project.repoUrl} target="_blank" rel="noreferrer noopener" className="link text-sm">
                     View on GitHub
                   </a>
                 ) : (
-                  <p className="text-ink/40">Private codebase — architecture walk-through in interview.</p>
+                  <p className="text-ink-muted text-sm">Private codebase — architecture walk-through in interview.</p>
                 )}
               </div>
 
@@ -94,14 +106,29 @@ export default function ProjectDetail({ project, prev, next }: Props) {
               )}
 
               <div className="pt-3 border-t border-ink/[0.07]">
-                <p className="text-xs text-ink/35 mb-2 uppercase tracking-wider font-mono">Stack</p>
-                <p className="text-ink/60 text-sm leading-relaxed">{project.stack.join(" · ")}</p>
+                <p className="text-xs text-ink-muted mb-2 uppercase tracking-wider">Stack</p>
+                <p className="text-ink-muted text-sm leading-relaxed">{project.stack.join(" · ")}</p>
               </div>
-            </div>
+            </dl>
           </aside>
 
           {/* Body */}
           <div className="space-y-10 max-w-2xl">
+            {/* Architecture diagram — shown before prose for visual context */}
+            {DIAGRAMS[project.slug] && (
+              <section>
+                <h2
+                  className="font-display-section font-medium text-ink mb-4"
+                  style={{ fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", letterSpacing: "-0.02em" }}
+                >
+                  Architecture
+                </h2>
+                <div className="rounded-xl border border-ink/[0.07] bg-surface/40 p-4 sm:p-6 overflow-x-auto">
+                  {DIAGRAMS[project.slug]}
+                </div>
+              </section>
+            )}
+
             <ContentSection title="Problem">
               <p>{project.problem}</p>
             </ContentSection>
@@ -164,8 +191,8 @@ export default function ProjectDetail({ project, prev, next }: Props) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-ink/35 mb-0.5 font-mono uppercase tracking-wider">{label}</p>
-      <p className="text-ink/70">{value}</p>
+      <dt className="text-xs text-ink-muted mb-0.5 uppercase tracking-wider">{label}</dt>
+      <dd className="text-ink text-sm">{value}</dd>
     </div>
   );
 }

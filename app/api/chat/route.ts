@@ -2,38 +2,62 @@
 import { NextRequest } from 'next/server';
 import { retrieve, type RetrievedChunk } from '@/lib/rag';
 
-// gemini-2.5-flash has hybrid thinking/response token budget.
-// With maxOutputTokens at 512, thinking tokens can consume the entire budget,
-// leaving zero tokens for actual response text — causing truncated answers and
-// empty-response errors that surface as 502s. Fix: disable thinking entirely
-// via thinkingBudget:0 and keep the output budget generous for short answers.
+// Root cause of previous 502s: gemini-2.5-flash allocates thinking tokens from
+// the same maxOutputTokens budget. With 512 tokens, thinking consumed the entire
+// budget, producing empty responses that threw errors. Fix: disable thinking via
+// thinkingBudget:0 and increase the response token budget.
 const GENERATION_MODEL = 'gemini-2.5-flash';
 const GENERATION_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GENERATION_MODEL}:generateContent`;
 
 const MAX_MESSAGE_LENGTH = 500;
 const MIN_RELEVANCE_SCORE = 0.35;
 
-// Simple response cache: avoids re-running full RAG for repeated questions
-// within the same serverless instance lifetime (common for suggested prompts).
-// Not persisted across instances — that is expected and acceptable for a demo.
-const responseCache = new Map<string, { response: string; sources: Array<{ title: string; url: string }>; ts: number }>();
+// ─── LRU response cache ────────────────────────────────────────────────────
+// Bounded at 200 entries; avoids re-running full RAG for repeated questions
+// (common for the 4 suggested prompts) within the same serverless instance.
+// Does not persist across instances — expected and acceptable for a demo.
+
+interface CacheEntry {
+  response: string;
+  sources: Array<{ title: string; url: string }>;
+  ts: number;
+}
+const CACHE_MAX = 200;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+class LRUCache {
+  private map = new Map<string, CacheEntry>();
+
+  get(key: string): CacheEntry | undefined {
+    const entry = this.map.get(key);
+    if (!entry) return undefined;
+    if (Date.now() - entry.ts > CACHE_TTL_MS) { this.map.delete(key); return undefined; }
+    // Move to most-recently-used position
+    this.map.delete(key);
+    this.map.set(key, entry);
+    return entry;
+  }
+
+  set(key: string, value: CacheEntry): void {
+    if (this.map.has(key)) this.map.delete(key);
+    if (this.map.size >= CACHE_MAX) {
+      // Evict least-recently-used (first entry)
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+    this.map.set(key, value);
+  }
+}
+
+const responseCache = new LRUCache();
 
 function cacheKey(question: string, audienceKey: string): string {
   return `${audienceKey}:${question.toLowerCase().trim()}`;
 }
 
-function getFromCache(key: string) {
-  const entry = responseCache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) { responseCache.delete(key); return null; }
-  return entry;
-}
-
-// In-memory rate limiter: 20 requests per IP per 10 minutes.
-// Note: does not persist across serverless function instances — each cold start
-// has a fresh counter. This is acceptable for a portfolio demo; for production
-// use a Redis-backed store (Upstash, Vercel KV) instead.
+// ─── Rate limiter ──────────────────────────────────────────────────────────
+// In-memory, 20 requests per IP per 10 minutes. Does not persist across
+// serverless instances. For production, use a Redis-backed store (Upstash).
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const requestLog = new Map<string, number[]>();
@@ -47,6 +71,7 @@ function withinRateLimit(ip: string): boolean {
   return true;
 }
 
+// ─── Prompt building ───────────────────────────────────────────────────────
 const AUDIENCE_STYLE: Record<string, string> = {
   recruiter: 'The visitor is a recruiter or hiring manager. Be professional and concise; lead with outcomes.',
   developer: 'The visitor is a developer. Be technical and specific; name concrete tools, patterns, and trade-offs.',
@@ -76,42 +101,42 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Calls the Gemini generation API with exponential backoff on transient failures.
-// Handles 429 (rate limit) and 5xx server errors with up to 3 retries.
-async function callGeminiWithRetry(url: string, init: RequestInit, maxRetries = 3): Promise<Response> {
+// ─── Generation with retry ─────────────────────────────────────────────────
+// Three retries with delays capped at ~3s total: 600ms, 1200ms, 1200ms.
+// Handles 429 (rate limit) and 5xx server errors.
+async function callGeminiWithRetry(url: string, init: RequestInit): Promise<Response> {
+  const DELAYS = [600, 1200, 1200] as const;
   let lastError: Error = new Error('No attempts made');
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+
+  for (let attempt = 0; attempt <= DELAYS.length; attempt++) {
     try {
       const res = await fetch(url, init);
       if (res.ok) return res;
 
       const isRetryable = res.status === 429 || res.status >= 500;
-      if (isRetryable && attempt < maxRetries) {
-        const delay = Math.min(800 * Math.pow(2, attempt), 6400);
-        console.error(`chat route: generation returned ${res.status}, retrying in ${delay}ms (attempt ${attempt + 1})`);
-        await sleep(delay);
+      if (isRetryable && attempt < DELAYS.length) {
+        console.error(`chat: generation returned ${res.status}, retrying (attempt ${attempt + 1})`);
+        await sleep(DELAYS[attempt]);
         lastError = new Error(`Generation API returned ${res.status}`);
         continue;
       }
       throw new Error(`Generation API returned ${res.status}`);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      if (attempt < maxRetries) {
-        const delay = Math.min(800 * Math.pow(2, attempt), 6400);
-        await sleep(delay);
-      }
+      if (attempt < DELAYS.length) await sleep(DELAYS[attempt]);
     }
   }
   throw lastError;
 }
 
-// Returns only sources that have a real URL (not internal-only descriptions).
+// Returns only sources that have a real navigable URL (not internal descriptions).
 function filterToLinkSources(chunks: RetrievedChunk[]): Array<{ title: string; url: string }> {
   return chunks
     .filter(c => c.sourceUrl.startsWith('http'))
     .map(c => ({ title: c.title, url: c.sourceUrl }));
 }
 
+// ─── Handler ───────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -145,7 +170,8 @@ export async function POST(req: NextRequest) {
   const question = message.trim().slice(0, MAX_MESSAGE_LENGTH);
   const audienceKey = typeof audience === 'string' ? audience : 'developer';
 
-  const cached = getFromCache(cacheKey(question, audienceKey));
+  // Cache hit
+  const cached = responseCache.get(cacheKey(question, audienceKey));
   if (cached) {
     return NextResponse.json({ response: cached.response, sources: cached.sources, cached: true });
   }
@@ -169,8 +195,9 @@ export async function POST(req: NextRequest) {
         generationConfig: {
           maxOutputTokens: 800,
           temperature: 0.4,
-          // Disable thinking tokens — they consume the output budget first,
-          // leaving insufficient tokens for the actual response text on free tier.
+          // Disable thinking tokens — on gemini-2.5-flash, thinking consumes the
+          // output token budget before any response text is written. With the
+          // previous 512-token limit this produced empty responses → 502 errors.
           thinkingConfig: { thinkingBudget: 0 },
         },
       }),
@@ -186,8 +213,7 @@ export async function POST(req: NextRequest) {
     if (!text) throw new Error('Empty generation response');
 
     const sources = filterToLinkSources(relevant);
-    const entry = { response: text, sources, ts: Date.now() };
-    responseCache.set(cacheKey(question, audienceKey), entry);
+    responseCache.set(cacheKey(question, audienceKey), { response: text, sources, ts: Date.now() });
 
     return NextResponse.json({ response: text, sources });
   } catch (err) {

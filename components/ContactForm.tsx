@@ -6,7 +6,7 @@ import { profile } from "@/lib/content";
 type Status = "idle" | "sending" | "success" | "error";
 
 const inputCls =
-  "w-full rounded-xl border border-ink/[0.09] bg-page px-4 py-2.5 text-sm text-ink placeholder:text-ink/35 focus:border-ink/25 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
+  "w-full rounded-xl border border-ink/[0.09] bg-page px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-ink/25 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -47,7 +47,7 @@ export default function ContactForm() {
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate={false}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-name" className="text-sm text-ink/55">Name</label>
+          <label htmlFor="contact-name" className="text-sm font-medium text-ink-muted">Name</label>
           <input
             id="contact-name"
             name="name"
@@ -62,7 +62,7 @@ export default function ContactForm() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-email" className="text-sm text-ink/55">Email</label>
+          <label htmlFor="contact-email" className="text-sm font-medium text-ink-muted">Email</label>
           <input
             id="contact-email"
             name="email"
@@ -79,7 +79,7 @@ export default function ContactForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="contact-message" className="text-sm text-ink/55">Message</label>
+        <label htmlFor="contact-message" className="text-sm font-medium text-ink-muted">Message</label>
         <textarea
           id="contact-message"
           name="message"

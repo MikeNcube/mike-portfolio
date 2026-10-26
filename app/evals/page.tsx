@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import results from "@/evals/results.json";
+import { existsSync, readFileSync } from "fs";
+import path from "path";
+import { EVAL_QUESTIONS } from "@/evals/eval";
+
+// Dynamic so fs.existsSync works at request time even without results.json
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Eval results",
-  description: "Portfolio RAG assistant evaluation results — answer correctness, citation, refusal, and prompt-injection tests.",
+  title: "Eval results · RAG assistant",
+  description:
+    "Methodology and results for the portfolio RAG assistant evaluation suite.",
 };
 
-type Check = { label: string; pass: boolean; detail?: string };
+type EvalCheck = { label: string; pass: boolean; detail?: string };
 type EvalResult = {
   id: string;
   question: string;
@@ -14,127 +20,211 @@ type EvalResult = {
   pass: boolean;
   response: string;
   sources: Array<{ title: string; url: string }>;
-  checks: Check[];
+  checks: EvalCheck[];
   durationMs: number;
 };
+type EvalData = {
+  runAt: string;
+  baseUrl: string;
+  summary: { passed: number; total: number; pct: number };
+  results: EvalResult[];
+};
+
+function loadResults(): EvalData | null {
+  try {
+    const file = path.join(process.cwd(), "evals", "results.json");
+    if (!existsSync(file)) return null;
+    const data = JSON.parse(readFileSync(file, "utf-8")) as EvalData;
+    // Sanity-check: real results must have a summary.passed number
+    if (typeof data?.summary?.passed !== "number") return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 export default function EvalsPage() {
-  const data = results as {
-    runAt: string;
-    baseUrl: string;
-    summary: { passed: number; total: number; pct: number };
-    results: EvalResult[];
-    note?: string;
-  };
+  const data = loadResults();
 
   return (
     <main className="pt-24 pb-20">
-      <div className="container-edge max-w-3xl">
+      <div className="container-edge" style={{ maxWidth: 780 }}>
+
+        {/* Header */}
         <div className="mb-10">
-          <p className="text-sm text-ink/40 uppercase tracking-widest mb-3 font-mono">Eval results</p>
+          <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-3">Eval results</p>
           <h1
             className="font-display-section font-medium text-ink mb-4"
             style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)", letterSpacing: "-0.025em" }}
           >
             RAG assistant evaluation
           </h1>
-
-          {/* Summary */}
-          <div className="flex gap-6 mt-6 mb-6">
-            <Stat label="Passed" value={`${data.summary.passed}/${data.summary.total}`} />
-            <Stat label="Score" value={`${data.summary.pct}%`} />
-            <Stat label="Run at" value={new Date(data.runAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} />
-          </div>
-
-          <p className="text-sm text-ink/40">
-            Tested against{" "}
-            <a href={data.baseUrl} target="_blank" rel="noreferrer noopener" className="link">
-              {data.baseUrl.replace("https://", "")}
-            </a>
-            {data.note && <> · {data.note}</>}
+          <p className="text-base text-ink-muted max-w-prose">
+            Ten questions covering answer correctness, citation correctness, out-of-scope refusals,
+            and prompt-injection resistance. Run against any deployment to generate results.
           </p>
         </div>
 
-        {/* Eval categories */}
-        <div className="mb-4 text-sm text-ink/50">
-          <span className="mr-6">Tests: answer correctness · citation · out-of-scope refusals · prompt injection</span>
-        </div>
+        {/* Methodology */}
+        <section className="mb-10">
+          <h2 className="text-base font-semibold text-ink mb-3">Methodology</h2>
+          <dl className="space-y-2 text-sm text-ink-muted">
+            <div className="flex gap-3">
+              <dt className="font-medium text-ink w-28 shrink-0">Runner</dt>
+              <dd>
+                <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">
+                  GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
+                </code>
+              </dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="font-medium text-ink w-28 shrink-0">Checks</dt>
+              <dd>Per-question: API success, refusal/answer correctness, mustContain phrases, mustNotContain phrases, source presence</dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="font-medium text-ink w-28 shrink-0">Rate limit</dt>
+              <dd>1.2 s pause between questions to stay within free-tier limits</dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="font-medium text-ink w-28 shrink-0">Output</dt>
+              <dd>Writes <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">evals/results.json</code> — commit after a clean run</dd>
+            </div>
+          </dl>
+        </section>
 
-        {/* Results list */}
-        <div className="space-y-4">
-          {data.results.map((r) => (
-            <details
-              key={r.id}
-              className="rounded-xl border border-ink/[0.08] overflow-hidden"
-            >
-              <summary className="flex cursor-pointer items-start justify-between gap-3 p-4 hover:bg-ink/[0.02]">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`font-mono text-micro ${r.pass ? "text-signal" : "text-red-500"}`}>
-                      {r.pass ? "PASS" : "FAIL"}
-                    </span>
-                    <span className="text-micro font-mono text-ink/30">{r.durationMs}ms</span>
-                  </div>
-                  <p className="text-sm font-medium text-ink">{r.question}</p>
-                  <p className="text-xs text-ink/40 mt-0.5">{r.description}</p>
-                </div>
-              </summary>
-
-              <div className="border-t border-ink/[0.07] p-4 space-y-3 bg-surface/30">
-                {/* Response */}
+        {/* Questions */}
+        <section className="mb-10">
+          <h2 className="text-base font-semibold text-ink mb-4">Questions ({EVAL_QUESTIONS.length})</h2>
+          <div className="space-y-3">
+            {EVAL_QUESTIONS.map((q, i) => (
+              <div
+                key={q.id}
+                className="flex gap-3 rounded-xl border border-ink/[0.07] p-4"
+              >
+                <span className="font-mono text-micro text-ink-muted w-5 shrink-0 mt-0.5">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 <div>
-                  <p className="text-xs text-ink/35 mb-1 font-mono uppercase tracking-wider">Response</p>
-                  <p className="text-sm text-ink/70 leading-relaxed">{r.response}</p>
-                </div>
-
-                {/* Sources */}
-                {r.sources.filter((s) => s.url.startsWith("http")).length > 0 && (
-                  <div>
-                    <p className="text-xs text-ink/35 mb-1 font-mono uppercase tracking-wider">Sources</p>
-                    <div className="flex flex-wrap gap-2">
-                      {r.sources.filter((s) => s.url.startsWith("http")).map((s) => (
-                        <a
-                          key={s.url}
-                          href={s.url}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="link text-xs"
-                        >
-                          {s.title}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Checks */}
-                <div>
-                  <p className="text-xs text-ink/35 mb-2 font-mono uppercase tracking-wider">Checks</p>
-                  <ul className="space-y-1">
-                    {r.checks.map((c) => (
-                      <li key={c.label} className="flex items-start gap-2 text-xs">
-                        <span className={`font-mono ${c.pass ? "text-signal" : "text-red-500"}`}>
-                          {c.pass ? "✓" : "✗"}
-                        </span>
-                        <span className="font-mono text-ink/50">{c.label}</span>
-                        {c.detail && <span className="text-ink/35">{c.detail}</span>}
-                      </li>
+                  <p className="text-sm font-medium text-ink">{q.question}</p>
+                  <p className="text-xs text-ink-muted mt-0.5">{q.description}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {q.expectRefusal && (
+                      <span className="text-micro font-mono text-ink-muted bg-surface rounded px-1.5 py-0.5">
+                        expects refusal
+                      </span>
+                    )}
+                    {q.expectSources && (
+                      <span className="text-micro font-mono text-ink-muted bg-surface rounded px-1.5 py-0.5">
+                        expects sources
+                      </span>
+                    )}
+                    {(q.mustContain ?? []).map((p) => (
+                      <span key={p} className="text-micro font-mono text-signal bg-surface rounded px-1.5 py-0.5">
+                        must contain: {p}
+                      </span>
                     ))}
-                  </ul>
+                    {(q.mustNotContain ?? []).map((p) => (
+                      <span key={p} className="text-micro font-mono text-ink-muted bg-surface rounded px-1.5 py-0.5 line-through">
+                        not: {p}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </details>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
 
-        <div className="mt-8 pt-6 border-t border-ink/[0.07] text-sm text-ink/40">
-          <p>
-            Run these evals yourself:{" "}
-            <code className="font-mono text-xs bg-surface rounded px-1.5 py-0.5">
-              GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-url.vercel.app
+        {/* Results — or placeholder if none */}
+        {data ? (
+          <section>
+            <div className="flex gap-6 mb-6">
+              <Stat label="Passed" value={`${data.summary.passed}/${data.summary.total}`} />
+              <Stat label="Score" value={`${data.summary.pct}%`} />
+              <Stat
+                label="Run at"
+                value={new Date(data.runAt).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              />
+            </div>
+            <p className="text-sm text-ink-muted mb-6">
+              Tested against{" "}
+              <a href={data.baseUrl} target="_blank" rel="noreferrer noopener" className="link">
+                {data.baseUrl.replace("https://", "")}
+              </a>
+            </p>
+            <div className="space-y-3">
+              {data.results.map((r) => (
+                <details
+                  key={r.id}
+                  className="rounded-xl border border-ink/[0.07] overflow-hidden"
+                >
+                  <summary className="flex cursor-pointer items-start justify-between gap-3 p-4 hover:bg-ink/[0.02]">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`font-mono text-micro ${r.pass ? "text-signal" : "text-red-600 dark:text-red-400"}`}>
+                          {r.pass ? "PASS" : "FAIL"}
+                        </span>
+                        <span className="text-micro font-mono text-ink-muted">{r.durationMs}ms</span>
+                      </div>
+                      <p className="text-sm font-medium text-ink">{r.question}</p>
+                      <p className="text-xs text-ink-muted mt-0.5">{r.description}</p>
+                    </div>
+                  </summary>
+                  <div className="border-t border-ink/[0.07] p-4 space-y-3 bg-surface/30">
+                    <div>
+                      <p className="text-xs text-ink-muted mb-1 uppercase tracking-wider">Response</p>
+                      <p className="text-sm text-ink-muted leading-relaxed">{r.response}</p>
+                    </div>
+                    {r.sources.filter((s) => s.url.startsWith("http")).length > 0 && (
+                      <div>
+                        <p className="text-xs text-ink-muted mb-1 uppercase tracking-wider">Sources</p>
+                        <div className="flex flex-wrap gap-2">
+                          {r.sources
+                            .filter((s) => s.url.startsWith("http"))
+                            .map((s) => (
+                              <a key={s.url} href={s.url} target="_blank" rel="noreferrer noopener" className="link text-xs">
+                                {s.title}
+                              </a>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-ink-muted mb-1 uppercase tracking-wider">Checks</p>
+                      <ul className="space-y-1">
+                        {r.checks.map((c) => (
+                          <li key={c.label} className="flex items-start gap-2 text-xs">
+                            <span className={`font-mono ${c.pass ? "text-signal" : "text-red-600 dark:text-red-400"}`}>
+                              {c.pass ? "✓" : "✗"}
+                            </span>
+                            <span className="font-mono text-ink-muted">{c.label}</span>
+                            {c.detail && <span className="text-ink-faint">{c.detail}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="rounded-2xl border border-ink/[0.07] bg-surface/40 p-8 text-center">
+            <p className="text-base font-medium text-ink mb-2">Results will appear after the first run against a live deployment.</p>
+            <p className="text-sm text-ink-muted mb-4">
+              Run the eval suite, then commit{" "}
+              <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">evals/results.json</code>{" "}
+              to publish here.
+            </p>
+            <code className="text-micro font-mono text-ink-muted block bg-surface rounded-lg px-4 py-3 text-left">
+              GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
             </code>
-          </p>
-        </div>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -143,7 +233,7 @@ export default function EvalsPage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-ink/35 font-mono uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-xs text-ink-muted uppercase tracking-wider mb-0.5">{label}</p>
       <p className="text-xl font-semibold text-ink">{value}</p>
     </div>
   );

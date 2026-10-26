@@ -32,12 +32,13 @@ export default function Nav() {
     <header className={`fixed inset-x-0 top-0 z-40 border-b transition-all duration-300 ${navBg}`}>
       {/* Safe area for iPhone notch */}
       <div className="pt-safe" />
-      <div className="container-edge flex h-14 items-center justify-between gap-4">
+      {/* items-stretch ensures nav links fill full header height (48px), passing target-size */}
+      <div className="container-edge flex h-12 items-stretch justify-between gap-2">
 
         {/* Logo / name */}
         <a
           href="#top"
-          className="flex min-h-[44px] items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          className="flex items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-ink/15">
             <Image
@@ -60,7 +61,7 @@ export default function Nav() {
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="min-h-[44px] inline-flex items-center rounded-lg px-3.5 py-1 text-sm text-ink/60 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+              className="inline-flex items-center rounded-lg px-3.5 text-sm text-ink/60 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
               {s.label}
             </a>
@@ -73,7 +74,7 @@ export default function Nav() {
 
           <a
             href={`mailto:${profile.email}?subject=Hi%20Mike`}
-            className="hidden md:inline-flex btn-ghost text-sm"
+            className="hidden md:flex items-center btn-ghost text-sm"
           >
             Email me
           </a>

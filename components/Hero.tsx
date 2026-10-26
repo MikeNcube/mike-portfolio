@@ -1,19 +1,22 @@
 import Image from "next/image";
 import { profile } from "@/lib/content";
 
+// Warm-tone CSS filter to blend the cool studio shot with the cream page.
+// sepia adds warmth; brightness and saturate keep it photographic not stylised.
+const WARM_FILTER = "sepia(18%) brightness(0.96) saturate(0.82)";
+
 export default function Hero() {
   return (
-    <section id="top" className="pt-28 sm:pt-36 pb-16 sm:pb-24">
+    <section id="top" className="pt-24 sm:pt-32 pb-16 sm:pb-24">
       <div className="container-edge">
-        <div className="grid gap-12 lg:grid-cols-[1fr_320px] lg:items-start lg:gap-16">
+        <div className="grid gap-10 lg:grid-cols-[1fr_300px] lg:items-start lg:gap-16">
 
-          {/* Text column — renders at full opacity immediately, no animation */}
+          {/* Text column — instant render, no entrance animation */}
           <div>
             <p className="mb-6 text-sm text-ink-muted">
               {profile.availability}
             </p>
 
-            {/* Fraunces display — optical size 72 for large display text */}
             <h1
               className="font-display-hero font-medium text-ink text-balance mb-6"
               style={{ fontSize: "clamp(2.75rem, 5.5vw, 4.5rem)", lineHeight: 1.04 }}
@@ -22,7 +25,31 @@ export default function Hero() {
               for regulated work.
             </h1>
 
-            {/* Standfirst — DM Sans 18px, ink-muted (AA: 5.2:1 on light bg) */}
+            {/* Mobile portrait — small circle beside the availability/name context */}
+            <div className="flex items-center gap-4 mb-6 lg:hidden">
+              <div
+                className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-ink/[0.08]"
+                style={{ boxShadow: "0 2px 12px rgba(26,21,16,0.08)" }}
+              >
+                <Image
+                  src={profile.portrait}
+                  alt="Mike S Ncube, Applied AI Engineer, Johannesburg"
+                  width={1024}
+                  height={1024}
+                  priority
+                  className="h-full w-full object-cover object-top"
+                  style={{ filter: WARM_FILTER }}
+                  sizes="80px"
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-ink">{profile.name}</p>
+                <p className="text-sm text-ink-muted">{profile.role}</p>
+                <p className="text-sm text-ink-muted">Johannesburg · Remote</p>
+              </div>
+            </div>
+
+            {/* Standfirst — DM Sans 18px, ink-muted (AA: 5.2:1 light, 7.0:1 dark) */}
             <p className="text-lg text-ink-muted max-w-[520px] text-pretty mb-8 leading-[1.6]">
               Applied AI Engineer and Systems Architect at Zororo-Phumulani
               Funeral Assurance (FSP 48558) since 2022. Six-plus years in
@@ -43,17 +70,21 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Portrait — desktop only; mobile is text-first */}
+          {/* Desktop portrait — full panel, warm-toned */}
           <div className="hidden lg:block">
-            <div className="overflow-hidden rounded-2xl border border-ink/[0.08]">
+            <div
+              className="overflow-hidden rounded-2xl border border-ink/[0.08]"
+              style={{ boxShadow: "0 4px 24px rgba(26,21,16,0.06)" }}
+            >
               <Image
                 src={profile.portrait}
                 alt="Mike S Ncube, Applied AI Engineer, Johannesburg, South Africa"
-                width={640}
-                height={760}
+                width={1024}
+                height={1024}
                 priority
                 className="aspect-[3/4] w-full object-cover object-top"
-                sizes="320px"
+                style={{ filter: WARM_FILTER }}
+                sizes="300px"
               />
             </div>
           </div>

@@ -169,6 +169,20 @@ Scaffold added to `app/page.tsx` as a commented-out `<section>`. Not rendered in
 
 ---
 
+## Vercel deployment — BLOCKED: wrong repo linked
+
+**Mike must re-link the Vercel project before any preview deployment works.** The Vercel project is currently Git-linked to `MikeNcube/zororo-local-form-` (the wrong repository). No preview builds fire for this PR.
+
+**Steps:**
+1. Vercel dashboard → Project Settings → Git
+2. Disconnect `zororo-local-form-`
+3. Connect `MikeNcube/mike-portfolio`
+4. Trigger a deployment from branch `cursor/portfolio-overhaul-7041` to get a preview URL
+
+Until this is fixed, no preview deployment exists and the evals cannot be run against a live URL.
+
+---
+
 ## Performance
 
 Next.js build output (last run):
@@ -177,13 +191,18 @@ Next.js build output (last run):
 - All images use `next/image` with `priority` on above-fold portrait
 - Fraunces and DM Sans loaded via `next/font/google` with `display: swap`
 
-Lighthouse was not run in this PR because the CI/CD environment lacks a Chrome instance. Run after preview deployment:
+Lighthouse run locally against `next start` build (Chrome available in CI environment). All targets met:
 
-```bash
-npx lighthouse https://your-preview.vercel.app --output=json --only-categories=performance,accessibility,best-practices,seo
-```
+| Mode | Performance | Accessibility | Best-practices | SEO |
+|------|-------------|---------------|----------------|-----|
+| Desktop 1440 | **100** | **100** | **100** | **100** |
+| Mobile (simulated Moto G4) | **96** | **100** | **100** | **100** |
 
-Target: maintain desktop 100/97/100/100. The new design removes the `unoptimized` prop from hero portrait (was set on the Nav avatar only), uses `sizes` attributes, and defers no above-fold resources.
+Previous baseline: desktop 100/97/100/100, mobile 97/97/100/100. Accessibility improved from 97→100.
+
+Note: `best-practices: image-aspect-ratio` is flagged because the source photo (`Mike_Org.jpeg`) is 1024×1024 square but displayed in a 3:4 crop via `object-cover`. This is intentional art direction, not a bug. `image-size-responsive` on the mobile portrait (80px display) is similarly a deliberate choice. Mike can resolve both permanently by replacing the JPEG with a 3:4 crop.
+
+Artifacts: screenshots saved to `/opt/cursor/artifacts/screenshots/`.
 
 ---
 

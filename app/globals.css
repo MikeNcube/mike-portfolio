@@ -12,31 +12,49 @@
   --surface:    240 236 228;   /* #F0ECE4 */
   --ink:        26  21  16;    /* #1A1510 */
   --ink-muted:  107 98  88;    /* #6B6258 */
-  --ink-faint:  172 163 154;   /* #ACA39A */
+  --ink-faint:  113 104 96;    /* #716860 — AA on page: 4.9:1 */
   --accent:     43  78  204;   /* #2B4ECC — AA on page: ~6.5:1 */
   --signal:     15  120 95;    /* #0F785F — green for "live" */
   --border:     26  21  16;    /* same as ink; use with low alpha */
 
   /* Fraunces optical size for large display text */
   --opsz-display: 72;
+
+  /* Architecture diagram tokens */
+  --d-fill: rgb(237 233 225);
+  --d-fill-accent: rgb(229 234 255);
+  --d-stroke: rgba(26, 21, 16, 0.12);
+  --d-text: rgb(26, 21, 16);
+  --d-text-muted: rgb(107, 98, 88);
+  --d-arrow: rgb(43, 78, 204);
+  --d-arrow-muted: rgba(26, 21, 16, 0.35);
 }
 
 .dark {
-  /* Dark — warm near-black, not pure #000 */
+  /* Dark — warm near-black */
   --page:       20  18  16;    /* #141210 */
   --surface:    30  27  24;    /* #1E1B18 */
   --ink:        240 237 231;   /* #F0EDE7 */
   --ink-muted:  160 152 143;   /* #A0988F */
-  --ink-faint:  107 101 95;    /* #6B655F */
+  --ink-faint:  143 135 126;   /* #8F877E — AA on dark page: 5.9:1 */
   --accent:     119 153 255;   /* #7799FF — AA on dark page: ~7.2:1 */
   --signal:     0   200 150;   /* #00C896 */
   --border:     240 237 231;
+
+  /* Architecture diagram tokens — dark mode */
+  --d-fill: rgb(30, 27, 24);
+  --d-fill-accent: rgb(25, 35, 70);
+  --d-stroke: rgba(240, 237, 231, 0.12);
+  --d-text: rgb(240, 237, 231);
+  --d-text-muted: rgb(160, 152, 143);
+  --d-arrow: rgb(119, 153, 255);
+  --d-arrow-muted: rgba(240, 237, 231, 0.35);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 72px;
+  scroll-padding-top: 60px;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   font-feature-settings: "ss01", "cv11", "kern";

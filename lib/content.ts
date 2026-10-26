@@ -126,7 +126,7 @@ export const flagshipProjects: Project[] = [
       "Production system used by over 40 people at Zororo-Phumulani Funeral Assurance. Private codebase — architecture walk-through available in interview.",
     engineeringDecisions: [
       "Deterministic lead grading (rules, not ML) because in a regulated product the grading logic must be auditable and explainable to compliance staff.",
-      "The policy system is isolated behind an adapter: a live integration change — new insurer, updated rate table — touches one file, not spread calls across the codebase.",
+      "The policy system is isolated behind an adapter: a live integration change touches one file, not spread calls across the codebase.",
       "Server-side session revocation allows immediate access termination without waiting for token expiry — required for a multi-role regulated environment.",
       "Reversible additive-only migrations so any schema change can be rolled back without data loss.",
     ],

@@ -6,12 +6,14 @@ import Footer from "@/components/Footer";
 
 // Display: Fraunces — a high-contrast variable serif with optical size axis.
 // Distinctively editorial; avoids the generic-grotesk template look.
+// Load only opsz axis — SOFT and WONK are decorative, not used in CSS.
+// Reduces font payload and improves LCP on mobile.
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  axes: ["opsz", "SOFT", "WONK"],
-  style: ["normal", "italic"],
+  axes: ["opsz"],
+  style: ["normal"],
 });
 
 // Body: DM Sans — geometric, comfortable at 17–18px, pairs well with Fraunces.

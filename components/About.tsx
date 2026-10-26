@@ -46,14 +46,15 @@ export default function About() {
           {/* How I build — 4 one-line principles */}
           <div>
             <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-6">How I build</p>
+            {/* dl > div > dt/dd — valid per HTML5 spec (one div level only) */}
             <dl className="space-y-5">
               {engineeringApproach.map((item) => (
-                <div key={item.title} className="flex gap-3">
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
-                  <div>
-                    <dt className="text-base font-semibold text-ink">{item.title}</dt>
-                    <dd className="mt-0.5 text-sm text-ink-muted">{item.body}</dd>
-                  </div>
+                <div key={item.title}>
+                  <dt className="flex gap-3 items-start text-base font-semibold text-ink">
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                    {item.title}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-ink-muted pl-[1.375rem]">{item.body}</dd>
                 </div>
               ))}
             </dl>

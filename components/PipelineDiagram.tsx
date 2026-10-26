@@ -25,8 +25,8 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
           : "RAG pipeline: embed, retrieve, gate, generate, cite"
       }
     >
-      {/* Steps — flex row, compact enough for ~360px screens */}
-      <div className="flex items-center gap-0 overflow-x-auto pb-1">
+      {/* Steps row — wraps to scroll on very narrow screens */}
+      <div className="flex items-stretch gap-0 overflow-x-auto pb-1 select-none">
         {STEPS.map((step, i) => {
           const isActive    = activeStep === i;
           const isCompleted = activeStep !== null && i < activeStep;
@@ -37,26 +37,26 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
               {/* Node */}
               <div
                 className={[
-                  "px-2.5 py-2 rounded-lg border text-center transition-all duration-300",
+                  "px-3 py-2.5 rounded-xl border text-center transition-all duration-300",
                   isActive
-                    ? "border-accent bg-accent text-page shadow-sm"
+                    ? "border-accent bg-accent text-page shadow-sm scale-[1.04]"
                     : isCompleted
-                    ? "border-ink/[0.08] bg-surface/80 text-ink-muted"
+                    ? "border-ink/[0.09] bg-surface text-ink-muted"
                     : isPending
                     ? "border-ink/[0.05] bg-transparent text-ink-faint"
-                    : "border-ink/[0.07] bg-transparent text-ink-muted",
+                    : "border-ink/[0.08] bg-surface/50 text-ink-muted",
                 ].join(" ")}
-                style={{ minWidth: 60 }}
+                style={{ minWidth: 72 }}
               >
                 <p className={[
-                  "text-[0.7rem] font-semibold tracking-tight leading-none",
+                  "text-[13px] font-semibold tracking-tight leading-none",
                   isActive ? "text-page" : "",
                 ].join(" ")}>
                   {step.label}
                 </p>
                 <p className={[
-                  "text-[0.625rem] font-mono mt-0.5 leading-none",
-                  isActive ? "text-page/70" : "text-ink-faint",
+                  "text-[11px] font-mono mt-1 leading-none",
+                  isActive ? "text-page/75" : "text-ink-faint",
                 ].join(" ")}>
                   {step.sub}
                 </p>
@@ -64,19 +64,15 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
 
               {/* Arrow connector */}
               {i < STEPS.length - 1 && (
-                <div className="px-1 shrink-0">
+                <div className="px-1 shrink-0" aria-hidden>
                   <svg
-                    width="16"
-                    height="8"
-                    viewBox="0 0 16 8"
-                    aria-hidden
-                    className={[
-                      "transition-colors duration-300",
-                      isCompleted ? "text-accent/50" : "text-ink/15",
-                    ].join(" ")}
+                    width="18"
+                    height="10"
+                    viewBox="0 0 18 10"
+                    className={`transition-colors duration-300 ${isCompleted ? "text-accent/60" : "text-ink/15"}`}
                   >
-                    <line x1="0" y1="4" x2="11" y2="4" stroke="currentColor" strokeWidth="1.25" />
-                    <polyline points="8,1 11,4 8,7" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+                    <line x1="0" y1="5" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" />
+                    <polyline points="9,2 12,5 9,8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                   </svg>
                 </div>
               )}
@@ -85,13 +81,13 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
         })}
       </div>
 
-      {/* Retrieved chunk labels — visible after retrieve step */}
+      {/* Retrieved chunks — visible after retrieve/gate step */}
       {chunks && chunks.length > 0 && activeStep !== null && activeStep >= 2 && (
-        <div className="mt-2 flex flex-wrap gap-1.5" aria-live="polite" aria-label="Retrieved chunks">
+        <div className="mt-2 flex flex-wrap gap-1.5" aria-live="polite" aria-label="Retrieved sources">
           {chunks.map((c) => (
             <span
               key={c.title}
-              className="rounded border border-ink/[0.07] bg-surface/60 px-1.5 py-0.5 font-mono text-[0.625rem] text-ink-muted"
+              className="rounded-md border border-ink/[0.07] bg-surface/70 px-2 py-0.5 font-mono text-[11px] text-ink-muted"
             >
               {c.title}
             </span>
