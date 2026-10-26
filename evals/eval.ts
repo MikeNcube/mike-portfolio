@@ -77,6 +77,19 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     description: "Shipped Digi [1] and CRM [2]; Rolling out ZDI [3]; claims [4] on standby",
   },
   {
+    id: "built-at-zororo",
+    question: "What has Mike built at Zororo-Phumulani?",
+    audience: "recruiter",
+    meaningChecks: [
+      { label: "claims_or_crm", anyOf: ["claims", "CRM", "Digi"] },
+    ],
+    mustNotContain: ["confidential client"],
+    expectRefusal: false,
+    expectSources: true,
+    expectCitation: true,
+    description: "List of Zororo work — each [n] must cite that project's source, not a neighbour",
+  },
+  {
     id: "proactive-sentinel",
     question: "Walk me through Proactive Sentinel's architecture.",
     audience: "developer",

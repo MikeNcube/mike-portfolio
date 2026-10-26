@@ -6,6 +6,7 @@ import {
   citationsMatchNamedProjects,
   CONTACT_EMAIL,
   EMAIL_FALLBACK,
+  ensureContactEmail,
   ensureInlineCitation,
   remapCitations,
   remapCitationsToSourceList,
@@ -1119,6 +1120,8 @@ describe("production-system and ZDI status copy", () => {
       "She designed Zororo AI OS; it is early-stage and not live.",
       "They created Zororo AI OS, which is early stage and undeployed.",
       "Zororo AI OS is early development and not yet deployed.",
+      "Zororo AI OS is in an early phase and has not been deployed.",
+      "Zororo AI OS is early-stage and hasn't been deployed.",
     ];
     for (const input of samples) {
       const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
@@ -1161,6 +1164,62 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(afterLastCite, /Zororo AI OS is (?:built|early-stage)/);
   });
 
+  it("folds claims approved into the project's own cited clause, never a neighbour's [n]", () => {
+    const sources = [
+      { id: "digi-app-form", title: "Digi App Form", url: "https://github.com/MikeNcube" },
+      { id: "zdi-signature-workflow", title: "ZDI — Signature", url: "https://github.com/MikeNcube" },
+      { id: "zororo-ai-os", title: "Zororo AI OS", url: "https://github.com/MikeNcube" },
+      { id: "zororo-crm", title: "Lead-management CRM", url: "https://github.com/MikeNcube" },
+      { id: "zororo-claims", title: "Claims operations platform", url: "https://github.com/MikeNcube" },
+    ];
+    const input =
+      "Mike built a claims operations platform that serves as a production-ready failover for the live claims system [5]; and the CRM [4].";
+    const out = ensureProjectStatusCopy("What has Mike built at Zororo-Phumulani?", input, sources);
+    assert.match(
+      out,
+      /an approved, production-ready failover for the live claims system \[5\]/,
+    );
+    assert.doesNotMatch(out, /The claims operations platform is approved/);
+    assert.doesNotMatch(out, /not the live system itself \[4\]/);
+    assert.doesNotMatch(out, /failover for the live claims system \[4\]/);
+    assert.match(out, /CRM \[4\]/);
+    const aligned = citationsMatchNamedProjects(out, sources);
+    assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("names the project instead of 'it' when the mention is long or the project is not the last NP", () => {
+    const input =
+      "Zororo AI OS routes every event through Presidio, an OPA policy check, risk scoring, then a decision of ALLOW / MONITOR / APPROVE / BLOCK.";
+    const out = ensureProjectStatusCopy("What is Zororo AI OS?", input);
+    assert.match(out, /Zororo AI OS is built, early-stage and not yet deployed/);
+    assert.doesNotMatch(out, /BLOCK;\s*it is built/i);
+    assert.doesNotMatch(out, /APPROVE \/ BLOCK; it is/i);
+  });
+
+  it("treats ZDI approved-for-rollout and not yet live as complete without adding rolling out soon", () => {
+    const input = "ZDI (approved for production rollout, not yet live) [1].";
+    const out = ensureProjectStatusCopy("What is ZDI?", input);
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /rolling out soon/);
+    const withSoon =
+      "ZDI (approved for production rollout, not yet live) [1]. ZDI is rolling out soon [1].";
+    const kept = ensureProjectStatusCopy("What is ZDI?", withSoon);
+    assert.equal(kept, withSoon);
+    assert.equal((kept.match(/rolling out soon/gi) ?? []).length, 1);
+  });
+
+  it("treats a trailing [n] as terminated before appending the contact email", () => {
+    assert.equal(
+      ensureContactEmail("Mike is based in South Africa. [1]"),
+      "Mike is based in South Africa [1]. Email mikencube03@gmail.com.",
+    );
+    assert.equal(
+      ensureContactEmail("Mike is available [1]"),
+      "Mike is available [1]. Email mikencube03@gmail.com.",
+    );
+    assert.doesNotMatch(ensureContactEmail("Mike is based in South Africa. [1]"), /\. \[1\]\./);
+  });
+
   it("collapses 'South Africa. [1].' to 'South Africa [1].'", () => {
     assert.equal(
       normaliseModelText("Mike is based in South Africa. [1]."),
@@ -1168,14 +1227,12 @@ describe("production-system and ZDI status copy", () => {
     );
   });
 
-  it("folds only the missing not-live clause into a claims mention that already has standby", () => {
+  it("treats failover/standby for the live claims system as already not-the-live-system", () => {
     const input =
       "The claims operations platform acts as an approved, production-ready standby (failover) for the live claims system.";
     const out = ensureProjectStatusCopy("What is the claims operations platform?", input);
-    assert.equal(
-      out,
-      "The claims operations platform acts as an approved, production-ready standby (failover) for the live claims system, not the live system itself.",
-    );
+    assert.equal(out, input);
+    assert.doesNotMatch(out, /not the live system itself/);
     assert.equal((out.match(/standby \(failover\)/gi) ?? []).length, 1);
     assert.equal(hasRepeatedStatus(out), false);
     assert.equal(itIsSentenceCount(out), 0);
@@ -1268,6 +1325,7 @@ describe("production-system and ZDI status copy", () => {
     meaningPass("rag-pipeline", "It embeds the knowledge base and retrieves by cosine similarity.");
     meaningPass("rag-pipeline", "Embedding then retrieval by similarity.");
     meaningPass("production-systems", CANONICAL_PRODUCTION_ANSWER);
+    meaningPass("built-at-zororo", CANONICAL_PRODUCTION_ANSWER);
     meaningPass("zororo-ai-os", AI_OS_STATUS_SENTENCE);
     meaningPass(
       "zororo-ai-os-about",

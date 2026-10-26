@@ -44,8 +44,12 @@ export function ensureContactEmail(text: string): string {
   if (text.toLowerCase().includes(CONTACT_EMAIL)) return text;
   const trimmed = text.trim();
   if (!trimmed) return trimmed;
-  const sep = /[.!?]$/.test(trimmed) ? " " : ". ";
-  return `${trimmed}${sep}Email ${CONTACT_EMAIL}.`;
+  const body = /\[\d+\]$/.test(trimmed)
+    ? `${trimmed}.`
+    : /[.!?]$/.test(trimmed)
+      ? trimmed
+      : `${trimmed}.`;
+  return normaliseModelText(`${body} Email ${CONTACT_EMAIL}.`);
 }
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
@@ -435,7 +439,7 @@ function polishResult(
   result: AnswerResult,
   chunks: RetrievedChunk[],
 ): AnswerResult {
-  const response = ensureProjectStatusCopy(question, result.response);
+  const response = ensureProjectStatusCopy(question, result.response, result.sources);
   const from = result.sources;
   let out = response;
   let sources = from;
