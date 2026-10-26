@@ -245,9 +245,33 @@ Truth fixes vs CV:
 - Sitewarden: loop is a second row (Await approval → Revise) with a sentence, not an arrow through Analyse.
 - Sentinel: Flag / Block IP / Audit log as three equal nodes; nothing clipped.
 
-Redirect: `/projects/zororo-digital-applications` → `/projects/digi-app-form`.
+Redirect: `/projects/zororo-digital-applications` → `/projects/digi-app-form` (HTTP 308).
 
 Mobile hero portrait: 80px slot, `object-position: 50% 12%` plus `scale(1.85)` so the crop is head and shoulders, not a squeezed full-length figure. Duplicate “Applied AI Engineer / Johannesburg · Remote” next to the mobile photo was removed.
+
+### Round 3 verification (local `next start` on :3001)
+
+Minimum rendered `.diagram-label` font-size, Playwright Chromium, no clipping detected:
+
+| Diagram | 390px | 1440px |
+|---------|-------|--------|
+| RAG | 14 | 14 |
+| Sitewarden | 14 | 14 |
+| Cube | 14 | 14 |
+| CRM | 14 | 14 |
+| Claims | 14 | 14 |
+| DigiForm | 14 | 14 |
+| Sentinel | 14 | 14 |
+
+Lighthouse (Chrome headless):
+
+| Page | Performance | Accessibility | Best-practices | SEO |
+|------|-------------|---------------|----------------|-----|
+| Home desktop | 100 | 100 | 100 | 100 |
+| Sitewarden desktop | 100 | 100 | 100 | 100 |
+| Home mobile 390 | 96 | 100 | 100 | 100 |
+
+`definition-list`, `color-contrast`, and `target-size` all pass. Homepage HTML contains no `/evals` link.
 
 ---
 
