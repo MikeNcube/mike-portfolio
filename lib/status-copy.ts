@@ -1,6 +1,6 @@
 // Canonical production-system, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r20";
+export const ANSWER_CACHE_VERSION = "r21";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -10,12 +10,17 @@ export const ZDI_STATUS_SENTENCE =
 
 export const AI_OS_STATUS_SENTENCE = "Built. Early stage, not deployed.";
 
+export const CLAIMS_STATUS_SENTENCE =
+  "Approved, production-ready standby (failover).";
+
 const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike (?:ship|build)|shipped at zororo)\b/i;
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
 const AI_OS_RE = /\bzororo ai os\b/i;
+
+const CLAIMS_RE = /\bclaims operations\b|\bzororo-claims\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
 
@@ -34,34 +39,41 @@ export function mentionsAiOs(text: string): boolean {
   return AI_OS_RE.test(text);
 }
 
-// True when ZDI status covers approved, rolling out soon, and not yet live.
-export function hasZdiStatus(text: string): boolean {
-  const t = text.toLowerCase();
-  return (
-    t.includes("approved for production rollout") &&
-    t.includes("rolling out soon") &&
-    t.includes("not yet live")
-  );
+// True when the text names the claims operations platform.
+export function mentionsClaims(text: string): boolean {
+  return CLAIMS_RE.test(text);
 }
 
-// True when Zororo AI OS is described as built, early stage, and not deployed.
+// True when ZDI status covers approved, rolling out, and not (yet) live.
+export function hasZdiStatus(text: string): boolean {
+  return /approved/i.test(text) && /rolling out/i.test(text) && /not (yet )?live/i.test(text);
+}
+
+// True when Zororo AI OS is built and not (yet) deployed.
 export function hasAiOsStatus(text: string): boolean {
-  const t = text.toLowerCase();
-  return t.includes("built") && t.includes("early stage") && t.includes("not deployed");
+  return /built/i.test(text) && /not (yet )?deployed/i.test(text);
+}
+
+// True when claims ops is approved, production-ready, and standby/failover.
+export function hasClaimsStatus(text: string): boolean {
+  return (
+    /approved/i.test(text)
+    && /production[- ]ready/i.test(text)
+    && /(standby|fail-?over)/i.test(text)
+  );
 }
 
 type StatusKind = "zdi" | "ai-os" | "claims";
 
-// Skip appending when the answer already conveys that project's status.
+// Skip appending only when the answer already has that project's full meaning.
 function alreadyConveysStatus(kind: StatusKind, text: string): boolean {
-  const t = text.toLowerCase();
   switch (kind) {
     case "zdi":
-      return t.includes("rolling out") || hasZdiStatus(text);
+      return hasZdiStatus(text);
     case "ai-os":
-      return t.includes("not deployed") || hasAiOsStatus(text);
+      return hasAiOsStatus(text);
     case "claims":
-      return t.includes("standby");
+      return hasClaimsStatus(text);
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -118,6 +130,9 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   }
   if ((mentionsAiOs(question) || mentionsAiOs(out)) && !alreadyConveysStatus("ai-os", out)) {
     out = appendStatusSentence(out, AI_OS_STATUS_SENTENCE);
+  }
+  if ((mentionsClaims(question) || mentionsClaims(out)) && !alreadyConveysStatus("claims", out)) {
+    out = appendStatusSentence(out, CLAIMS_STATUS_SENTENCE);
   }
   return out;
 }

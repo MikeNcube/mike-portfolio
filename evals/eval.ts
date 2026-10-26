@@ -93,10 +93,10 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zdi",
     question: "What is ZDI?",
     audience: "developer",
-    mustContain: [
-      "approved for production rollout",
-      "rolling out soon",
-      "not yet live",
+    meaningChecks: [
+      { label: "approved", anyOf: ["approved"] },
+      { label: "rolling_out", anyOf: ["rolling out"] },
+      { label: "not_live", anyOf: ["not yet live", "not live"] },
     ],
     mustNotContain: [
       "is live",
@@ -108,7 +108,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     ],
     expectRefusal: false,
     expectSources: true,
-    description: "ZDI — approved for production rollout, rolling out soon, not yet live",
+    description: "ZDI — approved, rolling out, and not yet live (model wording or canonical)",
   },
   {
     id: "zororo-ai-os",
@@ -125,7 +125,8 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     question: "What is the claims operations platform?",
     audience: "recruiter",
     meaningChecks: [
-      { label: "standby_or_failover", anyOf: ["standby", "failover"] },
+      { label: "approved", anyOf: ["approved"] },
+      { label: "standby_or_failover", anyOf: ["standby", "failover", "fail-over"] },
       { label: "production_ready", anyOf: ["production-ready", "production ready"] },
     ],
     mustNotContain: ["is the live system"],

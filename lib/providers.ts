@@ -1,8 +1,10 @@
 // LLM providers. Gemini is primary; Groq is the free-tier fallback.
-// Each provider is budgeted ~12s. Retry only 5xx and network/timeouts.
+// Gemini is budgeted ~4s so a hang falls through to Groq. Groq is budgeted ~12s.
+// Retry only 5xx, network, and timeouts (timeouts are treated as HTTP 503).
 // 400/401/403/404 fail fast and open a 10-minute circuit. Gemini/Groq 429
 // open a 60s circuit instead of retrying.
 
+export const GEMINI_TIMEOUT_MS = 4_000;
 export const PROVIDER_TIMEOUT_MS = 12_000;
 const RETRY_DELAYS = [600, 1200, 1200] as const;
 export const RATE_LIMIT_COOLDOWN_MS = 60_000;
@@ -90,6 +92,21 @@ function shouldRetryStatus(status: number): boolean {
   return status >= 500;
 }
 
+function isTimeoutError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === "AbortError" || /timed out/i.test(err.message);
+}
+
+function asProviderError(
+  err: unknown,
+  provider: "gemini" | "groq",
+  model: string,
+): Error {
+  if (err instanceof ProviderHttpError) return err;
+  if (isTimeoutError(err)) return new ProviderHttpError(provider, 503, model);
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -104,7 +121,7 @@ async function fetchUntilDeadline(
   deadline: number,
 ): Promise<Response> {
   const left = remainingMs(deadline);
-  if (left < 50) throw new Error("Provider timed out");
+  if (left < 50) throw new Error("Provider timed out"); // mapped to HTTP 503 by callWithRetry
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), left);
   try {
@@ -137,7 +154,9 @@ async function callWithRetry(
   let lastError: Error = new Error("No attempts made");
 
   for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
-    if (remainingMs(deadline) < 50) throw new Error(`${provider} timed out`);
+    if (remainingMs(deadline) < 50) {
+      throw new ProviderHttpError(provider, 503, model);
+    }
     try {
       const res = await fetchUntilDeadline(url, init, deadline);
       if (res.ok) return res;
@@ -165,7 +184,7 @@ async function callWithRetry(
       console.error(`[provider] ${provider} failed`, { status: res.status, model });
       throw new ProviderHttpError(provider, res.status, model);
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      lastError = asProviderError(err, provider, model);
       if (lastError instanceof ProviderHttpError && !shouldRetryStatus(lastError.status)) {
         throw lastError;
       }
@@ -185,7 +204,7 @@ export async function generateGemini(prompt: string, apiKey: string): Promise<st
   if (!geminiAvailable()) {
     throw new Error("Gemini cooling down");
   }
-  const deadline = Date.now() + PROVIDER_TIMEOUT_MS;
+  const deadline = Date.now() + GEMINI_TIMEOUT_MS;
   let res: Response;
   try {
     res = await callWithRetry(

@@ -13,12 +13,15 @@ import { normaliseModelText } from "../lib/normalise-answer";
 import { matchStaticAnswer } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
+  AI_OS_STATUS_SENTENCE,
   CANONICAL_PRODUCTION_ANSWER,
+  CLAIMS_STATUS_SENTENCE,
   ensureProjectStatusCopy,
+  ZDI_STATUS_SENTENCE,
   zdiListedAsShipped,
 } from "../lib/status-copy";
 import { isRefusal } from "../lib/refusal";
-import { normaliseEvalText } from "../evals/eval";
+import { EVAL_QUESTIONS, normaliseEvalText } from "../evals/eval";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
 import type { RetrievedChunk } from "../lib/rag";
@@ -570,35 +573,96 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(normaliseModelText("range\u20132024"), "range - 2024");
   });
 
-  it("does not repeat AI OS status when the answer already says not deployed", () => {
+  it("skips AI OS status for 'built but not yet deployed'", () => {
     const out = ensureProjectStatusCopy(
       "What is Zororo AI OS?",
-      "Zororo AI OS is a governed control plane, not deployed.",
+      "Zororo AI OS is built but not yet deployed.",
     );
-    assert.equal((out.match(/not deployed/gi) ?? []).length, 1);
-    assert.doesNotMatch(out, /Built\. Early stage, not deployed/);
-    assert.doesNotMatch(out, /early stage, not deployed\. Built/);
+    assert.equal(out, "Zororo AI OS is built but not yet deployed.");
+    assert.doesNotMatch(out, /Early stage/);
+    assert.equal((out.match(/Built\. Early stage, not deployed/g) ?? []).length, 0);
   });
 
-  it("does not repeat ZDI status when the answer already says rolling out", () => {
+  it("does not skip claims status for 'a fail-over standby' alone", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "It is a fail-over standby.",
+    );
+    assert.match(out, /fail-over standby/);
+    assert.match(out, /Approved, production-ready standby \(failover\)/);
+    assert.equal((out.match(/Approved, production-ready standby \(failover\)/g) ?? []).length, 1);
+  });
+
+  it("does not skip ZDI status for 'currently rolling out and not yet live' without approved", () => {
     const out = ensureProjectStatusCopy(
       "What is ZDI?",
-      "ZDI is a signature workflow, rolling out at Zororo-Phumulani.",
+      "ZDI is currently rolling out and not yet live.",
     );
-    assert.equal((out.match(/rolling out/gi) ?? []).length, 1);
-    assert.doesNotMatch(out, /Approved for production rollout, rolling out soon, not yet live/);
+    assert.match(out, /currently rolling out and not yet live/);
+    assert.match(out, /Approved for production rollout, rolling out soon, not yet live/);
+    assert.equal(
+      (out.match(/Approved for production rollout, rolling out soon, not yet live/g) ?? []).length,
+      1,
+    );
   });
 
-  it("does not repeat claims standby copy when the answer already says standby", () => {
+  it("inserts missing claims status once before a trailing citation", () => {
+    const out = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "It is a fail-over standby [1].",
+    );
+    assert.match(out, /Approved, production-ready standby \(failover\)\. \[1\]$/);
+    assert.doesNotMatch(out, /\[1\]\.\s*Approved/);
+  });
+
+  it("skips claims status when approved, production-ready, and standby are all present", () => {
     const out = ensureProjectStatusCopy(
       "What is the claims operations platform?",
       "The claims operations platform is an approved, production-ready standby.",
     );
-    assert.equal((out.match(/standby/gi) ?? []).length, 1);
     assert.equal(
       out,
       "The claims operations platform is an approved, production-ready standby.",
     );
+  });
+
+  it("ZDI and claims eval meaning checks pass on model wording or the canonical sentence", () => {
+    const meaningPass = (id: string, text: string) => {
+      const q = EVAL_QUESTIONS.find((item) => item.id === id);
+      assert.ok(q);
+      const haystack = normaliseEvalText(text);
+      for (const check of q.meaningChecks ?? []) {
+        assert.ok(
+          check.anyOf.some((phrase) => haystack.includes(normaliseEvalText(phrase))),
+          `${id} missing ${check.label} in: ${text}`,
+        );
+      }
+    };
+
+    meaningPass("zdi", ZDI_STATUS_SENTENCE);
+    meaningPass(
+      "zdi",
+      ensureProjectStatusCopy("What is ZDI?", "ZDI is currently rolling out and not yet live."),
+    );
+    meaningPass(
+      "zdi",
+      "ZDI is approved, rolling out, and not yet live at Zororo-Phumulani.",
+    );
+
+    meaningPass("zororo-claims", CLAIMS_STATUS_SENTENCE);
+    meaningPass(
+      "zororo-claims",
+      ensureProjectStatusCopy(
+        "What is the claims operations platform?",
+        "It is a fail-over standby.",
+      ),
+    );
+    meaningPass(
+      "zororo-claims",
+      "Approved production-ready failover for the current claims system.",
+    );
+
+    assert.match(AI_OS_STATUS_SENTENCE, /Built/);
   });
 
   it("rewrites a model production-systems answer into the canonical split", async () => {

@@ -9,6 +9,8 @@ import {
   DEFAULT_GROQ_MODEL,
   DEFAULT_GROQ_FALLBACK_MODEL,
   GEMINI_MODEL,
+  GEMINI_TIMEOUT_MS,
+  ProviderHttpError,
 } from "../lib/providers";
 
 afterEach(() => {
@@ -133,6 +135,46 @@ describe("provider circuit breakers", () => {
       else process.env.GROQ_MODEL = prevModel;
       if (prevFallback === undefined) delete process.env.GROQ_FALLBACK_MODEL;
       else process.env.GROQ_FALLBACK_MODEL = prevFallback;
+    }
+  });
+
+  it("times out a hung Gemini call in about 4s as HTTP 503 without a 10-minute circuit", async () => {
+    resetProviderCircuits();
+    let calls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url, init) =>
+      new Promise((_resolve, reject) => {
+        calls += 1;
+        const signal = init?.signal;
+        if (!signal) return;
+        const onAbort = () => {
+          const err = new Error("The operation was aborted");
+          err.name = "AbortError";
+          reject(err);
+        };
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
+      })) as typeof fetch;
+
+    try {
+      const started = Date.now();
+      await assert.rejects(
+        () => generateGemini("prompt", "key"),
+        (err: unknown) =>
+          err instanceof ProviderHttpError
+          && err.provider === "gemini"
+          && err.status === 503
+          && err.message.includes(GEMINI_MODEL),
+      );
+      const elapsed = Date.now() - started;
+      assert.ok(
+        elapsed >= GEMINI_TIMEOUT_MS - 500 && elapsed < GEMINI_TIMEOUT_MS + 2500,
+        `Gemini timeout took ${elapsed}ms, expected ~${GEMINI_TIMEOUT_MS}ms`,
+      );
+      assert.equal(calls, 1);
+      assert.equal(geminiAvailable(), true);
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 

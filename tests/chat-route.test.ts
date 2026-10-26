@@ -42,7 +42,7 @@ function chatRequest(message: string): NextRequest {
 
 describe("answer cache key", () => {
   it("uses a bumped version so older cached answers are not reused", () => {
-    assert.equal(ANSWER_CACHE_VERSION, "r20");
+    assert.equal(ANSWER_CACHE_VERSION, "r21");
   });
 });
 
