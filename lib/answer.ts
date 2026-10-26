@@ -15,6 +15,8 @@ import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot }
 import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
+  CANONICAL_TECH_LEAD_CRM_ANSWER,
+  CANONICAL_ZDI_LIVE_ANSWER,
   ensureProjectStatusCopy,
   isAwsQuestion,
   isProductionSystemsQuestion,
@@ -46,11 +48,100 @@ export function ensureContactEmail(text: string): string {
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
 
+export type AnswerSource = {
+  id?: string;
+  title: string;
+  url: string;
+};
+
 export type AnswerResult = {
   response: string;
-  sources: Array<{ title: string; url: string }>;
+  sources: AnswerSource[];
   via: AnswerVia;
 };
+
+export function sameSource(a: AnswerSource, b: AnswerSource): boolean {
+  if (a.id && b.id) return a.id === b.id;
+  return a.title === b.title && a.url === b.url;
+}
+
+const CITATION_PROJECTS: Array<{
+  id: string;
+  mention: RegExp;
+  source: RegExp;
+}> = [
+  { id: "digi-app-form", mention: /\bdigi(?:\s+app\s+form)?\b/i, source: /\bdigi\b/i },
+  {
+    id: "zdi-signature-workflow",
+    mention: /\bzdi\b|zororo document intelligence/i,
+    source: /\bzdi\b|document intelligence/i,
+  },
+  { id: "zororo-crm", mention: /\bcrm\b/i, source: /\bcrm\b/i },
+  { id: "zororo-claims", mention: /\bclaims\b/i, source: /\bclaims\b/i },
+];
+
+function sourceMatchesProject(
+  source: AnswerSource,
+  project: (typeof CITATION_PROJECTS)[number],
+): boolean {
+  if (source.id && source.id === project.id) return true;
+  return project.source.test(source.title);
+}
+
+// True when every [n] next to a named project points at that project's source.
+export function citationsMatchNamedProjects(
+  text: string,
+  sources: AnswerSource[],
+): { pass: boolean; failures: string[] } {
+  const failures: string[] = [];
+  const re = /\[(\d+)\]/g;
+  let match: RegExpExecArray | null;
+  let last = 0;
+  while ((match = re.exec(text)) !== null) {
+    const n = Number(match[1]);
+    const span = text.slice(last, match.index);
+    last = match.index + match[0].length;
+    const named = CITATION_PROJECTS.filter((p) => p.mention.test(span));
+    if (named.length === 0) continue;
+    const source = sources[n - 1];
+    if (!source) {
+      failures.push(`[${n}] is missing from the source list`);
+      continue;
+    }
+    if (!named.some((p) => sourceMatchesProject(source, p))) {
+      const names = named.map((p) => p.id).join(", ");
+      failures.push(`[${n}] in "${span.trim()}" names ${names} but source is "${source.title}"`);
+    }
+  }
+  return { pass: failures.length === 0, failures };
+}
+
+// After a source list is swapped or reordered, retarget every [n] by source id.
+export function remapCitationsToSourceList(
+  text: string,
+  fromSources: AnswerSource[],
+  toSources: AnswerSource[],
+): string {
+  const body = normaliseModelText(text);
+  if (toSources.length === 0) {
+    return body.replace(/\[(\d+)\]/g, "").replace(/\s+([.,;:!?])/g, "$1").replace(/ {2,}/g, " ").trim();
+  }
+  const map = new Map<number, number>();
+  for (const n of citedIndexes(body)) {
+    const from = fromSources[n - 1];
+    if (!from) continue;
+    const idx = toSources.findIndex((s) => sameSource(from, s));
+    if (idx >= 0) map.set(n, idx + 1);
+  }
+  return body
+    .replace(/\[(\d+)\]/g, (_, raw: string) => {
+      const mapped = map.get(Number(raw));
+      return mapped === undefined ? "" : `[${mapped}]`;
+    })
+    .replace(/\s+([.,;:!?])/g, "$1")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
 
 export type GenerateFn = (prompt: string) => Promise<string>;
 
@@ -85,7 +176,7 @@ export function buildPrompt(
     `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite Digi App Form, the CRM, ZDI, and claims with [n] matching the context blocks.`,
     "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
     "Content labelled lab, prototype, or not production must never be described as production.",
-    `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words.`,
+    `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words. List courses as training. Only named certificates are certifications. Never present AWS Training and Certification or AWS Skills Center as a credential.`,
     "Whenever you mention ZDI, state in one full sentence that it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live, and cite the source with [n]. Do not repeat that status.",
     "Whenever you mention Zororo AI OS, state in one full sentence that it is built, early stage, and not deployed. Do not write 'Built.' again if the sentence already says built, and never write 'Status: Built' after that.",
     "Mike works remote-first.",
@@ -124,20 +215,20 @@ export function selectCitedSources(
   text: string,
   chunks: RetrievedChunk[],
   options?: { allowTopFallback?: boolean },
-): Array<{ title: string; url: string }> {
+): AnswerSource[] {
   const normalised = normaliseModelText(text);
   const body = stripSourceFooter(normalised);
   if (isRefusal(normalised) || isRefusal(body)) return [];
 
   const seen = new Set<string>();
-  const picked: Array<{ title: string; url: string }> = [];
+  const picked: AnswerSource[] = [];
 
   const add = (chunk: RetrievedChunk | undefined) => {
     if (!chunk || !chunk.sourceUrl.startsWith("http")) return;
-    const key = `${chunk.title}|${chunk.sourceUrl}`;
+    const key = chunk.id || `${chunk.title}|${chunk.sourceUrl}`;
     if (seen.has(key)) return;
     seen.add(key);
-    picked.push({ title: chunk.title, url: chunk.sourceUrl });
+    picked.push({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl });
   };
 
   for (const n of citedIndexes(body)) add(chunks[n - 1]);
@@ -154,7 +245,7 @@ export function selectCitedSources(
 export function remapCitations(
   text: string,
   chunks: RetrievedChunk[],
-  sources: Array<{ title: string; url: string }>,
+  sources: AnswerSource[],
 ): string {
   const body = normaliseModelText(text);
   if (sources.length === 0) {
@@ -165,8 +256,9 @@ export function remapCitations(
   for (const n of citedIndexes(body)) {
     const chunk = chunks[n - 1];
     if (!chunk) continue;
-    const key = `${chunk.title}|${chunk.sourceUrl}`;
-    const idx = sources.findIndex((s) => `${s.title}|${s.url}` === key);
+    const idx = sources.findIndex((s) =>
+      sameSource({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }, s)
+    );
     if (idx >= 0) map.set(n, idx + 1);
   }
 
@@ -194,7 +286,7 @@ function finaliseModelText(
   options?: { allowTopFallback?: boolean },
 ): {
   response: string;
-  sources: Array<{ title: string; url: string }>;
+  sources: AnswerSource[];
 } {
   const normalised = normaliseModelText(raw);
   const stripped = stripSourceFooter(normalised);
@@ -234,18 +326,18 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
 }
 
 function ensureCrmSource(
-  sources: Array<{ title: string; url: string }>,
+  sources: AnswerSource[],
   chunks: RetrievedChunk[],
-): Array<{ title: string; url: string }> {
-  if (sources.some((s) => /\bcrm\b/i.test(s.title))) return sources;
+): AnswerSource[] {
+  if (sources.some((s) => s.id === "zororo-crm" || /\bcrm\b/i.test(s.title))) return sources;
   const chunk = chunks.find((c) => c.id === "zororo-crm" || /\bcrm\b/i.test(c.title));
   if (!chunk || !chunk.sourceUrl.startsWith("http")) return sources;
-  return [{ title: chunk.title, url: chunk.sourceUrl }, ...sources];
+  return [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }, ...sources];
 }
 
 function productionSystemSources(
-  resultSources: Array<{ title: string; url: string }>,
-): Array<{ title: string; url: string }> {
+  resultSources: AnswerSource[],
+): AnswerSource[] {
   const hit = matchStaticAnswer("What production systems has Mike shipped?");
   if (hit) {
     const sourced = sourcesFor(hit);
@@ -254,14 +346,14 @@ function productionSystemSources(
   return resultSources;
 }
 
-function isZdiSource(source: { title: string; url: string }): boolean {
-  return /\bzdi\b|document intelligence/i.test(source.title);
+function isZdiSource(source: AnswerSource): boolean {
+  return source.id === "zdi-signature-workflow" || /\bzdi\b|document intelligence/i.test(source.title);
 }
 
 function ensureZdiSource(
-  sources: Array<{ title: string; url: string }>,
+  sources: AnswerSource[],
   chunks: RetrievedChunk[],
-): Array<{ title: string; url: string }> {
+): AnswerSource[] {
   const existing = sources.find(isZdiSource);
   if (existing) {
     return [existing, ...sources.filter((s) => s !== existing)];
@@ -270,25 +362,22 @@ function ensureZdiSource(
     (c) => c.id === "zdi-signature-workflow" || /\bzdi\b/i.test(c.title),
   );
   if (chunk && chunk.sourceUrl.startsWith("http")) {
-    const zdi = { title: chunk.title, url: chunk.sourceUrl };
-    return [zdi, ...sources.filter((s) => `${s.title}|${s.url}` !== `${zdi.title}|${zdi.url}`)];
+    const zdi: AnswerSource = { id: chunk.id, title: chunk.title, url: chunk.sourceUrl };
+    return [zdi, ...sources.filter((s) => !sameSource(s, zdi))];
   }
   const hit = matchStaticAnswer("Is ZDI live?");
   if (hit) {
     const sourced = sourcesFor(hit);
     if (sourced.length > 0) {
-      return [
-        sourced[0],
-        ...sources.filter((s) => `${s.title}|${s.url}` !== `${sourced[0].title}|${sourced[0].url}`),
-      ];
+      return [sourced[0], ...sources.filter((s) => !sameSource(s, sourced[0]))];
     }
   }
   return sources;
 }
 
 function awsSources(
-  resultSources: Array<{ title: string; url: string }>,
-): Array<{ title: string; url: string }> {
+  resultSources: AnswerSource[],
+): AnswerSource[] {
   const hit = matchStaticAnswer("What AWS experience does Mike have?");
   if (hit) {
     const sourced = sourcesFor(hit);
@@ -297,10 +386,20 @@ function awsSources(
   return resultSources;
 }
 
+function applySourceList(
+  text: string,
+  from: AnswerSource[],
+  to: AnswerSource[],
+  textAuthoredForTo: boolean,
+): { text: string; sources: AnswerSource[] } {
+  if (textAuthoredForTo) return { text, sources: to };
+  return { text: remapCitationsToSourceList(text, from, to), sources: to };
+}
+
 // Attach [1] before the closing punctuation when a sourced answer has no inline cite.
 export function ensureInlineCitation(
   text: string,
-  sources: Array<{ title: string; url: string }>,
+  sources: AnswerSource[],
 ): string {
   if (isRefusal(text)) return text;
   if (/\[\d+\]/.test(text)) return text;
@@ -319,17 +418,41 @@ function polishResult(
   chunks: RetrievedChunk[],
 ): AnswerResult {
   const response = ensureProjectStatusCopy(question, result.response);
-  let sources = result.sources;
+  const from = result.sources;
+  let out = response;
+  let sources = from;
+
   if (isZdiLiveQuestion(question)) {
-    sources = ensureZdiSource(result.sources, chunks);
+    ({ text: out, sources } = applySourceList(
+      out,
+      from,
+      ensureZdiSource(from, chunks),
+      out === CANONICAL_ZDI_LIVE_ANSWER,
+    ));
   } else if (isTechLeadCrmQuestion(question)) {
-    sources = ensureCrmSource(result.sources, chunks);
+    ({ text: out, sources } = applySourceList(
+      out,
+      from,
+      ensureCrmSource(from, chunks),
+      out === CANONICAL_TECH_LEAD_CRM_ANSWER,
+    ));
   } else if (isAwsQuestion(question)) {
-    sources = awsSources(result.sources);
+    ({ text: out, sources } = applySourceList(
+      out,
+      from,
+      awsSources(from),
+      out === CANONICAL_AWS_ANSWER,
+    ));
   } else if (isProductionSystemsQuestion(question)) {
-    sources = productionSystemSources(result.sources);
+    ({ text: out, sources } = applySourceList(
+      out,
+      from,
+      productionSystemSources(from),
+      out === CANONICAL_PRODUCTION_ANSWER,
+    ));
   }
-  return { ...result, response: ensureInlineCitation(response, sources), sources };
+
+  return { ...result, response: ensureInlineCitation(out, sources), sources };
 }
 
 async function tryGenerate(

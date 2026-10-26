@@ -230,10 +230,10 @@ export function matchStaticAnswer(question: string): StaticAnswer | null {
   return null;
 }
 
-export function sourcesFor(answer: StaticAnswer): Array<{ title: string; url: string }> {
+export function sourcesFor(answer: StaticAnswer): Array<{ id: string; title: string; url: string }> {
   return answer.sourceIds
     .map((id) => KNOWLEDGE_CHUNKS.find((c) => c.id === id))
     .filter((c): c is (typeof KNOWLEDGE_CHUNKS)[number] => Boolean(c))
     .filter((c) => c.sourceUrl.startsWith("http"))
-    .map((c) => ({ title: c.title, url: c.sourceUrl }));
+    .map((c) => ({ id: c.id, title: c.title, url: c.sourceUrl }));
 }

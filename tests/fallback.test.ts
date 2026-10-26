@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import {
   answerQuestion,
   buildPrompt,
+  citationsMatchNamedProjects,
   CONTACT_EMAIL,
   EMAIL_FALLBACK,
   ensureInlineCitation,
   remapCitations,
+  remapCitationsToSourceList,
   SAFE_TOPIC_REPLY,
   selectCitedSources,
   shouldCacheAnswer,
@@ -584,10 +586,13 @@ describe("static CV copy", () => {
     assert.match(aws.answer, /CloudWatch/);
     assert.match(aws.answer, /Bedrock \[1\]/);
     assert.match(aws.answer, /lab, not production \[2\]/);
-    assert.match(aws.answer, /Practitioner Series \[3\]/);
+    assert.match(aws.answer, /Practitioner Series[\s\S]*\[3\]/);
+    assert.match(aws.answer, /Training includes/);
     assert.equal(aws.sourceIds.length, 3);
     assert.doesNotMatch(aws.answer, /extensive/i);
     assert.doesNotMatch(aws.answer, /production-grade/i);
+    assert.doesNotMatch(aws.answer, /AWS Training and Certification/);
+    assert.doesNotMatch(aws.answer, /AWS Skills Center/);
 
     const techLead = matchStaticAnswer("Did Mike act as tech lead on the CRM?");
     assert.ok(techLead);
@@ -849,6 +854,31 @@ describe("production-system and ZDI status copy", () => {
     assert.equal((out.match(/It is built, early stage, and not deployed/g) ?? []).length, 0);
   });
 
+  it("treats early-stage and early\u2011stage as early stage and skips extra status", () => {
+    const hyphen = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is built, early-stage, and not deployed.",
+    );
+    assert.equal(hyphen, "Zororo AI OS is built, early-stage, and not deployed.");
+    assert.doesNotMatch(hyphen, /It is built/);
+
+    const unicode = ensureProjectStatusCopy(
+      "What is Zororo AI OS?",
+      "Zororo AI OS is built, early\u2011stage, and not deployed.",
+    );
+    assert.equal(unicode, "Zororo AI OS is built, early\u2011stage, and not deployed.");
+    assert.doesNotMatch(unicode, /It is early stage/);
+
+    const claimsHyphen = ensureProjectStatusCopy(
+      "What is the claims operations platform?",
+      "The claims operations platform is approved, production ready, and a fail-over.",
+    );
+    assert.equal(
+      claimsHyphen,
+      "The claims operations platform is approved, production ready, and a fail-over.",
+    );
+  });
+
   it("inserts ZDI status after the mentioning sentence, not at the end", () => {
     const out = ensureProjectStatusCopy(
       "What is ZDI?",
@@ -1050,7 +1080,9 @@ describe("production-system and ZDI status copy", () => {
     assert.doesNotMatch(result.response, /production-grade/i);
     assert.match(result.response, /Bedrock \[1\]/);
     assert.match(result.response, /not production \[2\]/);
-    assert.match(result.response, /Practitioner Series \[3\]/);
+    assert.match(result.response, /Practitioner Series[\s\S]*\[3\]/);
+    assert.doesNotMatch(result.response, /AWS Training and Certification/);
+    assert.doesNotMatch(result.response, /AWS Skills Center/);
     assert.equal(result.sources.length, 3);
     assert.match(result.sources[0].title, /tech stack/i);
     assert.match(result.sources[1].title, /web tier/i);
@@ -1094,6 +1126,8 @@ describe("production-system and ZDI status copy", () => {
     assert.match(result.sources[1].title, /CRM/i);
     assert.match(result.sources[2].title, /ZDI/i);
     assert.match(result.sources[3].title, /claims operations platform/i);
+    const aligned = citationsMatchNamedProjects(result.response, result.sources);
+    assert.equal(aligned.pass, true, aligned.failures.join("; "));
   });
 
   it("says ZDI is not yet live when asked if it is live", async () => {
@@ -1151,5 +1185,85 @@ describe("production-system and ZDI status copy", () => {
       { title: "Availability", url: "https://github.com/MikeNcube" },
     ]);
     assert.equal(out, "Mike is available [1].");
+  });
+
+  it("remaps [n] by source id when the source list is reordered", () => {
+    const from = [
+      { id: "zororo-claims", title: "Claims operations platform", url: "https://github.com/MikeNcube" },
+      { id: "zdi-signature-workflow", title: "ZDI — Signature", url: "https://github.com/MikeNcube" },
+      { id: "zororo-crm", title: "Lead-management CRM", url: "https://github.com/MikeNcube" },
+      { id: "digi-app-form", title: "Digi App Form", url: "https://github.com/MikeNcube" },
+    ];
+    const to = [from[3], from[2], from[1], from[0]];
+    const swapped =
+      "Shipped: Digi App Form [4] and the Zororo CRM [3] (over 40 people, around 10 roles). Rolling out: ZDI [2] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [1].";
+    assert.equal(citationsMatchNamedProjects(swapped, to).pass, false);
+    const remapped = remapCitationsToSourceList(swapped, from, to);
+    assert.match(remapped, /Digi App Form \[1\]/);
+    assert.match(remapped, /Zororo CRM \[2\]/);
+    assert.match(remapped, /ZDI \[3\]/);
+    assert.match(remapped, /not the live system \[4\]/);
+    const aligned = citationsMatchNamedProjects(remapped, to);
+    assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("retargets ZDI and claims cites when production sources are swapped", async () => {
+    const result = await answerQuestion({
+      question: "What production systems has Mike shipped?",
+      retrieveFn: async () => [
+        {
+          id: "zororo-claims",
+          title: "Claims operations platform (Zororo-Phumulani)",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Approved, production-ready standby.",
+          score: 0.95,
+        },
+        {
+          id: "zdi-signature-workflow",
+          title: "ZDI — Signature & Approval Workflow (Zororo Document Intelligence)",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Approved for production rollout, rolling out soon, not yet live.",
+          score: 0.9,
+        },
+        {
+          id: "zororo-crm",
+          title: "Lead-management CRM (production, Zororo-Phumulani)",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Shipped CRM, over 40 people.",
+          score: 0.85,
+        },
+        {
+          id: "digi-app-form",
+          title: "Digi App Form — regulated insurance intake (Zororo-Phumulani)",
+          sourceUrl: "https://github.com/MikeNcube",
+          text: "Shipped Digi App Form.",
+          score: 0.8,
+        },
+      ],
+      generateGemini: async () =>
+        "Shipped: Digi App Form [4] and the Zororo CRM [3] (over 40 people, around 10 roles). Rolling out: ZDI [2] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [1].",
+    });
+    assert.equal(result.via, "gemini");
+    assert.match(result.response, /Digi App Form \[1\]/);
+    assert.match(result.response, /Zororo CRM \[2\]/);
+    assert.match(result.response, /ZDI \[3\]/);
+    assert.match(result.response, /not the live system \[4\]/);
+    assert.equal(result.sources[0]?.id, "digi-app-form");
+    assert.equal(result.sources[1]?.id, "zororo-crm");
+    assert.equal(result.sources[2]?.id, "zdi-signature-workflow");
+    assert.equal(result.sources[3]?.id, "zororo-claims");
+    const aligned = citationsMatchNamedProjects(result.response, result.sources);
+    assert.equal(aligned.pass, true, aligned.failures.join("; "));
+  });
+
+  it("rewrites AWS copy that treats training providers as certifications", () => {
+    const out = ensureProjectStatusCopy(
+      "What AWS experience does Mike have?",
+      "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock. The resilient web tier on AWS is labelled lab, not production. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series [1].",
+    );
+    assert.equal(out, CANONICAL_AWS_ANSWER);
+    assert.doesNotMatch(out, /AWS Training and Certification/);
+    assert.doesNotMatch(out, /AWS Skills Center/);
+    assert.match(out, /Training includes the Becoming an AI Practitioner Series/);
   });
 });

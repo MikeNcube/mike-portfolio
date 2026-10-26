@@ -12,6 +12,7 @@ import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
 import { hasRepeatedStatus } from "../lib/status-copy";
+import { citationsMatchNamedProjects } from "../lib/answer";
 
 function computesTwoPlusTwo(text: string): boolean {
   const t = text.toLowerCase();
@@ -125,6 +126,12 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
       label: "no_repeated_status",
       pass: !repeated,
       detail: repeated ? "repeated status wording (built/built or prototype/Status: Prototype)" : undefined,
+    });
+    const aligned = citationsMatchNamedProjects(response, sources);
+    checks.push({
+      label: "citations_match_named_projects",
+      pass: aligned.pass,
+      detail: aligned.failures.join("; ") || undefined,
     });
   }
 

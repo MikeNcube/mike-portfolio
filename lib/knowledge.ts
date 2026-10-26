@@ -212,7 +212,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'AI Practitioner',
       'AWS Skills Center',
     ],
-    text: 'AWS Training and Certification, AWS Skills Center, Becoming an AI Practitioner Series, Sep 2026: Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models. DeepLearning.AI: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, LangChain for LLM Application Development. No formal degree — capability evidenced by shipped systems and public GitHub portfolio.',
+    text: 'Training (courses, not credentials): Becoming an AI Practitioner Series, Sep 2026: Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models. DeepLearning.AI: Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, LangChain for LLM Application Development. AWS Training and Certification and AWS Skills Center are training providers, not certificates. No formal degree — capability evidenced by shipped systems and public GitHub portfolio.',
   },
   {
     id: 'engineering-approach',

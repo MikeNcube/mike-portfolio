@@ -117,10 +117,15 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     question: "What AWS experience does Mike have?",
     audience: "recruiter",
     mustContain: ["S3", "EC2", "IAM", "CloudWatch", "Bedrock"],
-    mustNotContain: ["extensive", "production-grade"],
+    mustNotContain: [
+      "extensive",
+      "production-grade",
+      "AWS Training and Certification",
+      "AWS Skills Center",
+    ],
     expectRefusal: false,
     expectSources: true,
-    description: "AWS — CV/KB services, lab, and training only; no extensive or production-grade claims",
+    description: "AWS — CV/KB services, lab, and training only; providers are not credentials",
   },
   {
     id: "sitewarden",

@@ -1,6 +1,6 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r26";
+export const ANSWER_CACHE_VERSION = "r27";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [4].";
@@ -18,7 +18,7 @@ export const CANONICAL_ZDI_LIVE_ANSWER =
   "No. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].";
 
 export const CANONICAL_AWS_ANSWER =
-  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series [3].";
+  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
 
 export const CANONICAL_TECH_LEAD_CRM_ANSWER =
   "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";
@@ -45,6 +45,9 @@ const TECH_LEAD_TITLE_CLAIM_RE =
   /\b(?:the tech lead|as tech lead|was tech lead|is tech lead)\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
+
+const AWS_PROVIDER_AS_CREDENTIAL_RE =
+  /AWS Training and Certification|AWS Skills Center/i;
 
 const REPEATED_STATUS_RES: RegExp[] = [
   /built\.\s*built/i,
@@ -110,29 +113,73 @@ export function awsAnswerIsCanonical(text: string): boolean {
     && /\bCloudWatch\b/i.test(text)
     && /\bBedrock\b/i.test(text)
     && /lab, not production/i.test(text)
-    && /AWS Training and Certification/i.test(text)
+    && /Becoming an AI Practitioner Series/i.test(text)
     && /\[\d+\]/.test(text)
     && !AWS_OVERCLAIM_RE.test(text)
+    && !AWS_PROVIDER_AS_CREDENTIAL_RE.test(text)
   );
+}
+
+// Fold hyphen-like dashes and spaces so 'early-stage' and 'early stage' match.
+export function foldStatusText(text: string): string {
+  return text
+    .replace(/[\u2010-\u2015]/g, "-")
+    .toLowerCase()
+    .replace(/[\s-]+/g, " ")
+    .trim();
+}
+
+function hasRollingOut(text: string): boolean {
+  const t = foldStatusText(text);
+  return /\brolling out\b|\broll out\b/.test(t);
+}
+
+function hasEarlyStage(text: string): boolean {
+  return /\bearly stage\b/.test(foldStatusText(text));
+}
+
+function hasProductionReady(text: string): boolean {
+  return /\bproduction ready\b/.test(foldStatusText(text));
+}
+
+function hasFailoverOrStandby(text: string): boolean {
+  const t = foldStatusText(text);
+  return /\bstandby\b/.test(t) || /\bfailover\b/.test(t) || /\bfail over\b/.test(t);
+}
+
+function hasApproved(text: string): boolean {
+  return /\bapproved\b/.test(foldStatusText(text));
+}
+
+function hasBuilt(text: string): boolean {
+  return /\bbuilt\b/.test(foldStatusText(text));
+}
+
+function hasNotDeployed(text: string): boolean {
+  return /\bnot(?: yet)? deployed\b/.test(foldStatusText(text));
+}
+
+function hasNotLive(text: string): boolean {
+  return /\bnot(?: yet)? live\b/.test(foldStatusText(text));
+}
+
+function hasNotTheLiveSystem(text: string): boolean {
+  return /\bnot the live system\b/.test(foldStatusText(text));
 }
 
 // True when ZDI status covers approved, rolling out, and not (yet) live.
 export function hasZdiStatus(text: string): boolean {
-  return /approved/i.test(text) && /rolling out/i.test(text) && /not (yet )?live/i.test(text);
+  return hasApproved(text) && hasRollingOut(text) && hasNotLive(text);
 }
 
 // True when Zororo AI OS is built and not (yet) deployed.
 export function hasAiOsStatus(text: string): boolean {
-  return /built/i.test(text) && /early stage/i.test(text) && /not (yet )?deployed/i.test(text);
+  return hasBuilt(text) && hasEarlyStage(text) && hasNotDeployed(text);
 }
 
 // True when claims ops is approved, production-ready, and standby/failover.
 export function hasClaimsStatus(text: string): boolean {
-  return (
-    /approved/i.test(text)
-    && /production[- ]ready/i.test(text)
-    && /(standby|fail-?over)/i.test(text)
-  );
+  return hasApproved(text) && hasProductionReady(text) && hasFailoverOrStandby(text);
 }
 
 // True when an answer repeats a status word back-to-back (built/built, prototype/Status: Prototype).
@@ -210,17 +257,17 @@ function joinStatusBits(bits: string[]): string {
 function statusSentenceFor(kind: StatusKind, mention: string): string | null {
   switch (kind) {
     case "zdi": {
-      const hasApproved = /approved/i.test(mention);
-      const hasRolling = /\brolling out\b/i.test(mention);
-      const hasNotLive = /not (yet )?live/i.test(mention);
-      if (hasApproved && hasRolling && hasNotLive) return null;
-      if (!hasApproved && !hasRolling && !hasNotLive) return ZDI_STATUS_SENTENCE;
+      const approved = hasApproved(mention);
+      const rolling = hasRollingOut(mention);
+      const notLive = hasNotLive(mention);
+      if (approved && rolling && notLive) return null;
+      if (!approved && !rolling && !notLive) return ZDI_STATUS_SENTENCE;
       const bits: string[] = [];
-      if (!hasApproved) bits.push("approved for production rollout at Zororo-Phumulani");
-      if (!hasRolling) bits.push("rolling out soon");
-      if (!hasNotLive) bits.push("not yet live");
+      if (!approved) bits.push("approved for production rollout at Zororo-Phumulani");
+      if (!rolling) bits.push("rolling out soon");
+      if (!notLive) bits.push("not yet live");
       if (bits.length === 0) return null;
-      if (bits.length === 1 && !hasNotLive) return `It is ${bits[0]}.`;
+      if (bits.length === 1 && !notLive) return `It is ${bits[0]}.`;
       if (bits.length === 1) return `It is ${bits[0]}.`;
       const last = bits[bits.length - 1];
       const head = bits.slice(0, -1);
@@ -230,31 +277,31 @@ function statusSentenceFor(kind: StatusKind, mention: string): string | null {
       return `It is ${joinStatusBits(bits)}.`;
     }
     case "ai-os": {
-      const hasBuilt = /\bbuilt\b/i.test(mention);
-      const hasEarly = /early stage/i.test(mention);
-      const hasNotDeployed = /not (yet )?deployed/i.test(mention);
-      if (hasBuilt && hasEarly && hasNotDeployed) return null;
-      if (!hasBuilt && !hasEarly && !hasNotDeployed) return AI_OS_STATUS_SENTENCE;
+      const built = hasBuilt(mention);
+      const early = hasEarlyStage(mention);
+      const notDeployed = hasNotDeployed(mention);
+      if (built && early && notDeployed) return null;
+      if (!built && !early && !notDeployed) return AI_OS_STATUS_SENTENCE;
       const bits: string[] = [];
-      if (!hasBuilt) bits.push("built");
-      if (!hasEarly) bits.push("early stage");
-      if (!hasNotDeployed) bits.push("not deployed");
+      if (!built) bits.push("built");
+      if (!early) bits.push("early stage");
+      if (!notDeployed) bits.push("not deployed");
       if (bits.length === 0) return null;
       return `It is ${joinStatusBits(bits)}.`;
     }
     case "claims": {
-      const hasApproved = /approved/i.test(mention);
-      const hasReady = /production[- ]ready/i.test(mention);
-      const hasStandby = /\b(standby|fail-?over)\b/i.test(mention);
-      const hasNotLive = /not the live system/i.test(mention);
-      if (hasApproved && hasReady && hasStandby) return null;
-      if (!hasApproved && !hasReady && !hasStandby) return CLAIMS_STATUS_SENTENCE;
+      const approved = hasApproved(mention);
+      const ready = hasProductionReady(mention);
+      const standby = hasFailoverOrStandby(mention);
+      const notLiveSystem = hasNotTheLiveSystem(mention);
+      if (approved && ready && standby) return null;
+      if (!approved && !ready && !standby) return CLAIMS_STATUS_SENTENCE;
       const bits: string[] = [];
-      if (!hasApproved) bits.push("approved");
-      if (!hasReady) bits.push("production-ready");
-      if (!hasStandby) bits.push("a standby (failover)");
+      if (!approved) bits.push("approved");
+      if (!ready) bits.push("production-ready");
+      if (!standby) bits.push("a standby (failover)");
       const core = bits.length > 0 ? `It is ${joinStatusBits(bits)}` : "It is";
-      if (hasNotLive) return bits.length > 0 ? `${core}.` : null;
+      if (notLiveSystem) return bits.length > 0 ? `${core}.` : null;
       if (bits.length === 0) return "It is not the live system.";
       return `${core}, not the live system.`;
     }
