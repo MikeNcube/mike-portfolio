@@ -55,6 +55,10 @@ const JAILBREAK_RES: RegExp[] = [
   /\bact as (a |an )?(different|unrestricted|new|jailbroken) (ai|assistant|model|bot)\b/i,
   /\bno (restrictions|rules|filters|guardrails)\b/i,
   /\b(developer|god|jailbreak) mode\b/i,
+  /\bdisregard (your |the |all )?(system )?(prompt|instructions|rules)\b/i,
+  /\b(reveal|show|print) (your |the )?(system )?prompt\b/i,
+  /\bfrom now on,? you are\b/i,
+  /\bwithout (any )?(rules|restrictions|filters)\b/i,
 ];
 
 // Uppercase DAN only so "Has Mike worked with Dan?" is not flagged.

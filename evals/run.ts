@@ -103,6 +103,16 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
     checks.push({ label: "no_sources_on_refusal", pass: sources.length === 0, detail: `${sources.length} source(s) returned` });
   }
 
+  if (q.expectCitation) {
+    const hasInline = /\[\d+\]/.test(response);
+    const hasLink = sources.some((s) => s.url.startsWith("http"));
+    checks.push({
+      label: "has_citation",
+      pass: hasInline || hasLink,
+      detail: hasInline ? "inline [n]" : hasLink ? "source url" : "no citation",
+    });
+  }
+
   const pass = checks.every((c) => c.pass);
 
   return { id: q.id, question: q.question, description: q.description, pass, response, sources, checks, durationMs };

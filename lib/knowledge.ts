@@ -64,6 +64,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       '40 users',
       '10 roles',
       'lead-management',
+      'tech lead',
     ],
     text: "Shipped live production system at Zororo-Phumulani Funeral Assurance: lead-management CRM used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
   },

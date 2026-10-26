@@ -3,7 +3,11 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { tokenize } from "./bm25";
-import { CANONICAL_AWS_ANSWER, CANONICAL_PRODUCTION_ANSWER } from "./status-copy";
+import {
+  CANONICAL_AWS_ANSWER,
+  CANONICAL_PRODUCTION_ANSWER,
+  CANONICAL_TECH_LEAD_CRM_ANSWER,
+} from "./status-copy";
 
 export type StaticAnswer = {
   question: string;
@@ -71,6 +75,16 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     answer:
       "Yes, Mike is available. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
+  },
+  {
+    question: "Did Mike act as tech lead on the CRM?",
+    aliases: [
+      "did mike act as tech lead on the crm",
+      "was mike tech lead on the crm",
+      "tech lead on the crm",
+    ],
+    answer: CANONICAL_TECH_LEAD_CRM_ANSWER,
+    sourceIds: ["zororo-crm", "employer"],
   },
   {
     question: "What AWS experience does Mike have?",

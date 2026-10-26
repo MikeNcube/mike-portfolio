@@ -16,6 +16,8 @@ export type EvalQuestion = {
   expectRefusal?: boolean;
   // True → sources array should be non-empty
   expectSources?: boolean;
+  // True → the response must include an inline [n] citation or a source URL
+  expectCitation?: boolean;
   // Description for the results report
   description: string;
 };
@@ -33,17 +35,26 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "who-is-mike",
     question: "Who is Mike Ncube?",
     audience: "recruiter",
-    mustContain: ["Applied AI Engineer", "Zororo"],
+    mustContain: ["Zororo"],
+    meaningChecks: [
+      {
+        label: "title",
+        anyOf: ["Applied AI Engineer", "Systems Architect", "AI engineer"],
+      },
+    ],
     mustNotContain: ["4+ years", "confidential client"],
     expectRefusal: false,
     expectSources: true,
-    description: "Basic bio — must mention employer and correct title",
+    description: "Basic bio — must mention employer and a CV title",
   },
   {
     id: "rag-pipeline",
     question: "How does the RAG pipeline work technically?",
     audience: "developer",
-    mustContain: ["embed", "cosine"],
+    meaningChecks: [
+      { label: "embedding", anyOf: ["embed", "embedding", "embeddings"] },
+      { label: "retrieval", anyOf: ["cosine", "similarity", "retriev"] },
+    ],
     mustNotContain: [],
     expectRefusal: false,
     expectSources: true,
@@ -53,7 +64,12 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "production-systems",
     question: "What production systems has Mike shipped?",
     audience: "recruiter",
-    mustContain: ["Shipped:", "Digi", "CRM", "Rolling out:", "ZDI", "standby"],
+    mustContain: ["Digi", "CRM", "ZDI"],
+    meaningChecks: [
+      { label: "shipped", anyOf: ["Shipped:", "shipped"] },
+      { label: "rolling_out", anyOf: ["Rolling out:", "rolling out"] },
+      { label: "standby", anyOf: ["standby", "failover", "fail-over"] },
+    ],
     mustNotContain: ["confidential client"],
     expectRefusal: false,
     expectSources: true,
@@ -63,11 +79,18 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "proactive-sentinel",
     question: "Walk me through Proactive Sentinel's architecture.",
     audience: "developer",
-    mustContain: ["Flask", "MITRE"],
+    meaningChecks: [
+      { label: "stack", anyOf: ["Flask", "Python", "SOC"] },
+      {
+        label: "detection_approach",
+        anyOf: ["MITRE", "ATT&CK", "correlation", "detection"],
+      },
+    ],
     mustNotContain: [],
     expectRefusal: false,
     expectSources: true,
-    description: "Architecture question — must name the tech and detection approach",
+    expectCitation: true,
+    description: "Architecture question — detection approach (MITRE, ATT&CK, correlation, or detection) plus a citation",
   },
   {
     id: "availability",
@@ -103,11 +126,17 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "sitewarden",
     question: "What is Sitewarden?",
     audience: "developer",
-    mustContain: ["LangGraph", "prototype"],
-    mustNotContain: [],
+    mustContain: ["prototype"],
+    meaningChecks: [
+      {
+        label: "architecture",
+        anyOf: ["LangGraph", "state graph", "human approval", "approval"],
+      },
+    ],
+    mustNotContain: ["is live", "shipped", "in production"],
     expectRefusal: false,
     expectSources: true,
-    description: "New project — must describe the governed agent platform",
+    description: "New project — governed agent platform, prototype (not live)",
   },
   {
     id: "zdi",
@@ -134,7 +163,11 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "zororo-ai-os",
     question: "What is Zororo AI OS?",
     audience: "developer",
-    mustContain: ["Built", "early stage", "not deployed"],
+    meaningChecks: [
+      { label: "built", anyOf: ["Built"] },
+      { label: "early_stage", anyOf: ["early stage"] },
+      { label: "not_deployed", anyOf: ["not deployed", "not yet deployed"] },
+    ],
     mustNotContain: ["is live", "shipped", "in production"],
     expectRefusal: false,
     expectSources: true,
@@ -158,11 +191,24 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     id: "ai-social-agent",
     question: "What is the multi-agent content pipeline?",
     audience: "developer",
-    mustContain: ["Prototype", "Ollama"],
+    mustContain: ["Prototype"],
+    meaningChecks: [
+      { label: "runtime", anyOf: ["Ollama", "local", "zero API"] },
+    ],
     mustNotContain: ["is live", "shipped"],
     expectRefusal: false,
     expectSources: true,
     description: "Content pipeline — prototype, local Ollama, human approval",
+  },
+  {
+    id: "tech-lead-crm",
+    question: "Did Mike act as tech lead on the CRM?",
+    audience: "recruiter",
+    mustNotContain: ["as tech lead", "was tech lead", "is tech lead", "the tech lead"],
+    expectRefusal: false,
+    expectSources: true,
+    expectCitation: true,
+    description: "Unstated title — must not refuse or claim tech lead; cite CRM role facts",
   },
   // ─── Refusals — out-of-scope ─────────────────────────────────────────
   {

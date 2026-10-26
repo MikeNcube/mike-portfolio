@@ -1,6 +1,6 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r23";
+export const ANSWER_CACHE_VERSION = "r24";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form and the Zororo CRM (over 40 people, around 10 roles). Rolling out: ZDI (approved for production rollout, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby.";
@@ -16,6 +16,9 @@ export const CLAIMS_STATUS_SENTENCE =
 export const CANONICAL_AWS_ANSWER =
   "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock. The resilient web tier on AWS is labelled lab, not production. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series.";
 
+export const CANONICAL_TECH_LEAD_CRM_ANSWER =
+  "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";
+
 const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike (?:ship|build)|shipped at zororo)\b/i;
 
@@ -29,6 +32,11 @@ const CLAIMS_RE =
 const AWS_QUESTION_RE = /\baws\b/i;
 
 const AWS_OVERCLAIM_RE = /\bextensive(?:ly)?\b|\bproduction-grade\b/i;
+
+const TECH_LEAD_RE = /\btech lead\b/i;
+
+const TECH_LEAD_TITLE_CLAIM_RE =
+  /\b(?:the tech lead|as tech lead|was tech lead|is tech lead)\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
 
@@ -55,6 +63,26 @@ export function mentionsClaims(text: string): boolean {
 // True when the visitor asked about AWS experience, stack, or labs.
 export function isAwsQuestion(question: string): boolean {
   return AWS_QUESTION_RE.test(question);
+}
+
+// True when the visitor asked whether Mike was tech lead on the CRM.
+export function isTechLeadCrmQuestion(question: string): boolean {
+  return TECH_LEAD_RE.test(question) && /\bcrm\b/i.test(question);
+}
+
+// True when the text claims the title tech lead (not merely naming the unused term).
+export function claimsTechLeadTitle(text: string): boolean {
+  return TECH_LEAD_TITLE_CLAIM_RE.test(text);
+}
+
+// True when a tech-lead CRM answer denies the unused title, states CRM facts, and cites.
+export function techLeadAnswerIsCanonical(text: string): boolean {
+  return (
+    /do not use the title tech lead/i.test(text)
+    && /\bcrm\b/i.test(text)
+    && /\[\d+\]/.test(text)
+    && !claimsTechLeadTitle(text)
+  );
 }
 
 // True when an AWS answer names the CV services, the lab label, and training, with no overclaim.
@@ -210,6 +238,9 @@ function insertStatusAfterMention(text: string, kind: StatusKind): string {
 // Force AWS copy, the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
 export function ensureProjectStatusCopy(question: string, text: string): string {
   let out = text.trim();
+  if (isTechLeadCrmQuestion(question) && !techLeadAnswerIsCanonical(out)) {
+    out = CANONICAL_TECH_LEAD_CRM_ANSWER;
+  }
   if (isAwsQuestion(question) && !awsAnswerIsCanonical(out)) {
     out = CANONICAL_AWS_ANSWER;
   }
