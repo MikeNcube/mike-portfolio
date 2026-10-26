@@ -61,7 +61,7 @@ export default function Nav() {
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="inline-flex items-center rounded-lg px-3.5 text-sm text-ink/60 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+              className="inline-flex items-center rounded-lg px-3.5 text-sm text-ink-muted transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
               {s.label}
             </a>
@@ -86,7 +86,7 @@ export default function Nav() {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="mobile-nav"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-ink/[0.06] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-ink/[0.06] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent md:hidden"
             style={{ minWidth: 44, minHeight: 44 }}
           >
             <span aria-hidden className="relative block h-[14px] w-[18px]">
@@ -111,7 +111,7 @@ export default function Nav() {
                 key={s.id}
                 href={`#${s.id}`}
                 onClick={() => setOpen(false)}
-                className="min-h-[44px] flex items-center rounded-lg px-2 text-base text-ink/70 hover:text-ink"
+                className="min-h-[44px] flex items-center rounded-lg px-2 text-base text-ink-muted hover:text-ink"
               >
                 {s.label}
               </a>

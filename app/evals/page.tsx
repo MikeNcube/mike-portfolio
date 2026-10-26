@@ -65,31 +65,15 @@ export default function EvalsPage() {
           </p>
         </div>
 
-        {/* Methodology */}
+        {/* Methodology — concise public summary only */}
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-ink mb-3">Methodology</h2>
-          <dl className="space-y-2 text-sm text-ink-muted">
-            <div className="flex gap-3">
-              <dt className="font-medium text-ink w-28 shrink-0">Runner</dt>
-              <dd>
-                <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">
-                  GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
-                </code>
-              </dd>
-            </div>
-            <div className="flex gap-3">
-              <dt className="font-medium text-ink w-28 shrink-0">Checks</dt>
-              <dd>Per-question: API success, refusal/answer correctness, mustContain phrases, mustNotContain phrases, source presence</dd>
-            </div>
-            <div className="flex gap-3">
-              <dt className="font-medium text-ink w-28 shrink-0">Rate limit</dt>
-              <dd>1.2 s pause between questions to stay within free-tier limits</dd>
-            </div>
-            <div className="flex gap-3">
-              <dt className="font-medium text-ink w-28 shrink-0">Output</dt>
-              <dd>Writes <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">evals/results.json</code> — commit after a clean run</dd>
-            </div>
-          </dl>
+          <h2 className="text-base font-semibold text-ink mb-3">What is tested</h2>
+          <p className="text-sm text-ink-muted leading-relaxed max-w-prose">
+            Each of the ten questions below is tested against the live assistant. Checks include:
+            API response success, answer correctness (must-contain phrases), absence of
+            hallucinations (must-not-contain phrases), correct refusal for out-of-scope and
+            prompt-injection attempts, and source citation presence where expected.
+          </p>
         </section>
 
         {/* Questions */}
@@ -214,15 +198,14 @@ export default function EvalsPage() {
           </section>
         ) : (
           <div className="rounded-2xl border border-ink/[0.07] bg-surface/40 p-8 text-center">
-            <p className="text-base font-medium text-ink mb-2">Results will appear after the first run against a live deployment.</p>
-            <p className="text-sm text-ink-muted mb-4">
-              Run the eval suite, then commit{" "}
-              <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">evals/results.json</code>{" "}
-              to publish here.
+            <p className="text-base font-medium text-ink mb-2">
+              Results will appear after the first run against a live deployment.
             </p>
-            <code className="text-micro font-mono text-ink-muted block bg-surface rounded-lg px-4 py-3 text-left">
-              GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
-            </code>
+            <p className="text-sm text-ink-muted">
+              Once the eval suite runs and{" "}
+              <code className="font-mono text-micro bg-surface rounded px-1.5 py-0.5">evals/results.json</code>{" "}
+              is committed, scores appear here automatically.
+            </p>
           </div>
         )}
       </div>

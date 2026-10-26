@@ -33,19 +33,19 @@ Secondary cause: free-tier `gemini-2.5-flash` is rate-limited to 10 RPM. The pre
 - No paid plan is required. All fixes work within the Gemini free tier (10 RPM, 1500 RPD for gemini-2.5-flash).
 - If traffic grows beyond free-tier limits, consider switching `GENERATION_MODEL` to `gemini-1.5-flash` (15 RPM free tier) via an env var.
 
-### Eval results (evals/results.json)
+### Eval suite (no fabricated results)
 
-10/10 evals pass. Categories tested:
+`evals/results.json` is **not** in the repo. The `/evals` page lists methodology and the 10 questions, and shows a placeholder until a real runner output is committed.
 
-| Category | Questions | Result |
-|----------|-----------|--------|
-| Answer correctness | who-is-mike, rag-pipeline, production-systems, proactive-sentinel, availability, sitewarden | 6/6 |
-| Refusal (out-of-scope) | math, hobbies | 2/2 |
-| Prompt injection | ignore-instructions, roleplay | 2/2 |
+```bash
+GEMINI_API_KEY=... npx tsx evals/run.ts --url https://your-preview.vercel.app
+```
 
-Run evals: `GEMINI_API_KEY=... npx tsx evals/run.ts --url https://preview-url.vercel.app`
+Then commit `evals/results.json`. Do not invent scores.
 
-Results page: `/evals`
+The `2 + 2` eval now requires a refusal plus contact email, and forbids common numeric-answer phrasings (`equals 4`, `is four`, `2 + 2 =`, etc.).
+
+The homepage does **not** link to `/evals` until real results exist.
 
 ---
 
@@ -219,6 +219,25 @@ Artifacts: screenshots saved to `/opt/cursor/artifacts/screenshots/`.
 | Keyboard nav | Tab order follows visual order; all interactive elements reachable |
 | `lang="en"` | Present on `<html>` |
 | Colour contrast | See table above — body and UI text ≥ AA |
+| Case-study sidebar | `dl` contains only `div > dt/dd` groups; GitHub/demo links sit outside the `dl` |
+
+---
+
+## Round 3 — diagrams, contrast, evals page
+
+Architecture diagrams are HTML/CSS boxes with real 14px text (class `diagram-label`), stacked vertically below `sm` so they do not scale down on a 390px screen.
+
+Truth fixes vs CV:
+- Claims: no “Scanned PDF”, no “auto-approved”. Flow is document → Claude vision → Pydantic → per-field confidence → needs-review flag. Caption states pending management approval.
+- CRM: no JWT, no session-store claim for Redis/Celery. Redis and Celery are labelled “async tasks”. Policy adapter: “one file per live integration change”.
+- Cube: trusted verifier lives in a dashed “sandboxed eval harness (not on the live path)” box. “swap one file” removed.
+- Digi: multi-step intake, server-side validation, policy PDF generation, staff admin only.
+- Sitewarden: loop is a second row (Await approval → Revise) with a sentence, not an arrow through Analyse.
+- Sentinel: Flag / Block IP / Audit log as three equal nodes; nothing clipped.
+
+Redirect: `/projects/zororo-digital-applications` → `/projects/digi-app-form`.
+
+Mobile hero portrait: 80px slot, `object-position: 50% 12%` plus `scale(1.85)` so the crop is head and shoulders, not a squeezed full-length figure. Duplicate “Applied AI Engineer / Johannesburg · Remote” next to the mobile photo was removed.
 
 ---
 
@@ -226,7 +245,7 @@ Artifacts: screenshots saved to `/opt/cursor/artifacts/screenshots/`.
 
 1. **Set `GEMINI_API_KEY`** in Vercel → Settings → Environment Variables (Production + Preview). This is already required; the PR just makes the assistant reliably use it.
 2. **Replace `/public/Mike_Org.jpeg`** with a 1200×630 export for correct OG image on Twitter/LinkedIn previews.
-3. **Run evals against the preview URL** to confirm live results match `evals/results.json`:
+3. **Run evals against the preview URL** (after re-linking Vercel) and commit the generated `evals/results.json`:
    ```bash
    GEMINI_API_KEY=... npx tsx evals/run.ts --url https://preview-url.vercel.app
    ```

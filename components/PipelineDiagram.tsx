@@ -3,8 +3,8 @@
 export type PipelineStep = 0 | 1 | 2 | 3 | 4 | null;
 
 const STEPS = [
-  { id: "embed",    label: "Embed",    sub: "query → vector" },
-  { id: "retrieve", label: "Retrieve", sub: "cosine top-4" },
+  { id: "embed",    label: "Embed",    sub: "query to vector" },
+  { id: "retrieve", label: "Retrieve", sub: "cosine top 4" },
   { id: "gate",     label: "Gate",     sub: "score ≥ 0.35" },
   { id: "generate", label: "Generate", sub: "grounded" },
   { id: "cite",     label: "Cite",     sub: "sources" },
@@ -25,69 +25,61 @@ export default function PipelineDiagram({ activeStep, chunks }: Props) {
           : "RAG pipeline: embed, retrieve, gate, generate, cite"
       }
     >
-      {/* Steps row — wraps to scroll on very narrow screens */}
-      <div className="flex items-stretch gap-0 overflow-x-auto pb-1 select-none">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch gap-1.5">
         {STEPS.map((step, i) => {
           const isActive    = activeStep === i;
           const isCompleted = activeStep !== null && i < activeStep;
           const isPending   = activeStep !== null && i > activeStep;
 
           return (
-            <div key={step.id} className="flex items-center shrink-0">
-              {/* Node */}
+            <div key={step.id} className="flex items-center sm:flex-1 min-w-0">
               <div
                 className={[
-                  "px-3 py-2.5 rounded-xl border text-center transition-all duration-300",
+                  "flex-1 rounded-[10px] border px-3 py-2.5 text-center transition-colors duration-300",
                   isActive
-                    ? "border-accent bg-accent text-page shadow-sm scale-[1.04]"
+                    ? "border-accent bg-accent text-page shadow-sm"
                     : isCompleted
                     ? "border-ink/[0.09] bg-surface text-ink-muted"
                     : isPending
-                    ? "border-ink/[0.05] bg-transparent text-ink-faint"
+                    ? "border-ink/[0.06] bg-transparent text-ink-faint"
                     : "border-ink/[0.08] bg-surface/50 text-ink-muted",
                 ].join(" ")}
-                style={{ minWidth: 72 }}
               >
-                <p className={[
-                  "text-[13px] font-semibold tracking-tight leading-none",
-                  isActive ? "text-page" : "",
-                ].join(" ")}>
+                <p
+                  className={["diagram-label font-medium leading-snug", isActive ? "text-page" : ""].join(" ")}
+                  style={{ fontSize: 14 }}
+                >
                   {step.label}
                 </p>
-                <p className={[
-                  "text-[11px] font-mono mt-1 leading-none",
-                  isActive ? "text-page/75" : "text-ink-faint",
-                ].join(" ")}>
+                <p
+                  className={["diagram-label font-mono mt-0.5 leading-snug", isActive ? "text-page/80" : "text-ink-muted"].join(" ")}
+                  style={{ fontSize: 14 }}
+                >
                   {step.sub}
                 </p>
               </div>
 
-              {/* Arrow connector */}
               {i < STEPS.length - 1 && (
-                <div className="px-1 shrink-0" aria-hidden>
-                  <svg
-                    width="18"
-                    height="10"
-                    viewBox="0 0 18 10"
-                    className={`transition-colors duration-300 ${isCompleted ? "text-accent/60" : "text-ink/15"}`}
-                  >
-                    <line x1="0" y1="5" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" />
-                    <polyline points="9,2 12,5 9,8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                  </svg>
-                </div>
+                <span
+                  aria-hidden
+                  className="hidden sm:inline-flex px-1 text-ink-faint select-none"
+                  style={{ fontSize: 16 }}
+                >
+                  →
+                </span>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Retrieved chunks — visible after retrieve/gate step */}
       {chunks && chunks.length > 0 && activeStep !== null && activeStep >= 2 && (
         <div className="mt-2 flex flex-wrap gap-1.5" aria-live="polite" aria-label="Retrieved sources">
           {chunks.map((c) => (
             <span
               key={c.title}
-              className="rounded-md border border-ink/[0.07] bg-surface/70 px-2 py-0.5 font-mono text-[11px] text-ink-muted"
+              className="diagram-label rounded-md border border-ink/[0.07] bg-surface/70 px-2 py-0.5 text-ink-muted"
+              style={{ fontSize: 14 }}
             >
               {c.title}
             </span>

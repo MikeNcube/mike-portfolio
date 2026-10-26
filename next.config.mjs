@@ -4,10 +4,10 @@ const nextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
-      // Old Zororo "digital applications" slug (clientProjects) → new CRM case study
+      // Old Zororo "digital applications" slug → Digi App Form (the shipped intake app)
       {
         source: "/projects/zororo-digital-applications",
-        destination: "/projects/zororo-crm",
+        destination: "/projects/digi-app-form",
         permanent: true,
       },
       // Old AWS RDS lab consolidates into the resilient web tier page

@@ -25,27 +25,27 @@ export default function Hero() {
               for regulated work.
             </h1>
 
-            {/* Mobile portrait — small circle beside the availability/name context */}
-            <div className="flex items-center gap-4 mb-6 lg:hidden">
+            {/* Mobile portrait — zoomed head-and-shoulders crop, 80px slot */}
+            <div className="mb-6 lg:hidden">
               <div
-                className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-ink/[0.08]"
+                className="relative h-20 w-20 overflow-hidden rounded-2xl border border-ink/[0.08]"
                 style={{ boxShadow: "0 2px 12px rgba(26,21,16,0.08)" }}
               >
                 <Image
                   src={profile.portrait}
-                  alt="Mike S Ncube, Applied AI Engineer, Johannesburg"
-                  width={1024}
-                  height={1024}
+                  alt="Mike S Ncube"
+                  width={160}
+                  height={160}
                   priority
-                  className="h-full w-full object-cover object-top"
-                  style={{ filter: WARM_FILTER }}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{
+                    filter: WARM_FILTER,
+                    objectPosition: "50% 12%",
+                    transform: "scale(1.85)",
+                    transformOrigin: "50% 12%",
+                  }}
                   sizes="80px"
                 />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-ink">{profile.name}</p>
-                <p className="text-sm text-ink-muted">{profile.role}</p>
-                <p className="text-sm text-ink-muted">Johannesburg · Remote</p>
               </div>
             </div>
 

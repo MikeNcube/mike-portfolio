@@ -1,154 +1,137 @@
-// Shared SVG diagram primitives.
-// All colors come from CSS custom properties so diagrams adapt to light/dark mode.
+// HTML/CSS diagram primitives.
+// All labels are real DOM text at 14px — they never scale with a viewBox.
 
-const FILL = "var(--d-fill)";
-const FILL_ACCENT = "var(--d-fill-accent)";
-const STROKE = "var(--d-stroke)";
-const TEXT = "var(--d-text)";
-const TEXT_MUTED = "var(--d-text-muted)";
-const ARROW = "var(--d-arrow)";
-const ARROW_MUTED = "var(--d-arrow-muted)";
+import React from "react";
 
-export { FILL, FILL_ACCENT, STROKE, TEXT, TEXT_MUTED, ARROW, ARROW_MUTED };
+const LABEL: React.CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.35,
+  fontWeight: 500,
+};
 
-// Rounded-rect node with a label and optional sub-label.
+const SUB: React.CSSProperties = {
+  fontSize: 14,
+  lineHeight: 1.35,
+  marginTop: 2,
+};
+
 export function Node({
-  x, y, w = 120, h = 44,
-  label, sub,
+  label,
+  sub,
   accent = false,
+  muted = false,
+  className = "",
 }: {
-  x: number; y: number; w?: number; h?: number;
-  label: string; sub?: string;
+  label: string;
+  sub?: string;
   accent?: boolean;
-}) {
-  const fill = accent ? FILL_ACCENT : FILL;
-  const cy = sub ? y + h / 2 - 7 : y + h / 2;
-  return (
-    <g>
-      <rect x={x} y={y} width={w} height={h} rx={8} style={{ fill, stroke: STROKE, strokeWidth: 1 }} />
-      <text
-        x={x + w / 2}
-        y={cy + 5}
-        textAnchor="middle"
-        style={{ fill: TEXT, fontSize: 14, fontWeight: 500, fontFamily: "var(--font-sans, DM Sans, sans-serif)" }}
-      >
-        {label}
-      </text>
-      {sub && (
-        <text
-          x={x + w / 2}
-          y={cy + 21}
-          textAnchor="middle"
-          style={{ fill: TEXT_MUTED, fontSize: 12, fontFamily: "var(--font-sans, DM Sans, sans-serif)" }}
-        >
-          {sub}
-        </text>
-      )}
-    </g>
-  );
-}
-
-// Horizontal arrow (left → right).
-export function ArrowH({
-  x1, x2, y, accent = false, label,
-}: {
-  x1: number; x2: number; y: number; accent?: boolean; label?: string;
-}) {
-  const color = accent ? ARROW : ARROW_MUTED;
-  const mid = (x1 + x2) / 2;
-  return (
-    <g>
-      <line x1={x1} y1={y} x2={x2 - 8} y2={y} style={{ stroke: color, strokeWidth: 1.5 }} />
-      <polygon
-        points={`${x2},${y} ${x2 - 8},${y - 4} ${x2 - 8},${y + 4}`}
-        style={{ fill: color }}
-      />
-      {label && (
-        <text
-          x={mid}
-          y={y - 5}
-          textAnchor="middle"
-          style={{ fill: TEXT_MUTED, fontSize: 11, fontFamily: "var(--font-sans, DM Sans, sans-serif)" }}
-        >
-          {label}
-        </text>
-      )}
-    </g>
-  );
-}
-
-// Vertical arrow (top → bottom).
-export function ArrowV({
-  x, y1, y2, accent = false,
-}: {
-  x: number; y1: number; y2: number; accent?: boolean;
-}) {
-  const color = accent ? ARROW : ARROW_MUTED;
-  return (
-    <g>
-      <line x1={x} y1={y1} x2={x} y2={y2 - 8} style={{ stroke: color, strokeWidth: 1.5 }} />
-      <polygon
-        points={`${x},${y2} ${x - 4},${y2 - 8} ${x + 4},${y2 - 8}`}
-        style={{ fill: color }}
-      />
-    </g>
-  );
-}
-
-// Diagonal arrow from (x1,y1) to (x2,y2).
-export function ArrowD({
-  x1, y1, x2, y2, accent = false,
-}: {
-  x1: number; y1: number; x2: number; y2: number; accent?: boolean;
-}) {
-  const color = accent ? ARROW : ARROW_MUTED;
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const len = 9;
-  const ex = x2 - len * Math.cos(angle);
-  const ey = y2 - len * Math.sin(angle);
-  return (
-    <g>
-      <line x1={x1} y1={y1} x2={ex} y2={ey} style={{ stroke: color, strokeWidth: 1.5 }} />
-      <polygon
-        points={`${x2},${y2} ${x2 - len * Math.cos(angle - 0.4)},${y2 - len * Math.sin(angle - 0.4)} ${x2 - len * Math.cos(angle + 0.4)},${y2 - len * Math.sin(angle + 0.4)}`}
-        style={{ fill: color }}
-      />
-    </g>
-  );
-}
-
-// Simple label (no box).
-export function Label({
-  x, y, text, muted = false,
-}: {
-  x: number; y: number; text: string; muted?: boolean;
+  muted?: boolean;
+  className?: string;
 }) {
   return (
-    <text
-      x={x}
-      y={y}
-      style={{ fill: muted ? TEXT_MUTED : TEXT, fontSize: 12, fontFamily: "var(--font-sans, DM Sans, sans-serif)" }}
+    <div
+      className={[
+        "rounded-[10px] border px-3 py-2.5 shrink-0 text-center min-w-[7.5rem]",
+        accent
+          ? "border-accent/25 bg-accent/[0.07] text-ink"
+          : muted
+          ? "border-ink/[0.08] bg-transparent text-ink-muted"
+          : "border-ink/[0.1] bg-surface text-ink",
+        className,
+      ].join(" ")}
     >
-      {text}
-    </text>
+      <p className="diagram-label" style={LABEL}>{label}</p>
+      {sub && (
+        <p className="diagram-label font-mono text-ink-muted" style={SUB}>
+          {sub}
+        </p>
+      )}
+    </div>
   );
 }
 
-// Diagram wrapper with accessible label.
-export function DiagramSVG({
-  viewBox, label, children,
+export function ArrowH() {
+  return (
+    <span
+      aria-hidden
+      className="hidden sm:inline-flex items-center justify-center shrink-0 px-1.5 text-ink-faint select-none"
+      style={{ fontSize: 16, lineHeight: 1 }}
+    >
+      →
+    </span>
+  );
+}
+
+export function ArrowV() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex sm:hidden items-center justify-center shrink-0 py-0.5 text-ink-faint select-none"
+      style={{ fontSize: 16, lineHeight: 1 }}
+    >
+      ↓
+    </span>
+  );
+}
+
+export function ArrowDown() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex items-center justify-center shrink-0 py-1 text-ink-faint select-none"
+      style={{ fontSize: 16, lineHeight: 1 }}
+    >
+      ↓
+    </span>
+  );
+}
+
+export function FlowRow({
+  children,
+  className = "",
 }: {
-  viewBox: string; label: string; children: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <svg
-      viewBox={viewBox}
-      width="100%"
+    <div className={`flex flex-col sm:flex-row sm:flex-wrap items-center gap-1 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+export function Caption({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="diagram-label mt-3 text-ink-muted leading-relaxed" style={{ fontSize: 14 }}>
+      {children}
+    </p>
+  );
+}
+
+export function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="diagram-label text-ink-muted" style={{ fontSize: 14, lineHeight: 1.4 }}>
+      {children}
+    </p>
+  );
+}
+
+export function Diagram({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
       role="img"
       aria-label={label}
-      style={{ maxHeight: 280, overflow: "visible" }}
+      className={`flex flex-col gap-2 ${className}`}
     >
       {children}
-    </svg>
+    </div>
   );
 }

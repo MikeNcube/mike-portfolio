@@ -22,7 +22,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-ink/50 transition hover:bg-ink/[0.06] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition hover:bg-ink/[0.06] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
       style={{ minWidth: 44, minHeight: 44 }}
     >
       {dark ? (

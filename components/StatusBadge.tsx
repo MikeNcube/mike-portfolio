@@ -5,9 +5,9 @@ const STYLES: Record<ProjectStatus, string> = {
   "Shipped":    "text-signal",
   "Prototype":  "text-accent",
   "Built":      "text-accent",
-  "Paused":     "text-ink/45",
-  "Reference":  "text-ink/45",
-  "Lab":        "text-ink/45",
+  "Paused":     "text-ink-muted",
+  "Reference":  "text-ink-muted",
+  "Lab":        "text-ink-muted",
 };
 
 export default function StatusBadge({ status }: { status: ProjectStatus }) {

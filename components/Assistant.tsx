@@ -266,8 +266,6 @@ export default function Assistant() {
           <p className="mt-4 text-center font-mono text-micro text-ink-muted">
             Rate-limited · grounded · refuses out-of-scope ·{" "}
             <a href={`mailto:${profile.email}`} className="link">email Mike</a>
-            {" · "}
-            <a href="/evals" className="link">eval results</a>
           </p>
         </div>
       </div>

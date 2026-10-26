@@ -195,7 +195,7 @@ export const flagshipProjects: Project[] = [
     outcome:
       "v1.0.0. Deployed to Railway for evaluation with PostgreSQL 15 and Redis 7; currently paused. 44 passing tests.",
     systemOverview:
-      "Events route through a DetectionEngine (Redis dedup + MITRE correlation). After an alert is persisted, an Action Dispatcher fires by severity: critical alerts block the attacker IP in Redis and write an audit entry; lower severities degrade gracefully. All API access is JWT-authenticated and rate-limited; observability is OpenTelemetry plus structured JSON logs.",
+      "Events route through a DetectionEngine (Redis dedup + MITRE correlation). After an alert is persisted, an Action Dispatcher fires by severity: critical alerts block the attacker IP in Redis and write an audit entry; lower severities degrade gracefully. Observability is OpenTelemetry plus structured JSON logs.",
     engineeringDecisions: [
       "SHA-256 fingerprint deduplication in Redis suppresses duplicate events at ingest, before they can create alert noise.",
       "MITRE ATT&CK chain correlation across events — recon followed by lateral movement followed by exfiltration escalates to a critical chain alert, which single-event rules would miss.",
