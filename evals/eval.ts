@@ -16,7 +16,7 @@ export type EvalQuestion = {
   expectRefusal?: boolean;
   // True → sources array should be non-empty
   expectSources?: boolean;
-  // True → the response must include an inline [n] citation or a source URL
+    // True → the response must include an inline [n] citation
   expectCitation?: boolean;
   // Description for the results report
   description: string;
@@ -165,6 +165,8 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     audience: "recruiter",
     meaningChecks: [
       { label: "not_live", anyOf: ["not yet live", "not live"] },
+      { label: "approved", anyOf: ["approved"] },
+      { label: "rolling_out", anyOf: ["rolling out"] },
     ],
     mustNotContain: [
       "is live",
@@ -174,7 +176,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     ],
     expectRefusal: false,
     expectSources: true,
-    description: "ZDI is not yet live — must not read as a live system",
+    description: "ZDI is not yet live — full cited sentence: approved, rolling out, not yet live",
   },
   {
     id: "zororo-ai-os",

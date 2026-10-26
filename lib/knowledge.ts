@@ -15,7 +15,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'positioning',
     title: 'Who Mike is',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. Remote-first. Contact: mikencube03@gmail.com.',
+    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. He works remote-first. Contact: mikencube03@gmail.com.',
   },
   {
     id: 'employer',
@@ -43,7 +43,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'availability',
     title: 'Availability and target roles',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike is available for full-time or contract, remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), AI Automation Engineer. Contact: mikencube03@gmail.com, github.com/MikeNcube, linkedin.com/in/mike-ncube-669563a7.',
+    text: 'Mike is available for full-time or contract and works remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), AI Automation Engineer. Contact: mikencube03@gmail.com, github.com/MikeNcube, linkedin.com/in/mike-ncube-669563a7.',
   },
   {
     id: 'portfolio-rag-assistant',
@@ -91,7 +91,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'Mike production systems',
       'Signature Service',
     ],
-    text: "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is Zororo Document Intelligence, a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link (no login); the requester completes the form, attaches a quotation and signs. Manager, Accounts and IT workspaces share one FastAPI backend and one routing contract. Capability check and workflow guards: a requester can never approve their own request. Config-driven route: submitted → manager review → accounts review → archived. A return for correction creates a new revision and the route restarts. Every signature is an append-only, hash-chained signing event that binds signer, role and capacity, explicit intent, method (drawn, captured or typed), and a SHA-256 of the exact content revision. A worker renders an archival PDF with an evidence appendix. An evidence check re-verifies the hashes. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
+    text: "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is Zororo Document Intelligence, a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link (no login); the requester completes the form, attaches a quotation and signs. Manager, Accounts and IT workspaces share one FastAPI backend and one routing contract. Capability check and workflow guards: a requester can never approve their own request. Config-driven route: submitted → manager review → accounts review → archived. A return for correction creates a new revision and the route restarts. Every signature is an append-only, hash-chained signing event that binds signer, role and capacity, explicit intent, method (drawn, captured or typed), and a SHA-256 of the exact content revision. A worker renders an archival PDF with an evidence appendix. An evidence check re-verifies the hashes. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
   },
   {
     id: 'zororo-ai-os',
@@ -108,7 +108,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'hash-chained',
       'not deployed',
     ],
-    text: "Zororo AI OS is a governed AI control plane. Status: Built. Early stage, not deployed. Every event (claims, policy changes, LLM queries, tool calls) passes one fixed pipeline: PII detection with Microsoft Presidio, plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits; an OPA (Rego) policy check; risk scoring from fixed rules plus anomaly statistics; a decision of ALLOW / MONITOR / APPROVE / BLOCK; then a tamper-evident, hash-chained audit log. If any step fails, the event is blocked by default. An MCP gateway uses capability tokens and replay protection. README reports 310 passing tests, including pytest and Rego policy tests. Stack: Python 3.12, FastAPI, Presidio, OPA/Rego, Pydantic, Terraform, pytest. LangGraph and pgvector are planned. Private repo.",
+    text: "Zororo AI OS is a governed AI control plane. It is built, early stage, and not deployed. Every event (claims, policy changes, LLM queries, tool calls) passes one fixed pipeline: PII detection with Microsoft Presidio, plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits; an OPA (Rego) policy check; risk scoring from fixed rules plus anomaly statistics; a decision of ALLOW / MONITOR / APPROVE / BLOCK; then a tamper-evident, hash-chained audit log. If any step fails, the event is blocked by default. An MCP gateway uses capability tokens and replay protection. README reports 310 passing tests, including pytest and Rego policy tests. Stack: Python 3.12, FastAPI, Presidio, OPA/Rego, Pydantic, Terraform, pytest. LangGraph and pgvector are planned. Private repo.",
   },
   {
     id: 'zororo-claims',
@@ -126,7 +126,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'production systems',
       'Mike production systems',
     ],
-    text: "The claims operations platform is an approved, production-ready standby (failover), not the live system. A role-based platform for funeral-case processing (claims, cash services and courtesy services). Status: Approved · standby. It takes over if the current claims system fails. A case state machine with hand-offs between departments, plus role- and shift-based routing. PII encrypted at the app layer and masked by default on list views, with an audit log of who read PII. Access is enforced at both the middleware and API layers. A public case-tracking link and compliance exports. POPIA-aware design. Stack: Next.js, TypeScript, NextAuth, Prisma, PostgreSQL, Docker. Private repo.",
+    text: "The claims operations platform is an approved, production-ready standby (failover), not the live system. A role-based platform for funeral-case processing (claims, cash services and courtesy services). It takes over if the current claims system fails. A case state machine with hand-offs between departments, plus role- and shift-based routing. PII encrypted at the app layer and masked by default on list views, with an audit log of who read PII. Access is enforced at both the middleware and API layers. A public case-tracking link and compliance exports. POPIA-aware design. Stack: Next.js, TypeScript, NextAuth, Prisma, PostgreSQL, Docker. Private repo.",
   },
   {
     id: 'ai-social-agent',
@@ -142,7 +142,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'ArXiv',
       'prototype',
     ],
-    text: "Multi-agent content pipeline: three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. Status: Prototype. Runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress. Stack: Python, FastAPI, Jinja2, Ollama, Docker, n8n. Private repo.",
+    text: "Multi-agent content pipeline: a prototype. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. Runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress. Stack: Python, FastAPI, Jinja2, Ollama, Docker, n8n. Private repo.",
   },
   {
     id: 'claims-pipeline',
@@ -174,7 +174,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'sitewarden',
     title: 'Sitewarden — governed AI operations platform (prototype)',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Sitewarden is a governed AI operations platform prototype. FastAPI backend. LangGraph state graph with plan, analyse, self-check, write-report, await-approval, and revise steps. Role-scoped steps, human interrupt approval before consequential actions, Postgres checkpoints. Risk-tiered tool gateway, MCP-style JSON-RPC endpoint. pgvector hybrid keyword and vector search with citations. 89 tests, retrieval and trajectory evals, CI with import rules. Prototype, not deployed.',
+    text: 'Sitewarden is a governed AI operations platform prototype, not deployed. FastAPI backend. LangGraph state graph with plan, analyse, self-check, write-report, await-approval, and revise steps. Role-scoped steps, human interrupt approval before consequential actions, Postgres checkpoints. Risk-tiered tool gateway, MCP-style JSON-RPC endpoint. pgvector hybrid keyword and vector search with citations. 89 tests, retrieval and trajectory evals, CI with import rules.',
   },
   {
     id: 'cube-agent',
@@ -187,7 +187,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'provider-agnostic',
       'sandboxed eval',
     ],
-    text: "Cube is a coding agent prototype. Own tool-calling loop, provider-agnostic adapters (swap model without changing business logic), approval prompts before writes, and a sandboxed eval harness with a trusted verifier to check agent outputs. Prototype, not deployed.",
+    text: "Cube is a coding agent prototype, not deployed. Own tool-calling loop, provider-agnostic adapters (swap model without changing business logic), approval prompts before writes, and a sandboxed eval harness with a trusted verifier to check agent outputs.",
   },
   {
     id: 'proactive-sentinel-overview',

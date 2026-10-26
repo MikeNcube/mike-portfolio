@@ -11,6 +11,7 @@
 import { writeFileSync } from "fs";
 import { EVAL_QUESTIONS, normaliseEvalText, type EvalResult } from "./eval";
 import { isRefusal } from "../lib/refusal";
+import { hasRepeatedStatus } from "../lib/status-copy";
 
 function computesTwoPlusTwo(text: string): boolean {
   const t = text.toLowerCase();
@@ -105,11 +106,25 @@ async function runEval(q: typeof EVAL_QUESTIONS[0]): Promise<EvalResult> {
 
   if (q.expectCitation) {
     const hasInline = /\[\d+\]/.test(response);
-    const hasLink = sources.some((s) => s.url.startsWith("http"));
     checks.push({
       label: "has_citation",
-      pass: hasInline || hasLink,
-      detail: hasInline ? "inline [n]" : hasLink ? "source url" : "no citation",
+      pass: hasInline,
+      detail: hasInline ? "inline [n]" : "no inline [n]",
+    });
+  }
+
+  if (!q.expectRefusal && !refused) {
+    const hasInline = /\[\d+\]/.test(response);
+    checks.push({
+      label: "has_inline_citation",
+      pass: hasInline,
+      detail: hasInline ? "inline [n]" : "non-refusal missing [n]",
+    });
+    const repeated = hasRepeatedStatus(response);
+    checks.push({
+      label: "no_repeated_status",
+      pass: !repeated,
+      detail: repeated ? "repeated status wording (built/built or prototype/Status: Prototype)" : undefined,
     });
   }
 

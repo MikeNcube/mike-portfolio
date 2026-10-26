@@ -94,7 +94,7 @@ describe("keyword retrieval fallback", () => {
     assert.ok(ids.includes("ai-social-agent"), `expected ai-social-agent in ${ids.join(", ")}`);
     const hit = hits.find((h) => h.id === "ai-social-agent");
     assert.ok(hit);
-    assert.match(hit!.text, /Prototype/);
+    assert.match(hit!.text, /prototype/i);
   });
 
   it("falls back to BM25 when embeddings throw", async () => {

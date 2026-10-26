@@ -27,7 +27,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "introduce mike ncube",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa. He has been the sole AI engineer in a four-person IT team since 2022. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -38,7 +38,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does retrieval work",
     ],
     answer:
-      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts.",
+      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts [2].",
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
   },
   {
@@ -59,7 +59,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about proactive sentinel",
     ],
     answer:
-      "Proactive Sentinel is a Flask SOC with a detection engine and an audit log. Designed with POPIA in mind. 44 passing tests.",
+      "Proactive Sentinel is a Flask SOC with a detection engine and an audit log [1]. Designed with POPIA in mind. 44 passing tests [2].",
     sourceIds: ["proactive-sentinel-overview", "proactive-sentinel-tech"],
   },
   {
@@ -74,7 +74,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "full-time or contract",
     ],
     answer:
-      "Yes, Mike is available. Email mikencube03@gmail.com.",
+      "Yes, Mike is available [1]. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
   },
   {
@@ -108,7 +108,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is the cube agent",
     ],
     answer:
-      "Cube is a coding agent prototype. Own tool-calling loop, provider-agnostic adapters so the model can be swapped without changing business logic, approval prompts before writes, and a sandboxed eval harness with a trusted verifier. Prototype, not deployed.",
+      "Cube is a coding agent prototype [1]. Own tool-calling loop, provider-agnostic adapters so the model can be swapped without changing business logic, approval prompts before writes, and a sandboxed eval harness with a trusted verifier. Not deployed.",
     sourceIds: ["cube-agent"],
   },
   {
@@ -119,7 +119,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "explain sitewarden",
     ],
     answer:
-      "Sitewarden is a governed AI operations platform prototype. FastAPI with a LangGraph state graph: plan, analyse, self-check, write-report, await-approval, revise. Human interrupt before consequential actions, Postgres checkpoints, risk-tiered tool gateway, pgvector hybrid search. 89 tests. Prototype, not deployed.",
+      "Sitewarden is a governed AI operations platform prototype [1]. FastAPI with a LangGraph state graph: plan, analyse, self-check, write-report, await-approval, revise. Human interrupt before consequential actions, Postgres checkpoints, risk-tiered tool gateway, pgvector hybrid search. 89 tests. Not deployed.",
     sourceIds: ["sitewarden"],
   },
   {
@@ -133,7 +133,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "zdi signature workflow",
     ],
     answer:
-      "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. Status: Rolling out. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+      "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence [1]. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
     sourceIds: ["zdi-signature-workflow"],
   },
   {
@@ -155,7 +155,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is the governed ai control plane",
     ],
     answer:
-      "Zororo AI OS is a governed AI control plane. Status: Built. Early stage, not deployed. Every event passes Presidio PII detection, an OPA (Rego) policy check, risk scoring, then ALLOW / MONITOR / APPROVE / BLOCK, and a hash-chained audit log. If any step fails, the event is blocked by default. README reports 310 passing tests. LangGraph and pgvector are planned.",
+      "Zororo AI OS is a governed AI control plane. It is built, early stage, and not deployed [1]. Every event passes Presidio PII detection, an OPA (Rego) policy check, risk scoring, then ALLOW / MONITOR / APPROVE / BLOCK, and a hash-chained audit log. If any step fails, the event is blocked by default. README reports 310 passing tests. LangGraph and pgvector are planned.",
     sourceIds: ["zororo-ai-os"],
   },
   {
@@ -167,7 +167,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "claims standby",
     ],
     answer:
-      "The claims operations platform is an approved, production-ready standby (failover), not the live system. A role-based platform for funeral-case processing: claims, cash services and courtesy services. Status: Approved · standby. It takes over if the current claims system fails.",
+      "The claims operations platform is an approved, production-ready standby (failover), not the live system [1]. A role-based platform for funeral-case processing: claims, cash services and courtesy services. It takes over if the current claims system fails.",
     sourceIds: ["zororo-claims"],
   },
   {
@@ -179,7 +179,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "explain the content pipeline",
     ],
     answer:
-      "The multi-agent content pipeline is a prototype. Status: Prototype. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. It runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",
+      "The multi-agent content pipeline is a prototype [1]. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. It runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",
     sourceIds: ["ai-social-agent"],
   },
 ];

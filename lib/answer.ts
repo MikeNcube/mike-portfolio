@@ -16,6 +16,7 @@ import {
   CANONICAL_AWS_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   ensureProjectStatusCopy,
+  isAwsQuestion,
   isProductionSystemsQuestion,
   isTechLeadCrmQuestion,
   isZdiLiveQuestion,
@@ -85,9 +86,10 @@ export function buildPrompt(
     "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
     "Content labelled lab, prototype, or not production must never be described as production.",
     `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words.`,
-    "Whenever you mention ZDI, state that it is approved for production rollout at Zororo-Phumulani, rolling out soon, and not yet live.",
-    "Whenever you mention Zororo AI OS, state that it is Built, early stage, and not deployed.",
-    "Cite supporting blocks with [n] immediately after the claim they support. Do not append a '(Sources: [n])' list in the answer body.",
+    "Whenever you mention ZDI, state in one full sentence that it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live, and cite the source with [n]. Do not repeat that status.",
+    "Whenever you mention Zororo AI OS, state in one full sentence that it is built, early stage, and not deployed. Do not write 'Built.' again if the sentence already says built, and never write 'Status: Built' after that.",
+    "Mike works remote-first.",
+    "Cite supporting blocks with [n] immediately after the claim they support. Every factual answer must include at least one [n]. Do not append a '(Sources: [n])' list in the answer body.",
     "",
     "CONTEXT:",
     context,
@@ -252,23 +254,62 @@ function productionSystemSources(
   return resultSources;
 }
 
+function isZdiSource(source: { title: string; url: string }): boolean {
+  return /\bzdi\b|document intelligence/i.test(source.title);
+}
+
 function ensureZdiSource(
   sources: Array<{ title: string; url: string }>,
   chunks: RetrievedChunk[],
 ): Array<{ title: string; url: string }> {
-  if (sources.some((s) => /\bzdi\b|document intelligence/i.test(s.title))) return sources;
+  const existing = sources.find(isZdiSource);
+  if (existing) {
+    return [existing, ...sources.filter((s) => s !== existing)];
+  }
   const chunk = chunks.find(
     (c) => c.id === "zdi-signature-workflow" || /\bzdi\b/i.test(c.title),
   );
   if (chunk && chunk.sourceUrl.startsWith("http")) {
-    return [{ title: chunk.title, url: chunk.sourceUrl }, ...sources];
+    const zdi = { title: chunk.title, url: chunk.sourceUrl };
+    return [zdi, ...sources.filter((s) => `${s.title}|${s.url}` !== `${zdi.title}|${zdi.url}`)];
   }
   const hit = matchStaticAnswer("Is ZDI live?");
   if (hit) {
     const sourced = sourcesFor(hit);
-    if (sourced.length > 0) return sourced;
+    if (sourced.length > 0) {
+      return [
+        sourced[0],
+        ...sources.filter((s) => `${s.title}|${s.url}` !== `${sourced[0].title}|${sourced[0].url}`),
+      ];
+    }
   }
   return sources;
+}
+
+function awsSources(
+  resultSources: Array<{ title: string; url: string }>,
+): Array<{ title: string; url: string }> {
+  const hit = matchStaticAnswer("What AWS experience does Mike have?");
+  if (hit) {
+    const sourced = sourcesFor(hit);
+    if (sourced.length > 0) return sourced;
+  }
+  return resultSources;
+}
+
+// Attach [1] before the closing punctuation when a sourced answer has no inline cite.
+export function ensureInlineCitation(
+  text: string,
+  sources: Array<{ title: string; url: string }>,
+): string {
+  if (isRefusal(text)) return text;
+  if (/\[\d+\]/.test(text)) return text;
+  if (sources.length === 0) return text;
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  const punct = trimmed.match(/[.!?]$/)?.[0];
+  if (punct) return `${trimmed.slice(0, -1).trimEnd()} [1]${punct}`;
+  return `${trimmed} [1].`;
 }
 
 // Apply production-system split, ZDI/AI OS status, and per-item production citations.
@@ -278,15 +319,17 @@ function polishResult(
   chunks: RetrievedChunk[],
 ): AnswerResult {
   const response = ensureProjectStatusCopy(question, result.response);
+  let sources = result.sources;
   if (isZdiLiveQuestion(question)) {
-    return { ...result, response, sources: ensureZdiSource(result.sources, chunks) };
+    sources = ensureZdiSource(result.sources, chunks);
+  } else if (isTechLeadCrmQuestion(question)) {
+    sources = ensureCrmSource(result.sources, chunks);
+  } else if (isAwsQuestion(question)) {
+    sources = awsSources(result.sources);
+  } else if (isProductionSystemsQuestion(question)) {
+    sources = productionSystemSources(result.sources);
   }
-  if (isTechLeadCrmQuestion(question)) {
-    return { ...result, response, sources: ensureCrmSource(result.sources, chunks) };
-  }
-  if (!isProductionSystemsQuestion(question)) return { ...result, response };
-  const sources = productionSystemSources(result.sources);
-  return { ...result, response, sources };
+  return { ...result, response: ensureInlineCitation(response, sources), sources };
 }
 
 async function tryGenerate(

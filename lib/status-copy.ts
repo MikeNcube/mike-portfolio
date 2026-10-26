@@ -1,23 +1,24 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
-export const ANSWER_CACHE_VERSION = "r25";
+export const ANSWER_CACHE_VERSION = "r26";
 
 export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system [4].";
 
 export const ZDI_STATUS_SENTENCE =
-  "Approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live.";
+  "It is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live.";
 
-export const AI_OS_STATUS_SENTENCE = "Built. Early stage, not deployed.";
+export const AI_OS_STATUS_SENTENCE =
+  "It is built, early stage, and not deployed.";
 
 export const CLAIMS_STATUS_SENTENCE =
-  "Approved, production-ready standby (failover), not the live system.";
+  "It is an approved, production-ready standby (failover), not the live system.";
 
 export const CANONICAL_ZDI_LIVE_ANSWER =
-  "No. ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live).";
+  "No. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].";
 
 export const CANONICAL_AWS_ANSWER =
-  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock. The resilient web tier on AWS is labelled lab, not production. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series.";
+  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. AWS training and certifications include AWS Training and Certification, AWS Skills Center, and the Becoming an AI Practitioner Series [3].";
 
 export const CANONICAL_TECH_LEAD_CRM_ANSWER =
   "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";
@@ -44,6 +45,11 @@ const TECH_LEAD_TITLE_CLAIM_RE =
   /\b(?:the tech lead|as tech lead|was tech lead|is tech lead)\b/i;
 
 const ELLIPSIS_RE = /…|\u2026|\.\.\./;
+
+const REPEATED_STATUS_RES: RegExp[] = [
+  /built\.\s*built/i,
+  /prototype\.\s*status:\s*prototype/i,
+];
 
 // True when the visitor asked which production systems Mike shipped.
 export function isProductionSystemsQuestion(question: string): boolean {
@@ -105,6 +111,7 @@ export function awsAnswerIsCanonical(text: string): boolean {
     && /\bBedrock\b/i.test(text)
     && /lab, not production/i.test(text)
     && /AWS Training and Certification/i.test(text)
+    && /\[\d+\]/.test(text)
     && !AWS_OVERCLAIM_RE.test(text)
   );
 }
@@ -126,6 +133,11 @@ export function hasClaimsStatus(text: string): boolean {
     && /production[- ]ready/i.test(text)
     && /(standby|fail-?over)/i.test(text)
   );
+}
+
+// True when an answer repeats a status word back-to-back (built/built, prototype/Status: Prototype).
+export function hasRepeatedStatus(text: string): boolean {
+  return REPEATED_STATUS_RES.some((re) => re.test(text));
 }
 
 type StatusKind = "zdi" | "ai-os" | "claims";
@@ -176,14 +188,89 @@ function peelTrailingCitations(text: string): { body: string; cites: string } {
   return { body: m[1].trim(), cites: m[2].trim().replace(/\s+/g, " ") };
 }
 
-function appendStatusSentence(text: string, sentence: string): string {
+// Put [n] inside the sentence, before the closing punctuation.
+function attachCites(sentence: string, cites: string): string {
+  const trimmed = sentence.trim();
+  if (!cites) return trimmed;
+  if (/\[\d+\]/.test(trimmed)) return trimmed;
+  const punctMatch = trimmed.match(/[.!?]$/);
+  const punct = punctMatch ? punctMatch[0] : ".";
+  const core = punctMatch ? trimmed.slice(0, -1).trimEnd() : trimmed;
+  return `${core} ${cites}${punct}`;
+}
+
+function joinStatusBits(bits: string[]): string {
+  if (bits.length === 0) return "";
+  if (bits.length === 1) return bits[0];
+  if (bits.length === 2) return `${bits[0]} and ${bits[1]}`;
+  return `${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}`;
+}
+
+// Full sentence covering only the status facts the mention sentence is missing.
+function statusSentenceFor(kind: StatusKind, mention: string): string | null {
+  switch (kind) {
+    case "zdi": {
+      const hasApproved = /approved/i.test(mention);
+      const hasRolling = /\brolling out\b/i.test(mention);
+      const hasNotLive = /not (yet )?live/i.test(mention);
+      if (hasApproved && hasRolling && hasNotLive) return null;
+      if (!hasApproved && !hasRolling && !hasNotLive) return ZDI_STATUS_SENTENCE;
+      const bits: string[] = [];
+      if (!hasApproved) bits.push("approved for production rollout at Zororo-Phumulani");
+      if (!hasRolling) bits.push("rolling out soon");
+      if (!hasNotLive) bits.push("not yet live");
+      if (bits.length === 0) return null;
+      if (bits.length === 1 && !hasNotLive) return `It is ${bits[0]}.`;
+      if (bits.length === 1) return `It is ${bits[0]}.`;
+      const last = bits[bits.length - 1];
+      const head = bits.slice(0, -1);
+      if (last === "not yet live") {
+        return `It is ${joinStatusBits(head)}, but it is not yet live.`;
+      }
+      return `It is ${joinStatusBits(bits)}.`;
+    }
+    case "ai-os": {
+      const hasBuilt = /\bbuilt\b/i.test(mention);
+      const hasEarly = /early stage/i.test(mention);
+      const hasNotDeployed = /not (yet )?deployed/i.test(mention);
+      if (hasBuilt && hasEarly && hasNotDeployed) return null;
+      if (!hasBuilt && !hasEarly && !hasNotDeployed) return AI_OS_STATUS_SENTENCE;
+      const bits: string[] = [];
+      if (!hasBuilt) bits.push("built");
+      if (!hasEarly) bits.push("early stage");
+      if (!hasNotDeployed) bits.push("not deployed");
+      if (bits.length === 0) return null;
+      return `It is ${joinStatusBits(bits)}.`;
+    }
+    case "claims": {
+      const hasApproved = /approved/i.test(mention);
+      const hasReady = /production[- ]ready/i.test(mention);
+      const hasStandby = /\b(standby|fail-?over)\b/i.test(mention);
+      const hasNotLive = /not the live system/i.test(mention);
+      if (hasApproved && hasReady && hasStandby) return null;
+      if (!hasApproved && !hasReady && !hasStandby) return CLAIMS_STATUS_SENTENCE;
+      const bits: string[] = [];
+      if (!hasApproved) bits.push("approved");
+      if (!hasReady) bits.push("production-ready");
+      if (!hasStandby) bits.push("a standby (failover)");
+      const core = bits.length > 0 ? `It is ${joinStatusBits(bits)}` : "It is";
+      if (hasNotLive) return bits.length > 0 ? `${core}.` : null;
+      if (bits.length === 0) return "It is not the live system.";
+      return `${core}, not the live system.`;
+    }
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function appendStatusSentence(text: string, sentence: string, cites: string): string {
   const trimmed = text.trim();
-  if (!trimmed) return sentence;
-  const { body, cites } = peelTrailingCitations(trimmed);
-  const sep = /[.!?]$/.test(body) ? " " : ". ";
-  const core = `${body}${sep}${sentence}`;
-  if (!cites) return core;
-  return /[.!?]$/.test(core) ? `${core} ${cites}` : `${core}. ${cites}`;
+  const injected = attachCites(sentence, cites);
+  if (!trimmed) return injected;
+  const sep = /[.!?]$/.test(trimmed) ? " " : ". ";
+  return `${trimmed}${sep}${injected}`;
 }
 
 function splitSentences(text: string): string[] {
@@ -211,40 +298,36 @@ function mentionRe(kind: StatusKind): RegExp {
   }
 }
 
-function canonicalSentence(kind: StatusKind): string {
-  switch (kind) {
-    case "zdi":
-      return ZDI_STATUS_SENTENCE;
-    case "ai-os":
-      return AI_OS_STATUS_SENTENCE;
-    case "claims":
-      return CLAIMS_STATUS_SENTENCE;
-    default: {
-      const _exhaustive: never = kind;
-      return _exhaustive;
-    }
-  }
-}
-
-// Insert the status sentence right after the sentence that names the project.
+// Insert a full status sentence right after the sentence that names the project.
 function insertStatusAfterMention(text: string, kind: StatusKind): string {
-  const sentence = canonicalSentence(kind);
   const re = mentionRe(kind);
   const parts = splitSentences(text);
   const idx = parts.findIndex((part) => re.test(part));
-  if (idx < 0) return appendStatusSentence(text, sentence);
+  const mention = idx >= 0 ? parts[idx] : text;
+  const sentence = statusSentenceFor(kind, mention);
+  if (!sentence) return text;
+
+  if (idx < 0) {
+    const { body, cites } = peelTrailingCitations(text.trim());
+    return appendStatusSentence(body, sentence, cites);
+  }
 
   const { body, cites } = peelTrailingCitations(parts[idx].trim());
+  const injected = attachCites(sentence, cites);
   const sep = /[.!?]$/.test(body) ? " " : ". ";
-  const core = `${body}${sep}${sentence}`;
-  const injected = cites
-    ? (/[.!?]$/.test(core) ? `${core} ${cites}` : `${core}. ${cites}`)
-    : core;
+  const replaced = `${body}${sep}${injected}`;
   const head = parts.slice(0, idx).join("");
   const rest = parts.slice(idx + 1).join("").trim();
-  if (!rest) return `${head}${injected}`.trim();
-  const gap = /[.!?]$/.test(injected) ? " " : ". ";
-  return `${head}${injected}${gap}${rest}`.replace(/ {2,}/g, " ").trim();
+  if (!rest) return `${head}${replaced}`.trim();
+  const gap = /[.!?]$/.test(replaced) ? " " : ". ";
+  return `${head}${replaced}${gap}${rest}`.replace(/ {2,}/g, " ").trim();
+}
+
+// Drop a second "Built." or "Status: Prototype." when the equivalent is already said.
+export function collapseRepeatedStatus(text: string): string {
+  return text
+    .replace(/\bprototype\.\s*Status:\s*Prototype\.?/gi, "prototype.")
+    .replace(/\bbuilt\.\s*Built\b/gi, "built");
 }
 
 // Force AWS copy, the Shipped/Rolling out split, ZDI status, and Zororo AI OS status.
@@ -271,5 +354,5 @@ export function ensureProjectStatusCopy(question: string, text: string): string 
   if ((mentionsClaims(question) || mentionsClaims(out)) && !alreadyConveysStatus("claims", out)) {
     out = insertStatusAfterMention(out, "claims");
   }
-  return out;
+  return collapseRepeatedStatus(out);
 }
