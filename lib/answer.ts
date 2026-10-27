@@ -2,7 +2,12 @@
 // Never throws to the caller for provider failures.
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
-import { matchProjectScopedAnswer, matchRecruiterIntent } from "./intent";
+import {
+  isStartJoinAvailabilityQuestion,
+  matchProjectScopedAnswer,
+  matchRecruiterIntent,
+  namedProjects,
+} from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   DEFAULT_K,
@@ -85,10 +90,10 @@ export function isContactQuestion(question: string): boolean {
 }
 
 const HONEST_UNKNOWN_RE =
-  /\b(?:day rate|hourly rate|daily rate|notice period|relocat(?:e|ion)|time ?zone|timezone|start (?:date|next|this|tomorrow)|when can (?:mike|he) start|can mike start|available from)\b/i;
+  /\b(?:day rate|hourly rate|daily rate|notice period|what notice|relocat(?:e|ion)|time ?zone|timezone|start (?:date|next|this|tomorrow|immediately)|when can (?:mike|he) start|can mike start|available from|available to start|how soon can (?:mike|he) start)\b/i;
 
 export function isHonestUnknownQuestion(question: string): boolean {
-  return HONEST_UNKNOWN_RE.test(question);
+  return HONEST_UNKNOWN_RE.test(question) || isStartJoinAvailabilityQuestion(question);
 }
 
 export function ensureContactEmail(text: string): string {
@@ -545,31 +550,43 @@ function fallbackSentenceFromChunk(
   }
   const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
   const contentWords = distinctiveSubjectTerms(question);
+  const relaxedWords = [
+    ...contentWords,
+    ...contentWords.flatMap((term) =>
+      term.includes(" ")
+        ? tokenize(term).filter((token) => token.length >= 6 && !FALLBACK_STOPWORDS.has(token))
+        : [],
+    ),
+  ];
   const popiaQuestion = /\bpopia\b/i.test(question);
   let fallbackTruncated = "";
-  const ranked = [...parts].sort(
-    (a, b) => sentenceQuality(b, contentWords, pythonQuestion) - sentenceQuality(a, contentWords, pythonQuestion),
-  );
-  for (const part of ranked) {
-    if (sentenceLeaksSourceOrPath(part) || isWeakLeadClause(part)) continue;
-    if (popiaQuestion && !/\bpopia\b/i.test(part)) continue;
-    const rewritten = rewriteFallbackSentence(part, chunk.title);
-    if (!rewritten || sentenceLeaksSourceOrPath(rewritten) || isWeakLeadClause(rewritten)) continue;
-    const cut = firstSentence(rewritten);
-    if (sentenceLeaksSourceOrPath(cut) || isWeakLeadClause(cut)) continue;
-    if (/\bif Gemini errors\b|\brate-limited\b/i.test(cut)) continue;
-    if (
-      contentWords.length > 0
-      && !contentWords.some((term) => passageHasTerm(cut, term))
-    ) {
-      continue;
+  const pick = (terms: string[], allowTruncated: boolean): string => {
+    const ranked = [...parts].sort(
+      (a, b) => sentenceQuality(b, terms, pythonQuestion) - sentenceQuality(a, terms, pythonQuestion),
+    );
+    for (const part of ranked) {
+      if (sentenceLeaksSourceOrPath(part) || isWeakLeadClause(part)) continue;
+      if (popiaQuestion && !/\bpopia\b/i.test(part)) continue;
+      const rewritten = rewriteFallbackSentence(part, chunk.title);
+      if (!rewritten || sentenceLeaksSourceOrPath(rewritten) || isWeakLeadClause(rewritten)) continue;
+      const cut = firstSentence(rewritten);
+      if (sentenceLeaksSourceOrPath(cut) || isWeakLeadClause(cut)) continue;
+      if (/\bif Gemini errors\b|\brate-limited\b/i.test(cut)) continue;
+      if (terms.length > 0 && !terms.some((term) => passageHasTerm(cut, term))) {
+        continue;
+      }
+      if (/…$|\.\.\.$/.test(cut)) {
+        if (allowTruncated && !fallbackTruncated) fallbackTruncated = cut;
+        continue;
+      }
+      return cut;
     }
-    if (/…$|\.\.\.$/.test(cut)) {
-      if (!fallbackTruncated) fallbackTruncated = cut;
-      continue;
-    }
-    return cut;
-  }
+    return "";
+  };
+  const exact = pick(contentWords, true);
+  if (exact) return exact;
+  const relaxed = pick(relaxedWords, false);
+  if (relaxed) return relaxed;
   return fallbackTruncated;
 }
 
@@ -662,6 +679,7 @@ const FALLBACK_STOPWORDS = new Set([
   "consider",
   "want",
   "wants",
+  "next",
 ]);
 
 const WEAK_SUBJECT_TERMS = new Set([
@@ -714,6 +732,7 @@ const WEAK_SUBJECT_TERMS = new Set([
   "consider",
   "want",
   "wants",
+  "next",
 ]);
 
 const MULTIWORD_SUBJECTS = [
@@ -747,6 +766,8 @@ const RELATED_TERMS: Record<string, string[]> = {
   "vector databases": ["vector databases", "pgvector", "postgresql", "postgres"],
   golang: ["golang", "go"],
   go: ["golang", "go"],
+  security: ["security", "compliance", "popia", "secure"],
+  compliance: ["compliance", "popia"],
 };
 
 const KNOWN_TECH_TERMS = [
@@ -819,94 +840,77 @@ function stemVariants(word: string): string[] {
   return [...out];
 }
 
-const KB_ENTITY_TECH_TERMS = new Set([
-  "zdi",
-  "crm",
-  "digi",
-  "sitewarden",
-  "cube",
-  "sentinel",
-  "claims",
-  "zororo",
-  "portfolio",
-  "assistant",
-  "chatbot",
-  "rag",
-  "agent",
-  "agents",
-  "github",
-  "signature",
-  "signatures",
-  "certification",
-  "certifications",
-  "grounding",
-  "approval",
-  "workflow",
-  "workflows",
-  "python",
-  "fastapi",
-  "flask",
-  "typescript",
-  "javascript",
-  "react",
-  "postgresql",
-  "postgres",
-  "pgvector",
-  "sqlite",
-  "redis",
-  "docker",
-  "celery",
-  "sqlalchemy",
-  "alembic",
-  "prisma",
-  "nextauth",
-  "aws",
-  "s3",
-  "ec2",
-  "iam",
-  "cloudwatch",
-  "bedrock",
-  "gemini",
-  "groq",
-  "claude",
-  "openai",
-  "anthropic",
-  "langgraph",
-  "langchain",
-  "ollama",
-  "presidio",
-  "opa",
-  "rego",
-  "pydantic",
-  "terraform",
-  "pytest",
-  "jinja2",
-  "n8n",
-  "jwt",
-  "railway",
-  "gunicorn",
-  "opentelemetry",
-  "mitre",
-  "popia",
-  "bm25",
-  "embeddings",
-  "embedding",
-  "sql",
-  "database",
-  "databases",
-  "postgres",
-]);
+function buildKbEntityIndex(): { terms: Set<string>; phrases: string[] } {
+  const terms = new Set<string>();
+  const phrases = new Set<string>();
+
+  const addKeywordToken = (token: string) => {
+    if (token.length < 2 || NAME_TOKENS.has(token)) return;
+    if (token === "next" || token === "js") return;
+    terms.add(token);
+  };
+
+  const addTextToken = (token: string) => {
+    if (token.length < 2 || NAME_TOKENS.has(token) || FALLBACK_STOPWORDS.has(token)) return;
+    if (token === "next" || token === "js") return;
+    if (token.length >= 6 || /\d/.test(token)) terms.add(token);
+  };
+
+  const addPhrase = (raw: string) => {
+    const phrase = raw.toLowerCase().replace(/\s+/g, " ").trim();
+    if (!phrase.includes(" ")) return;
+    phrases.add(phrase);
+    for (const token of tokenize(phrase)) addKeywordToken(token);
+  };
+
+  for (const chunk of KNOWLEDGE_CHUNKS) {
+    const dotted = `${chunk.title} ${chunk.text} ${(chunk.keywords ?? []).join(" ")}`
+      .toLowerCase()
+      .match(/\b[a-z][a-z0-9]*\.[a-z0-9]+\b/g) ?? [];
+    for (const phrase of dotted) phrases.add(phrase);
+    for (const keyword of chunk.keywords ?? []) {
+      if (/[\s./]/.test(keyword)) addPhrase(keyword);
+      for (const token of tokenize(keyword)) addKeywordToken(token);
+    }
+    for (const token of tokenize(chunk.title)) {
+      if (token === "next" || token === "js") continue;
+      addKeywordToken(token);
+    }
+    const textTokens = tokenize(chunk.text);
+    for (const token of textTokens) addTextToken(token);
+    if (terms.has("postgresql") || terms.has("sqlalchemy") || terms.has("sqlite")) {
+      terms.add("sql");
+    }
+    for (let i = 0; i < textTokens.length - 1; i += 1) {
+      const left = textTokens[i];
+      const right = textTokens[i + 1];
+      if (FALLBACK_STOPWORDS.has(left) || FALLBACK_STOPWORDS.has(right)) continue;
+      if (NAME_TOKENS.has(left) || NAME_TOKENS.has(right)) continue;
+      phrases.add(`${left} ${right}`);
+    }
+  }
+  return { terms, phrases: [...phrases] };
+}
+
+const KB_ENTITY_INDEX = buildKbEntityIndex();
+const KB_ENTITY_TECH_TERMS = KB_ENTITY_INDEX.terms;
+const KB_SUBJECT_PHRASES = [...new Set([...MULTIWORD_SUBJECTS, ...KB_ENTITY_INDEX.phrases])]
+  .sort((a, b) => b.length - a.length);
+
+export function kbEntityTechTerms(): Set<string> {
+  return KB_ENTITY_TECH_TERMS;
+}
 
 function isKbEntityOrTech(term: string): boolean {
   const lower = term.toLowerCase();
   if (KB_ENTITY_TECH_TERMS.has(lower)) return true;
-  if (MULTIWORD_SUBJECTS.includes(lower)) return true;
+  if (KB_SUBJECT_PHRASES.includes(lower)) return true;
   return tokenize(lower).some((token) => KB_ENTITY_TECH_TERMS.has(token));
 }
 
 function distinctiveSubjectTerms(question: string): string[] {
   const lower = question.toLowerCase();
-  const phrases = MULTIWORD_SUBJECTS.filter((p) => lower.includes(p));
+  const phrases = KB_SUBJECT_PHRASES.filter((p) => lower.includes(p));
   const covered = new Set<string>();
   for (const phrase of phrases) {
     for (const token of tokenize(phrase)) covered.add(token);
@@ -1192,7 +1196,7 @@ function staticOrSafeReply(
     }, chunks));
   }
   const staticHit = matchStaticAnswer(question);
-  if (staticHit) {
+  if (staticHit && staticHitFitsNamedProjects(question, staticHit)) {
     return withUnknownTermNote(question, polishResult(question, {
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
@@ -1475,12 +1479,48 @@ function polishResult(
     }
   }
 
+  const sequential = sequentializeCitations(out, sources);
   const polished = {
     ...result,
-    response: dropTrailingTruncation(ensureInlineCitation(out, sources)),
-    sources,
+    response: dropTrailingTruncation(ensureInlineCitation(sequential.text, sequential.sources)),
+    sources: sequential.sources,
   };
   return result.via === "static" ? withUnknownTermNote(question, polished) : polished;
+}
+
+function staticHitFitsNamedProjects(
+  question: string,
+  hit: { answer: string; sourceIds: string[] },
+): boolean {
+  const projects = namedProjects(question);
+  if (projects.length === 0) return true;
+  const hay = `${hit.answer} ${hit.sourceIds.join(" ")}`.toLowerCase();
+  return projects.every((project) =>
+    project.sourceIds.some((id) => hit.sourceIds.includes(id))
+    || hay.includes(project.id)
+    || project.sourceIds.some((id) => hay.includes(id)),
+  );
+}
+
+function sequentializeCitations(
+  text: string,
+  sources: AnswerSource[],
+): { text: string; sources: AnswerSource[] } {
+  const seen = new Map<number, number>();
+  const used: AnswerSource[] = [];
+  let next = 1;
+  const rewritten = text.replace(/\[(\d+)\]/g, (_, raw: string) => {
+    const original = Number(raw);
+    const existing = seen.get(original);
+    if (existing) return `[${existing}]`;
+    const mapped = next;
+    next += 1;
+    seen.set(original, mapped);
+    const source = sources[original - 1];
+    if (source) used.push(source);
+    return `[${mapped}]`;
+  });
+  return { text: rewritten, sources: used.length > 0 ? used : sources };
 }
 
 function dropTrailingTruncation(text: string): string {

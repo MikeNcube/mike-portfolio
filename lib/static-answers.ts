@@ -28,6 +28,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "introduce mike ncube",
       "give me a quick summary of who mike is",
       "summary of who mike is",
+      "cv highlights",
+      "resume highlights",
     ],
     answer:
       "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
@@ -200,6 +202,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "where is mike based",
       "where does mike live",
       "where is he based",
+      "what part of south africa is mike in",
     ],
     answer:
       "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
@@ -256,6 +259,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what roles is mike looking for",
       "what is mike looking for",
       "target roles",
+      "is mike currently job hunting",
+      "what job is mike hoping to land",
+      "what type of role suits mike",
     ],
     answer:
       "Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. He is available for full-time or contract [1].",
@@ -310,9 +316,11 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     aliases: [
       "what is mike's team size",
       "how big is mike's team",
+      "how many people are in mike's it department",
+      "has mike ever supervised other developers",
     ],
     answer:
-      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1]. The sources do not say he manages the CRM's users.",
+      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -342,6 +350,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "why should we hire mike",
       "is mike a good fit for a senior ai engineer role",
       "what makes mike different",
+      "give me three reasons to interview mike",
     ],
     answer:
       "Mike has shipped live production systems at Zororo-Phumulani in a regulated funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
@@ -352,6 +361,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     aliases: [
       "what is mike's strongest project",
       "what is mike's best project",
+      "what is mike's proudest build",
     ],
     answer:
       `The sources do not rank a strongest project. ${CANONICAL_PRODUCTION_ANSWER}`,
@@ -363,6 +373,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does this assistant work",
       "how does the assistant work",
       "how does the fact assistant work",
+      "what powers this chat assistant",
+      "what powers this assistant",
+      "which model answers my questions here",
     ],
     answer:
       "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. It embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded cited answer [2]. If embeddings fail, it falls back to BM25 keyword search. Generation tries Gemini 2.5 Flash first, then Groq, then a static CV answer [2]. It refuses questions outside that scope. The grounding prompt is server-side [1].",
@@ -376,6 +389,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "test coverage",
       "how does mike approach testing and quality",
       "how does mike keep code reliable",
+      "how does mike make sure his systems don't break",
     ],
     answer:
       "Public tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
@@ -415,6 +429,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "where is zdi deployed",
       "is zdi deployed",
       "where does zdi run",
+      "has zdi been rolled out",
     ],
     answer:
       "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
@@ -564,7 +579,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is the digi app form",
     ],
     answer:
-      "Digi App Form is a shipped live production system for regulated funeral-assurance intake at Zororo-Phumulani [1]. Full-stack Flask: multi-step intake, server-side validation, automated policy-PDF generation, document upload, and a staff admin dashboard.",
+      "Digi App Form is a shipped live production system for regulated funeral-assurance intake at Zororo-Phumulani [1]. Full-stack Flask: multi-step intake, server-side validation before anything is persisted, durable submission storage, automated policy-PDF generation, supporting-document upload handling, a staff admin dashboard, and a scheduled backup routine.",
     sourceIds: ["digi-app-form"],
   },
   {

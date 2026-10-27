@@ -10,7 +10,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r49";
+export const ANSWER_CACHE_VERSION = "r50";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -63,7 +63,8 @@ const WORK_FILLER_RE =
 
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
-const ZDI_LIVE_QUESTION_RE = /\bis zdi\b.{0,24}\blive\b/i;
+const ZDI_LIVE_QUESTION_RE =
+  /\b(?:is zdi\b.{0,32}\b(?:live|rolled out|deployed)|has zdi been (?:rolled out|deployed|launched)|zdi\b.{0,24}\b(?:rolled out|rollout|rolling out))\b/i;
 
 const OTHER_LIVE_PROJECT_RE = /\bcrm\b|\bdigi\b|\bsentinel\b|\bsitewarden\b/i;
 

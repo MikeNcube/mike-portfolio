@@ -168,7 +168,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'Zororo',
       'Zororo-Phumulani',
     ],
-    text: 'Digi App Form: shipped live production system for regulated funeral-assurance intake at Zororo-Phumulani. Full-stack Flask web application. Multi-step intake form, server-side validation before anything is persisted, automated policy-PDF generation, supporting-document upload handling, staff admin dashboard, and a scheduled backup routine. Stack: Python, Flask, SQLite, Docker. Status: shipped.',
+    text: 'Digi App Form: shipped live production system for regulated funeral-assurance intake at Zororo-Phumulani. Full-stack Flask web application. Multi-step intake form, server-side validation before anything is persisted, durable submission storage, automated policy-PDF generation, supporting-document upload handling, staff admin dashboard, and a scheduled backup routine. Stack: Python, Flask, SQLite, Docker. Status: shipped.',
   },
   {
     id: 'sitewarden',

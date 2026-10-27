@@ -112,8 +112,18 @@ const CONCEPTS: Concept[] = [
   {
     id: "location",
     question: "Where is Mike based?",
-    keywords: ["where", "country", "from"],
-    strong: ["based", "live", "city", "located", "reside"],
+    keywords: ["where", "country", "part"],
+    strong: ["based", "live", "city", "located", "reside", "south africa", "province", "region", "whereabouts"],
+    allOf: [
+      ["part", "south africa"],
+      ["part of"],
+      ["where", "south africa"],
+      ["located", "south africa"],
+      ["live", "south africa"],
+      ["based", "south africa"],
+      ["where", "from"],
+      ["country", "from"],
+    ],
   },
   {
     id: "title",
@@ -149,8 +159,18 @@ const CONCEPTS: Concept[] = [
   {
     id: "roles",
     question: "What roles is Mike looking for?",
-    keywords: ["want", "wants", "targeting"],
-    strong: ["looking for", "seeking", "target role", "target roles", "open to"],
+    keywords: ["want", "wants", "targeting", "hunting"],
+    strong: [
+      "looking for",
+      "seeking",
+      "target role",
+      "target roles",
+      "open to",
+      "job hunting",
+      "open to work",
+      "hoping to land",
+      "hoping to",
+    ],
     allOf: [
       ["position", "want"],
       ["position", "wants"],
@@ -160,6 +180,10 @@ const CONCEPTS: Concept[] = [
       ["role", "wants"],
       ["role", "seeking"],
       ["role", "looking"],
+      ["role", "suits"],
+      ["type", "role"],
+      ["job", "hoping"],
+      ["hoping", "land"],
     ],
   },
   {
@@ -183,12 +207,25 @@ const CONCEPTS: Concept[] = [
   {
     id: "team",
     question: "What is Mike's team size?",
-    keywords: ["engineers", "lead", "report", "reports", "teammates", "manager"],
-    strong: ["team", "colleagues", "leadership", "team size", "work with", "manage"],
+    keywords: ["engineers", "lead", "report", "reports", "teammates", "manager", "mentor"],
+    strong: [
+      "team",
+      "colleagues",
+      "leadership",
+      "team size",
+      "work with",
+      "manage",
+      "department",
+      "supervise",
+      "supervised",
+    ],
     allOf: [
       ["manage", "people"],
       ["lead", "team"],
       ["how many", "engineers"],
+      ["how many", "people"],
+      ["it", "department"],
+      ["supervise", "developers"],
     ],
   },
   {
@@ -204,40 +241,84 @@ const CONCEPTS: Concept[] = [
     id: "why-hire",
     question: "Why should we hire Mike?",
     keywords: ["fit"],
-    strong: ["hire", "good fit", "strong candidate", "strong fit", "why mike", "what makes", "should we hire", "different"],
+    strong: [
+      "hire",
+      "good fit",
+      "strong candidate",
+      "strong fit",
+      "why mike",
+      "what makes",
+      "should we hire",
+      "different",
+      "reasons to interview",
+      "interview mike",
+      "interviewing",
+    ],
     allOf: [
       ["why", "hire"],
+      ["reasons", "interview"],
+      ["three", "reasons"],
+      ["worth", "interview"],
     ],
   },
   {
     id: "strongest",
     question: "What is Mike's strongest project?",
     keywords: ["impressive"],
-    strong: ["strongest", "best project", "best build", "most impressive"],
+    strong: [
+      "strongest",
+      "best project",
+      "best build",
+      "most impressive",
+      "proudest",
+      "flagship",
+      "favourite",
+      "favorite",
+    ],
     allOf: [
       ["impressive", "build"],
       ["impressive", "project"],
+      ["proudest", "build"],
     ],
   },
   {
     id: "assistant",
     question: "How does this assistant work?",
     keywords: [],
-    strong: ["chatbot", "this assistant", "the assistant", "fact assistant"],
+    strong: [
+      "chatbot",
+      "this assistant",
+      "the assistant",
+      "fact assistant",
+      "chat assistant",
+      "which model",
+      "what powers",
+      "llm behind",
+    ],
     allOf: [
       ["assistant", "work"],
       ["assistant", "built"],
       ["chatbot", "built"],
+      ["powers", "assistant"],
+      ["model", "answers"],
+      ["model", "questions"],
+      ["llm", "assistant"],
+      ["llm", "behind"],
+      ["behind", "assistant"],
     ],
   },
   {
     id: "testing",
     question: "What testing has Mike done?",
     keywords: ["testing", "tests", "coverage"],
-    strong: ["test coverage", "quality", "reliable", "reliability"],
+    strong: ["test coverage", "quality", "reliable", "reliability", "don't break", "does not break"],
     allOf: [
       ["testing", "quality"],
       ["code", "reliable"],
+      ["systems", "break"],
+      ["make sure", "break"],
+      ["systems", "fail"],
+      ["keep", "failing"],
     ],
   },
   {
@@ -254,10 +335,15 @@ const CONCEPTS: Concept[] = [
       "summarize",
       "introduce",
       "introduction",
+      "cv highlights",
+      "resume highlights",
+      "highlights",
     ],
     allOf: [
       ["brief", "about"],
       ["about", "who"],
+      ["cv", "highlights"],
+      ["resume", "highlights"],
     ],
   },
 ];
@@ -273,9 +359,9 @@ const SPECIFICITY: Record<string, number> = {
   remote: 78,
   years: 76,
   title: 74,
+  assistant: 73,
   "ai-tools": 72,
   languages: 70,
-  assistant: 68,
   testing: 66,
   strongest: 64,
   "why-hire": 62,
@@ -287,6 +373,19 @@ const SPECIFICITY: Record<string, number> = {
 };
 
 function scoreConcept(hay: string, tokens: string[], concept: Concept): number {
+  if (
+    concept.id === "team"
+    && /\b(?:join|start|begin)\b/i.test(hay)
+    && /\b(?:when|could|can|soon|date)\b/i.test(hay)
+  ) {
+    return 0;
+  }
+  if (concept.id === "location" && /\bremote(?:ly)?\b/i.test(hay)) {
+    return 0;
+  }
+  if (concept.id === "location" && /\b(?:cv|resume)\b/i.test(hay) && /\bhighlights?\b/i.test(hay)) {
+    return 0;
+  }
   let score = 0;
   const seen = new Set<string>();
   const bump = (key: string, weight: number) => {
@@ -409,6 +508,21 @@ const PROJECTS: Array<{
   },
 ];
 
+export function isStartJoinAvailabilityQuestion(question: string): boolean {
+  return (
+    /\b(?:when (?:can|could|would|will) (?:mike|he) (?:start|join|begin)|(?:can|could) (?:mike|he) start|how soon can (?:mike|he) (?:start|join)|available to start|start (?:date|next|this|tomorrow|immediately))\b/i
+      .test(question)
+  );
+}
+
+const PROJECT_TESTING: Record<string, string> = {
+  zdi: "ZDI has 525 backend tests [1].",
+  sitewarden: "Sitewarden has 89 tests, including retrieval and trajectory evals [1].",
+  sentinel: "Proactive Sentinel has 44 passing tests [1].",
+  "ai-os": "Zororo AI OS has 310 passing tests, including pytest and Rego policy tests [1].",
+  cube: "Cube has a sandboxed eval harness with a trusted verifier [1].",
+};
+
 export function namedProjects(question: string): NamedProject[] {
   const hits: NamedProject[] = [];
   for (const project of PROJECTS) {
@@ -427,12 +541,20 @@ export function namedProjects(question: string): NamedProject[] {
 
 function projectTopic(
   question: string,
-): "stack" | "languages" | "ai" | "approvers" | "deploy" | "lead" | "general" {
+): "stack" | "languages" | "ai" | "approvers" | "deploy" | "lead" | "testing" | "remote" | "storage" | "general" {
   const hay = question.toLowerCase();
   if (/\b(?:tech lead|team lead|engineering lead)\b/i.test(hay)) return "lead";
   if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews)\b/i.test(hay)) return "approvers";
-  if (/\b(?:deploy(?:ed|ment)?|where is .{0,24}hosted|live|production rollout)\b/i.test(hay)) {
+  if (
+    /\b(?:deploy(?:ed|ment)?|where is .{0,24}hosted|live|production rollout|rolled out|rollout|rolling out)\b/i
+      .test(hay)
+  ) {
     return "deploy";
+  }
+  if (/\bremote(?:ly)?\b/i.test(hay)) return "remote";
+  if (/\b(?:test(?:s|ed|ing)?|evals?|coverage)\b/i.test(hay)) return "testing";
+  if (/\b(?:document storage|supporting-document|durable submission|document upload)\b/i.test(hay)) {
+    return "storage";
   }
   if (/\b(?:written in|programming languages?|what languages?)\b/i.test(hay)) return "languages";
   if (/\b(?:ai tools?|llm|frameworks?)\b/i.test(hay)) return "ai";
@@ -470,6 +592,37 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
         answer: CANONICAL_ZDI_LIVE_ANSWER,
         sourceIds: project.sourceIds,
       },
+    };
+  }
+  if (topic === "remote") {
+    return {
+      id: `project-${project.id}-remote`,
+      answer: {
+        question: project.staticQuestion,
+        aliases: [],
+        answer: staticByQuestion(project.staticQuestion).answer,
+        sourceIds: project.sourceIds,
+      },
+    };
+  }
+  if (topic === "testing") {
+    const testing = PROJECT_TESTING[project.id];
+    if (testing) {
+      return {
+        id: `project-${project.id}-testing`,
+        answer: {
+          question: project.staticQuestion,
+          aliases: [],
+          answer: testing,
+          sourceIds: project.sourceIds,
+        },
+      };
+    }
+  }
+  if (topic === "storage") {
+    return {
+      id: `project-${project.id}-storage`,
+      answer: staticByQuestion(project.staticQuestion),
     };
   }
   if (topic === "stack") {
@@ -513,6 +666,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
 
 export function matchRecruiterIntent(question: string): RecruiterIntent | null {
   if (namedProjects(question).length > 0) return null;
+  if (isStartJoinAvailabilityQuestion(question)) return null;
   const hay = question.toLowerCase();
   const tokens = tokenizeWords(question);
   const scored = CONCEPTS.map((concept) => ({
@@ -521,7 +675,7 @@ export function matchRecruiterIntent(question: string): RecruiterIntent | null {
   })).sort((a, b) => b.score - a.score);
 
   const dropWho = isExperienceQuestion(question) || isWorkQuestion(question);
-  const specific = scored.filter((row) => SPECIFIC_IDS.has(row.concept.id) && row.score > 0);
+  const specific = scored.filter((row) => SPECIFIC_IDS.has(row.concept.id) && row.score >= 2);
   const pool = (specific.length > 0 ? specific : scored.filter((row) => row.score > 0)).filter(
     (row) => !(dropWho && row.concept.id === "who"),
   );
