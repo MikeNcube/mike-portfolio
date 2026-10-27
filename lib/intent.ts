@@ -74,6 +74,9 @@ function hasKeyword(hay: string, tokens: string[], keyword: string): boolean {
   if (kw === "engineers" || kw === "engineer") {
     return /\bengineers?\b/i.test(hay);
   }
+  if ((kw === "language" || kw === "languages") && /\bnatural language\b/i.test(hay)) {
+    return false;
+  }
   const kwStems = new Set(stem(kw));
   return tokens.some((token) => stem(token).some((s) => kwStems.has(s)));
 }
@@ -189,6 +192,15 @@ const CONCEPTS: Concept[] = [
     ],
   },
   {
+    id: "availability",
+    question: "Is Mike available for hire?",
+    keywords: ["available"],
+    strong: ["availability", "can i hire", "available for hire"],
+    allOf: [
+      ["available", "hire"],
+    ],
+  },
+  {
     id: "why-hire",
     question: "Why should we hire Mike?",
     keywords: ["fit"],
@@ -255,6 +267,7 @@ const SPECIFIC_IDS = new Set(CONCEPTS.map((c) => c.id).filter((id) => id !== "wh
 const SPECIFICITY: Record<string, number> = {
   linkedin: 100,
   contract: 90,
+  availability: 88,
   employer: 85,
   education: 80,
   remote: 78,

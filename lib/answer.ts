@@ -733,6 +733,8 @@ const MULTIWORD_SUBJECTS = [
   "ci/cd",
   "mlops",
   "github actions",
+  "grounding prompt",
+  "approval workflow",
 ];
 
 const RELATED_TERMS: Record<string, string[]> = {
@@ -835,6 +837,12 @@ const KB_ENTITY_TECH_TERMS = new Set([
   "github",
   "signature",
   "signatures",
+  "certification",
+  "certifications",
+  "grounding",
+  "approval",
+  "workflow",
+  "workflows",
   "python",
   "fastapi",
   "flask",
@@ -1517,12 +1525,12 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   if (isInjectionDefenceQuestion(question)) {
     return withContactEmail(question, injectionDefenceReply([]));
   }
+  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) {
+    return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
   const intent = recruiterIntentReply(question);
   if (intent) {
     return withContactEmail(question, polishResult(question, intent, []));
-  }
-  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) {
-    return { response: EMAIL_FALLBACK, sources: [], via: "email" };
   }
 
   const audience = input.audience ?? "developer";
