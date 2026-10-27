@@ -526,6 +526,7 @@ function fallbackSentenceFromChunk(
   const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
   const contentWords = distinctiveSubjectTerms(question);
   const popiaQuestion = /\bpopia\b/i.test(question);
+  let fallbackTruncated = "";
   const ranked = [...parts].sort(
     (a, b) => sentenceQuality(b, contentWords, pythonQuestion) - sentenceQuality(a, contentWords, pythonQuestion),
   );
@@ -543,9 +544,13 @@ function fallbackSentenceFromChunk(
     ) {
       continue;
     }
+    if (/…$|\.\.\.$/.test(cut)) {
+      if (!fallbackTruncated) fallbackTruncated = cut;
+      continue;
+    }
     return cut;
   }
-  return "";
+  return fallbackTruncated;
 }
 
 const FALLBACK_STOPWORDS = new Set([
@@ -631,11 +636,52 @@ const MULTIWORD_SUBJECTS = [
   "data science",
   "ci/cd",
   "mlops",
+  "github actions",
 ];
 
 const RELATED_TERMS: Record<string, string[]> = {
   sql: ["sql", "postgresql", "postgres", "sqlite", "sqlalchemy"],
+  postgres: ["postgres", "postgresql"],
+  postgresql: ["postgresql", "postgres"],
+  database: ["database", "postgresql", "postgres", "pgvector", "sqlite"],
+  databases: ["database", "postgresql", "postgres", "pgvector", "sqlite"],
+  "vector database": ["vector database", "pgvector", "postgresql", "postgres"],
+  "vector databases": ["vector databases", "pgvector", "postgresql", "postgres"],
+  golang: ["golang", "go"],
+  go: ["golang", "go"],
 };
+
+const KNOWN_TECH_TERMS = [
+  "kubernetes",
+  "rust",
+  "golang",
+  "java",
+  "azure",
+  "gcp",
+  "google cloud",
+  "snowflake",
+  "kafka",
+  "lambda",
+  "graphql",
+  "linux",
+  "spark",
+  "mongodb",
+  "mysql",
+  "dynamodb",
+  "oracle",
+  "cassandra",
+  "elasticsearch",
+  "helm",
+  "ansible",
+  "jenkins",
+  "kotlin",
+  "swift",
+  "ruby",
+  "php",
+  "scala",
+  "haskell",
+  "elixir",
+];
 
 const BUILT_WITH_SKIP_IDS = new Set([
   ...PADDING_CHUNK_IDS,
@@ -742,38 +788,51 @@ function prettySubject(term: string): string {
   if (lower === "nlp") return "NLP";
   if (lower === "mlops") return "MLOps";
   if (lower === "ci/cd") return "CI/CD";
+  if (lower === "gcp") return "GCP";
+  if (lower === "golang") return "Go";
   return lower.replace(/\b([a-z])/g, (ch) => ch.toUpperCase());
 }
 
-function looksLikeSkillTerm(term: string): boolean {
-  if (term.includes(" ") || term.includes("/") || term.includes(".")) return true;
-  if (term.length <= 2) return false;
-  return !FALLBACK_STOPWORDS.has(term) && !WEAK_SUBJECT_TERMS.has(term);
+function questionHasKnownTech(question: string, term: string): boolean {
+  const lower = question.toLowerCase();
+  if (term === "go") {
+    return /\bgolang\b/.test(lower) || /\b(?:knows?|used?|using|built with)\s+go\b/.test(lower)
+      || /\band\s+go\b/.test(lower) || /\bgo\s+and\b/.test(lower);
+  }
+  if (term.includes(" ") || term.includes(".") || term.includes("/")) {
+    return lower.includes(term);
+  }
+  return hasWholeWord(question, term);
 }
 
-function shouldNoteUnknownTerms(question: string): boolean {
-  return (
-    /\bknows?\b/i.test(question)
-    || isBuiltOrUsedQuestion(question)
-    || isAwsQuestion(question)
-    || /\b[a-z0-9.+#/-]+\s+and\s+[a-z0-9.+#/-]+/i.test(question)
-  );
+function listedTechInQuestion(question: string): string[] {
+  const extra: string[] = [];
+  if (/\bgo\b/i.test(question) && questionHasKnownTech(question, "go") && !/\bgolang\b/i.test(question)) {
+    extra.push("go");
+  }
+  return [...new Set([
+    ...KNOWN_TECH_TERMS.filter((term) => questionHasKnownTech(question, term)),
+    ...extra,
+  ])];
 }
 
 function withUnknownTermNote(question: string, result: AnswerResult): AnswerResult {
   if (isRefusal(result.response)) return result;
-  if (!shouldNoteUnknownTerms(question)) return result;
-  const known = distinctiveSubjectTerms(question).filter((term) => kbHasTerm(term));
-  const unknown = distinctiveSubjectTerms(question).filter(
-    (term) => !kbHasTerm(term) && looksLikeSkillTerm(term),
-  );
-  if (known.length === 0 || unknown.length === 0) return result;
-  if (/not listed in Mike's portfolio/i.test(result.response)) return result;
+  if (result.via !== "static") return result;
+  if (/isn'?t listed in Mike's portfolio|aren't listed in Mike's portfolio|not listed in Mike's portfolio/i.test(result.response)) {
+    return result;
+  }
+  const listed = listedTechInQuestion(question);
+  const unknown = listed.filter((term) => !kbHasTerm(term));
+  if (unknown.length === 0) return result;
+  const knownListed = listed.filter((term) => kbHasTerm(term));
+  const knownOther = distinctiveSubjectTerms(question).filter((term) => kbHasTerm(term));
+  if (knownListed.length === 0 && knownOther.length === 0) return result;
   const names = unknown.map(prettySubject);
-  const verb = names.length === 1 ? "is" : "are";
+  const verb = names.length === 1 ? "isn't" : "aren't";
   return {
     ...result,
-    response: `${result.response.replace(/\s+$/, "")} ${joinList(names)} ${verb} not listed in Mike's portfolio.`,
+    response: `${result.response.replace(/\s+$/, "")} ${joinList(names)} ${verb} listed in Mike's portfolio.`,
   };
 }
 
@@ -834,6 +893,10 @@ export function citedFallbackFromChunks(
   const pythonQuestion = /\bpython\b/i.test(question);
   const terms = distinctiveSubjectTerms(question);
   const kb = knowledgeAsRetrieved();
+  const skillPhrases = MULTIWORD_SUBJECTS.filter((p) => question.toLowerCase().includes(p));
+  if (skillPhrases.some((p) => !kb.some((c) => passageHasTerm(`${c.title}\n${c.text}`, p)))) {
+    return null;
+  }
   const present = terms.filter((term) =>
     kb.some((c) => passageHasTerm(`${c.title}\n${c.text}`, term)),
   );
@@ -1177,11 +1240,22 @@ function polishResult(
     }
   }
 
-  return withUnknownTermNote(question, {
+  const polished = {
     ...result,
-    response: ensureInlineCitation(out, sources),
+    response: dropTrailingTruncation(ensureInlineCitation(out, sources)),
     sources,
-  });
+  };
+  return result.via === "static" ? withUnknownTermNote(question, polished) : polished;
+}
+
+function dropTrailingTruncation(text: string): string {
+  const trimmed = text.trim();
+  if (!/\[\d+\]…\s*$/u.test(trimmed) && !/…\s*$/u.test(trimmed)) return trimmed;
+  const parts = splitIntoSentences(trimmed);
+  if (parts.length > 1) {
+    return parts.slice(0, -1).join(" ").trim();
+  }
+  return trimmed;
 }
 
 async function tryGenerate(

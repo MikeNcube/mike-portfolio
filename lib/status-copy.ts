@@ -9,7 +9,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r44";
+export const ANSWER_CACHE_VERSION = "r45";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -1095,6 +1095,27 @@ function contradictsSentinelAsLlm(sentence: string): boolean {
   );
 }
 
+const PROJECT_TEST_COUNTS: Array<{ mention: RegExp; count: number }> = [
+  { mention: ZDI_RE, count: 525 },
+  { mention: /\b(?:proactive )?sentinel\b/i, count: 44 },
+  { mention: AI_OS_RE, count: 310 },
+  { mention: /\bsitewarden\b/i, count: 89 },
+];
+
+function contradictsCrossProjectTestCount(sentence: string): boolean {
+  if (!/\btests?\b/i.test(sentence)) return false;
+  const mentioned = PROJECT_TEST_COUNTS.filter((p) => p.mention.test(sentence));
+  if (mentioned.length === 0) return false;
+  for (const project of mentioned) {
+    if (new RegExp(`\\b${project.count}\\b`).test(sentence)) continue;
+    for (const other of PROJECT_TEST_COUNTS) {
+      if (other.count === project.count) continue;
+      if (new RegExp(`\\b${other.count}\\b`).test(sentence)) return true;
+    }
+  }
+  return false;
+}
+
 function sentenceHasProjectFactContradiction(sentence: string): boolean {
   return (
     contradictsZdiAsAi(sentence)
@@ -1103,6 +1124,7 @@ function sentenceHasProjectFactContradiction(sentence: string): boolean {
     || contradictsClaimsAsLive(sentence)
     || contradictsAiOsAsDeployed(sentence)
     || contradictsSentinelAsLlm(sentence)
+    || contradictsCrossProjectTestCount(sentence)
   );
 }
 

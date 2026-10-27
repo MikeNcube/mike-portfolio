@@ -41,6 +41,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "has mike built rag systems",
       "what rag work has mike done",
       "rag experience",
+      "bm25",
+      "does mike know bm25",
+      "has mike used bm25",
     ],
     answer:
       "The live RAG assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer [2].",

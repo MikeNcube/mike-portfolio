@@ -56,7 +56,7 @@ const JAILBREAK_RES: RegExp[] = [
   /\bno (restrictions|rules|filters|guardrails)\b/i,
   /\b(developer|god|jailbreak) mode\b/i,
   /\bdisregard (your |the |all )?(system )?(prompt|instructions|rules)\b/i,
-  /\b(reveal|show|print) (your |the )?(system )?prompt\b/i,
+  /\b(reveal|show|print) (your |the )?(system |hidden |secret |internal |original |initial )?(prompt|instructions)\b/i,
   /\bfrom now on,? you are\b/i,
   /\bwithout (any )?(rules|restrictions|filters)\b/i,
 ];
