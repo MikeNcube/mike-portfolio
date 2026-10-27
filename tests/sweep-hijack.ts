@@ -1,16 +1,10 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { answerQuestion, EMAIL_FALLBACK } from "../lib/answer";
-import { matchProjectScopedAnswer, matchRecruiterIntent } from "../lib/intent";
+import { matchProjectScopedAnswer } from "../lib/intent";
 import { isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
-import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
-import type { RetrievedChunk } from "../lib/rag";
-
-const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
-  .filter((c) => c.sourceUrl.startsWith("http"))
-  .map((c) => ({ ...c, score: 0.9 }));
 
 const modes = ["none", "gemini-refuse", "groq-refuse"] as const;
 type SweepMode = (typeof modes)[number];
@@ -18,7 +12,6 @@ type SweepMode = (typeof modes)[number];
 async function ask(question: string, mode: SweepMode) {
   return answerQuestion({
     question,
-    retrieveFn: async () => kbChunks,
     ...(mode === "gemini-refuse"
       ? {
           generateGemini: async () => "I don't have information about that.",
@@ -89,9 +82,11 @@ beforeEach(() => {
 });
 
 describe("round 49 project hijack guard", () => {
-  it("never assigns a Mike-wide recruiter intent to a named project", () => {
+  // r52: classify-first matchRecruiterIntent is gone. Project questions
+  // must still resolve via named-project rank boost + grounding, not a
+  // Mike-wide canned intent return.
+  it("keeps named-project questions on the project-scoped path", () => {
     for (const item of HIJACK_CASES) {
-      assert.equal(matchRecruiterIntent(item.question), null, item.question);
       assert.ok(matchProjectScopedAnswer(item.question), item.question);
     }
   });

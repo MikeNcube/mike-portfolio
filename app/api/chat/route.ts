@@ -45,8 +45,8 @@ class LRUCache {
 const responseCache = new LRUCache();
 
 // Versioned so a copy change does not serve an older cached answer.
-function cacheKey(question: string): string {
-  return `${ANSWER_CACHE_VERSION}:${normaliseQuestion(question)}`;
+function cacheKey(question: string, audience?: string): string {
+  return `${ANSWER_CACHE_VERSION}:${audience ?? "developer"}:${normaliseQuestion(question)}`;
 }
 
 function clientIp(req: NextRequest): string {
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
   const question = message.trim();
   const audienceKey = typeof audience === "string" ? audience : "developer";
 
-  const cached = responseCache.get(cacheKey(question));
+  const cached = responseCache.get(cacheKey(question, audienceKey));
   if (cached) {
     return jsonAnswer(cached, { cached: true });
   }
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (shouldCacheAnswer(result)) {
-      responseCache.set(cacheKey(question), result);
+      responseCache.set(cacheKey(question, audienceKey), result);
     }
 
     return jsonAnswer(result);

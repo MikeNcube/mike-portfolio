@@ -1,16 +1,10 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { answerQuestion, citedFallbackFromChunks, EMAIL_FALLBACK } from "../lib/answer";
-import { matchRecruiterIntent } from "../lib/intent";
 import { isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
-import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 import type { RetrievedChunk } from "../lib/rag";
-
-const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
-  .filter((c) => c.sourceUrl.startsWith("http"))
-  .map((c) => ({ ...c, score: 0.9 }));
 
 const modes = ["none", "gemini-refuse", "groq-refuse"] as const;
 type SweepMode = (typeof modes)[number];
@@ -18,7 +12,6 @@ type SweepMode = (typeof modes)[number];
 async function ask(question: string, mode: SweepMode) {
   return answerQuestion({
     question,
-    retrieveFn: async () => kbChunks,
     ...(mode === "gemini-refuse"
       ? {
           generateGemini: async () => "I don't have information about that.",
@@ -608,17 +601,8 @@ beforeEach(() => {
 });
 
 describe("round 49 sweep-new paraphrases", () => {
-  it("matches B19 phrasings to concept intents or honest refusal", () => {
-    for (const item of B19_CASES) {
-      if (item.refuse) {
-        assert.equal(matchRecruiterIntent(item.question), null, item.question);
-        continue;
-      }
-      const hit = matchRecruiterIntent(item.question);
-      assert.ok(hit, item.question);
-      assert.equal(hit.id, item.intent, item.question);
-    }
-  });
+  // r52 dropped classify-first matchRecruiterIntent. B19 is enforced by
+  // the answer/refuse assertions below (real retrieve, grounding gate).
 
   for (const mode of modes) {
     it(`answers B19 cases with ${mode}`, async () => {
@@ -641,9 +625,6 @@ describe("round 49 sweep-new paraphrases", () => {
       for (const [id, spec] of Object.entries(PARAPHRASES)) {
         assert.equal(spec.questions.length, 20, id);
         for (const question of spec.questions) {
-          const intent = matchRecruiterIntent(question);
-          assert.ok(intent, `${id} ${question}`);
-          assert.equal(intent.id, id, `${id} ${question}`);
           const result = await ask(question, mode);
           assert.equal(isRefusal(result.response), false, `${mode} ${question} => ${result.response}`);
           assert.match(result.response, spec.match, `${mode} ${question} => ${result.response}`);

@@ -1,22 +1,10 @@
-// Recruiter-intent canned answers from KB/CV facts only.
-// Exemplar-bank classifier (TF-IDF cosine, local) with head-noun overrides.
-// Project-named questions and start-date refusals never take a Mike-wide intent.
+// Named-project matching used as a retrieval rank boost, never as a classify-first return.
 
 import { STATIC_ANSWERS, type StaticAnswer } from "./static-answers";
 import {
   CANONICAL_TECH_LEAD_CRM_ANSWER,
   CANONICAL_ZDI_LIVE_ANSWER,
-  isAwsQuestion,
-  isExperienceQuestion,
-  isTopicalTechBuildQuestion,
-  isWorkQuestion,
 } from "./status-copy";
-import {
-  INTENT_CANONICAL,
-  INTENT_EXEMPLARS,
-  type ClassifiedIntentId,
-  type RecruiterIntentId,
-} from "./intent-exemplars";
 
 export type RecruiterIntent = {
   id: string;
@@ -32,274 +20,12 @@ export type NamedProject = {
   ai: string;
 };
 
-export type IntentClassification = {
-  id: ClassifiedIntentId;
-  score: number;
-  runnerUp: ClassifiedIntentId | null;
-  runnerUpScore: number;
-};
-
 function staticByQuestion(question: string): StaticAnswer {
   const hit = STATIC_ANSWERS.find((item) => item.question === question);
   if (!hit) {
     throw new Error(`missing static answer: ${question}`);
   }
   return hit;
-}
-
-const INTENT_STOP = new Set([
-  "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
-  "and", "or", "but", "if", "then", "so", "to", "of", "in", "on", "for",
-  "with", "at", "by", "from", "as", "it", "its", "this", "that", "these",
-  "those", "i", "you", "he", "she", "we", "they", "me", "him", "her",
-  "my", "your", "our", "their", "do", "does", "did", "has", "have", "had",
-  "can", "could", "would", "should", "will", "just", "about", "into", "over",
-  "than", "too", "very", "mike", "ncube", "please", "also", "really",
-  "whats", "thats", "theres", "im", "ive",
-]);
-
-function canonicalStem(word: string): string {
-  const w = word.toLowerCase();
-  if (w === "studied" || w === "studies" || w === "study") return "studi";
-  if (w === "lives" || w === "lived" || w === "living" || w === "live") return "live";
-  if (w === "favourite" || w === "favorite") return "favorit";
-  if (w === "colour" || w === "color") return "color";
-  if (w.length <= 3) return w;
-  if (w.endsWith("ies") && w.length > 4) return `${w.slice(0, -3)}y`;
-  if (w.endsWith("ing") && w.length > 5) return w.slice(0, -3);
-  if (w.endsWith("ed") && w.length > 4) return w.slice(0, -2);
-  if (w.endsWith("es") && w.length > 4) return w.slice(0, -2);
-  if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && w.length > 3) {
-    return w.slice(0, -1);
-  }
-  return w;
-}
-
-function intentTokens(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9+]+/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length > 1 && !INTENT_STOP.has(t))
-    .map(canonicalStem);
-}
-
-type TfIdfVec = Map<string, number>;
-
-type ExemplarDoc = {
-  id: ClassifiedIntentId;
-  tokens: string[];
-  tfidf: TfIdfVec;
-  norm: number;
-};
-
-const MIN_COSINE = 0.5;
-const MIN_MARGIN = 0.04;
-
-function tfMap(tokens: string[]): Map<string, number> {
-  const tf = new Map<string, number>();
-  for (const token of tokens) tf.set(token, (tf.get(token) ?? 0) + 1);
-  return tf;
-}
-
-function vectorNorm(vec: TfIdfVec): number {
-  let sum = 0;
-  for (const value of vec.values()) sum += value * value;
-  return Math.sqrt(sum) || 1;
-}
-
-function cosine(a: TfIdfVec, aNorm: number, b: TfIdfVec, bNorm: number): number {
-  let dot = 0;
-  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
-  for (const [term, weight] of smaller) {
-    const other = larger.get(term);
-    if (other) dot += weight * other;
-  }
-  return dot / (aNorm * bNorm);
-}
-
-function buildIndex(): { docs: ExemplarDoc[]; idf: Map<string, number> } {
-  const raw: Array<{ id: ClassifiedIntentId; tokens: string[] }> = [];
-  for (const [id, questions] of Object.entries(INTENT_EXEMPLARS) as Array<
-    [ClassifiedIntentId, string[]]
-  >) {
-    for (const question of questions) {
-      raw.push({ id, tokens: intentTokens(question) });
-    }
-  }
-  const df = new Map<string, number>();
-  for (const doc of raw) {
-    for (const term of new Set(doc.tokens)) {
-      df.set(term, (df.get(term) ?? 0) + 1);
-    }
-  }
-  const n = raw.length;
-  const idf = new Map<string, number>();
-  for (const [term, count] of df) {
-    idf.set(term, Math.log((n + 1) / (count + 1)) + 1);
-  }
-  const docs: ExemplarDoc[] = raw.map((doc) => {
-    const tf = tfMap(doc.tokens);
-    const vec: TfIdfVec = new Map();
-    for (const [term, count] of tf) {
-      vec.set(term, (count / doc.tokens.length) * (idf.get(term) ?? 0));
-    }
-    return { id: doc.id, tokens: doc.tokens, tfidf: vec, norm: vectorNorm(vec) };
-  });
-  return { docs, idf };
-}
-
-const INTENT_INDEX = buildIndex();
-
-function queryVector(tokens: string[]): { vec: TfIdfVec; norm: number } {
-  const tf = tfMap(tokens);
-  const vec: TfIdfVec = new Map();
-  for (const [term, count] of tf) {
-    vec.set(term, (count / tokens.length) * (INTENT_INDEX.idf.get(term) ?? 0));
-  }
-  return { vec, norm: vectorNorm(vec) };
-}
-
-const PLACE_RE =
-  /\b(?:city|country|based|live|lives|living|located|reside|province|region|whereabouts|south africa|johannesburg|where)\b/i;
-
-function headNounOverride(question: string): ClassifiedIntentId | null {
-  const hay = question.toLowerCase();
-  if (
-    /\b(?:favourites?|favorites?)\b/.test(hay)
-    && /\b(?:project|build|system|flagship)\b/.test(hay)
-  ) {
-    return "strongest";
-  }
-  if (
-    /\b(?:favourites?|favorites?|colour|color|pizza|pasta|weather|hobb(?:y|ies)|personal life)\b/.test(hay)
-    && !/\b(?:project|build|system|work|role|stack|flagship)\b/.test(hay)
-  ) {
-    return "off-topic";
-  }
-  if (/\bai tools?\b/.test(hay) || /\bllm (?:tools?|frameworks?|stack)\b/.test(hay)) {
-    return "ai-tools";
-  }
-  if (
-    /\b(?:title|role|position|job)\b/.test(hay)
-    && /\b(?:next|want|wants|hoping|after|target|suits?|like|open to)\b/.test(hay)
-    && !/\bcurrent\b/.test(hay)
-  ) {
-    return "roles";
-  }
-  if (/\bopen to work\b/.test(hay) && !/\bhire\b/.test(hay)) {
-    return "roles";
-  }
-  if (
-    /\b(?:company|org|organisation|organization)\b/.test(hay)
-    && /\b(?:value|bring|benefit)\b/.test(hay)
-  ) {
-    return "why-hire";
-  }
-  if (/\b(?:cv|resume)\b/.test(hay) && /\bhighlights?\b/.test(hay)) {
-    return "who";
-  }
-  if (
-    /\bprojects?\b/.test(hay)
-    && /\b(?:best|shows?|demonstrat|highlight)\b/.test(hay)
-  ) {
-    return "strongest";
-  }
-  if (
-    (/\bmanagers?\b/.test(hay) && /\b(?:people|team|engineering)\b/.test(hay))
-    || /\bpeople manager\b/.test(hay)
-    || (/\bpeople\b/.test(hay) && /\bmanag/.test(hay))
-  ) {
-    if (!/\b(?:zdi|join|start|begin)\b/.test(hay)) return "team";
-  }
-  if (
-    /\bpart of\b/.test(hay)
-    && /\b(?:team|department|engineering)\b/.test(hay)
-    && !PLACE_RE.test(hay)
-  ) {
-    return "team";
-  }
-  if (
-    /\bproduction\b/.test(hay)
-    && /\b(?:bugs?|defects?|fallback|retries|auditable)\b/.test(hay)
-  ) {
-    return "engineering";
-  }
-  if (
-    /\b(?:break|breaking|reliable|reliability)\b/.test(hay)
-    && /\b(?:systems?|code|prod(?:uction)?)\b/.test(hay)
-    && !/\b(?:bugs?|defects?|fallback|retries|auditable)\b/.test(hay)
-  ) {
-    return "testing";
-  }
-  if (/\b(?:teammates?|colleagues?)\b/.test(hay) && !/\bremote(?:ly)?\b/.test(hay)) {
-    return "team";
-  }
-  if (/\borchestration\b/.test(hay) && /\b(?:librar(?:y|ies)|agents?|frameworks?)\b/.test(hay)) {
-    return "ai-tools";
-  }
-  if (/\bself[- ]?taught\b/.test(hay) || (/\btaught\b/.test(hay) && /\bself\b/.test(hay))) {
-    return "education";
-  }
-  if (/\bmoonlight\b/.test(hay)) {
-    return "contract";
-  }
-  if (/\bmarket\b/.test(hay) && /\b(?:job|role|work)\b/.test(hay)) {
-    return "roles";
-  }
-  if (/\balone\b/.test(hay) && /\b(?:others|teammates|colleagues|team)\b/.test(hay)) {
-    return "team";
-  }
-  if (
-    /\bhire\b/.test(hay)
-    && /\b(?:why|should)\b/.test(hay)
-    && !/\b(?:can i hire|available for hire)\b/.test(hay)
-  ) {
-    return "why-hire";
-  }
-  if (
-    /\b(?:gigs?|freelance|consult(?:ing|ant)?)\b/.test(hay)
-    && !/\b(?:available for hire|can i hire)\b/.test(hay)
-  ) {
-    return "contract";
-  }
-  if (
-    /\bprofile\b/.test(hay)
-    && /\b(?:describe|nutshell|summary|bio|brief)\b/.test(hay)
-    && !/\blinkedin\b/.test(hay)
-  ) {
-    return "who";
-  }
-  return null;
-}
-
-export function classifyRecruiterIntent(question: string): IntentClassification | null {
-  const override = headNounOverride(question);
-  if (override) {
-    return { id: override, score: 1, runnerUp: null, runnerUpScore: 0 };
-  }
-  const tokens = intentTokens(question);
-  if (tokens.length === 0) return null;
-  const query = queryVector(tokens);
-  const bestById = new Map<ClassifiedIntentId, number>();
-  for (const doc of INTENT_INDEX.docs) {
-    const score = cosine(query.vec, query.norm, doc.tfidf, doc.norm);
-    const prev = bestById.get(doc.id) ?? 0;
-    if (score > prev) bestById.set(doc.id, score);
-  }
-  const ranked = [...bestById.entries()].sort((a, b) => b[1] - a[1]);
-  if (ranked.length === 0) return null;
-  const [id, score] = ranked[0];
-  const [runnerId, runnerScore] = ranked[1] ?? [null, 0];
-  if (score < MIN_COSINE) return null;
-  if (runnerId && score - runnerScore < MIN_MARGIN) return null;
-  return {
-    id,
-    score,
-    runnerUp: runnerId,
-    runnerUpScore: runnerScore,
-  };
 }
 
 const PROJECTS: Array<{
@@ -404,13 +130,6 @@ const PROJECTS: Array<{
     ai: "The live RAG assistant uses Gemini embeddings and Groq [1].",
   },
 ];
-
-export function isStartJoinAvailabilityQuestion(question: string): boolean {
-  return (
-    /\b(?:when (?:can|could|would|will) (?:mike|he) (?:start|join|begin)|(?:can|could) (?:mike|he) start|how soon can (?:mike|he) (?:start|join)|available to start|start (?:date|next|this|tomorrow|immediately))\b/i
-      .test(question)
-  );
-}
 
 const PROJECT_TESTING: Record<string, string> = {
   zdi: "ZDI has 525 backend tests [1].",
@@ -612,51 +331,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
   }
 }
 
-function isTechKnowledgeQuestion(question: string): boolean {
-  return /^(?:so |hey,? )?(?:does|has|did) mike (?:know|used?|built?|done)\b/i.test(question.trim());
-}
-
-function hasOwnTopicPath(question: string): boolean {
-  return (
-    /\b(?:grounding prompt|prompt injection|prompt templates?|prompt engineering)\b/i.test(question)
-    || (/\brag\b/i.test(question) && !/\b(?:assistant|chatbot|this chat)\b/i.test(question))
-    || /\bproduction systems?\b/i.test(question)
-    || (
-      /\b(?:contact|email|get in touch|reach (?:out|mike|him)|how (?:can|do) i reach)\b/i.test(question)
-      && !/\bhire\b/i.test(question)
-    )
-    || /\bpopia\b/i.test(question)
-    || /\bvector databases?\b/i.test(question)
-    || /\bcertif/i.test(question)
-    || (
-      /\b(?:courses?|training)\b/i.test(question)
-      && !/\b(?:education|degree|self[- ]?taught)\b/i.test(question)
-    )
-  );
-}
-
-export function matchRecruiterIntent(question: string): RecruiterIntent | null {
-  if (namedProjects(question).length > 0) return null;
-  if (isStartJoinAvailabilityQuestion(question)) return null;
-  if (/\b(?:day rate|hourly rate|daily rate|notice period|relocat(?:e|ion)|time ?zone|timezone)\b/i.test(question)) {
-    return null;
-  }
-  if (/\bgithub\b/i.test(question) && !/\blinkedin\b/i.test(question)) return null;
-  if (isTechKnowledgeQuestion(question)) return null;
-  if (hasOwnTopicPath(question)) return null;
-  if (isAwsQuestion(question)) return null;
-  if (isTopicalTechBuildQuestion(question)) return null;
-  if (isExperienceQuestion(question) || isWorkQuestion(question)) return null;
-  const hit = classifyRecruiterIntent(question);
-  if (!hit || hit.id === "off-topic") return null;
-  if (
-    hit.id === "availability"
-    && !/\b(?:hire|hiring|hireable|availability)\b/i.test(question)
-  ) {
-    return null;
-  }
-  const id = hit.id as RecruiterIntentId;
-  const canonical = INTENT_CANONICAL[id];
-  if (!canonical) return null;
-  return { id, answer: staticByQuestion(canonical) };
+/** Rank boost: source ids that should rise when the question names a project. */
+export function projectBoostIds(question: string): string[] {
+  return namedProjects(question).flatMap((p) => p.sourceIds);
 }

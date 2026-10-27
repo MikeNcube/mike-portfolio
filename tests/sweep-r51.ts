@@ -7,11 +7,7 @@ import {
   isHonestUnknownQuestion,
   kbEntityTechTerms,
 } from "../lib/answer";
-import {
-  classifyRecruiterIntent,
-  matchProjectScopedAnswer,
-  matchRecruiterIntent,
-} from "../lib/intent";
+import { matchProjectScopedAnswer } from "../lib/intent";
 import {
   exemplarCount,
   isInExemplarBank,
@@ -34,7 +30,6 @@ type SweepMode = (typeof modes)[number];
 async function ask(question: string, mode: SweepMode) {
   return answerQuestion({
     question,
-    retrieveFn: async () => kbChunks,
     ...(mode === "gemini-refuse"
       ? {
           generateGemini: async () => "I don't have information about that.",
@@ -175,26 +170,8 @@ describe("round 51 exemplar-bank intents and held-out generalisation", () => {
     assert.match(kafka.response, /Redis/i);
   });
 
-  it("routes held-out questions to the intended class", () => {
-    for (const item of HOLDOUT) {
-      if (item.refuse) {
-        const classified = classifyRecruiterIntent(item.question);
-        assert.equal(matchRecruiterIntent(item.question), null, item.question);
-        assert.ok(
-          classified === null || classified.id === "off-topic",
-          `${item.question} => ${classified?.id}`,
-        );
-        continue;
-      }
-      if (item.intent === null) {
-        assert.equal(matchRecruiterIntent(item.question), null, item.question);
-        continue;
-      }
-      const hit = matchRecruiterIntent(item.question);
-      assert.ok(hit, item.question);
-      assert.equal(hit.id, item.intent, `${item.question} => ${hit?.id}`);
-    }
-  });
+  // r52: classify-first routing is gone. Held-outs are checked by the
+  // answer-path tests below against real retrieve, not intent ids.
 
   for (const mode of modes) {
     it(`answers held-out paraphrases with ${mode}`, async () => {
@@ -236,7 +213,6 @@ describe("round 51 exemplar-bank intents and held-out generalisation", () => {
       "When could Mike join our team?",
     ]) {
       assert.equal(isHonestUnknownQuestion(question), true, question);
-      assert.equal(matchRecruiterIntent(question), null, question);
       for (const mode of modes) {
         const result = await ask(question, mode);
         assert.equal(result.response, EMAIL_FALLBACK, `${mode} ${question}`);

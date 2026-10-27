@@ -1,18 +1,22 @@
 // Fallback chain: Gemini → Groq → closest static CV answer → email.
 // Never throws to the caller for provider failures.
 
-import { matchStaticAnswer, sourcesFor } from "./static-answers";
+import { matchStaticAnswer, sourcesFor, type StaticAnswer } from "./static-answers";
+import { matchProjectScopedAnswer, namedProjects } from "./intent";
+import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
-  classifyRecruiterIntent,
-  isStartJoinAvailabilityQuestion,
-  matchProjectScopedAnswer,
-  matchRecruiterIntent,
-  namedProjects,
-} from "./intent";
+  contentTerms,
+  evaluateGrounding,
+  kbHasTerm,
+  listedTechInQuestion,
+  passageHasTerm,
+  unknownTechNote,
+  validateModelSentences,
+} from "./grounding";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   DEFAULT_K,
-  MIN_RELEVANCE_SCORE,
+  promptChunks,
   retrieve,
   retrieveKeyword,
   type RetrievedChunk,
@@ -65,16 +69,9 @@ const PADDING_CHUNK_IDS = new Set([
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
 
-const OFF_TOPIC_QUESTION_RE =
-  /\b(hobb(?:y|ies)|favourite foods?|favorite foods?|politics|political party|weather|forecast)\b/i;
-
-const OFF_TOPIC_MATH_RE = /\b\d+\s*[+\-×x*/]\s*\d+\b|\bwhat is\s+\d+\b/i;
-
 // True when the visitor asked something outside Mike's work (personal, world, math).
 export function isOffTopicQuestion(question: string): boolean {
-  const q = question.toLowerCase();
-  if (OFF_TOPIC_QUESTION_RE.test(q) || OFF_TOPIC_MATH_RE.test(q)) return true;
-  return classifyRecruiterIntent(question)?.id === "off-topic";
+  return isUnknowableQuestion(question);
 }
 
 const CONTACT_QUESTION_RE =
@@ -91,11 +88,8 @@ export function isContactQuestion(question: string): boolean {
   return CONTACT_QUESTION_RE.test(question);
 }
 
-const HONEST_UNKNOWN_RE =
-  /\b(?:day rate|hourly rate|daily rate|notice period|what notice|relocat(?:e|ion)|time ?zone|timezone|start (?:date|next|this|tomorrow|immediately)|when can (?:mike|he) start|can mike start|available from|available to start|how soon can (?:mike|he) start)\b/i;
-
 export function isHonestUnknownQuestion(question: string): boolean {
-  return HONEST_UNKNOWN_RE.test(question) || isStartJoinAvailabilityQuestion(question);
+  return isUnknowableQuestion(question) || isStartJoinAvailabilityQuestion(question);
 }
 
 export function ensureContactEmail(text: string): string {
@@ -758,52 +752,6 @@ const MULTIWORD_SUBJECTS = [
   "approval workflow",
 ];
 
-const RELATED_TERMS: Record<string, string[]> = {
-  sql: ["sql", "postgresql", "postgres", "sqlite", "sqlalchemy"],
-  postgres: ["postgres", "postgresql"],
-  postgresql: ["postgresql", "postgres"],
-  database: ["database", "postgresql", "postgres", "pgvector", "sqlite"],
-  databases: ["database", "postgresql", "postgres", "pgvector", "sqlite"],
-  "vector database": ["vector database", "pgvector", "postgresql", "postgres"],
-  "vector databases": ["vector databases", "pgvector", "postgresql", "postgres"],
-  golang: ["golang", "go"],
-  go: ["golang", "go"],
-  security: ["security", "compliance", "popia", "secure"],
-  compliance: ["compliance", "popia"],
-};
-
-const KNOWN_TECH_TERMS = [
-  "kubernetes",
-  "rust",
-  "golang",
-  "java",
-  "azure",
-  "gcp",
-  "google cloud",
-  "snowflake",
-  "kafka",
-  "lambda",
-  "graphql",
-  "linux",
-  "spark",
-  "mongodb",
-  "mysql",
-  "dynamodb",
-  "oracle",
-  "cassandra",
-  "elasticsearch",
-  "helm",
-  "ansible",
-  "jenkins",
-  "kotlin",
-  "swift",
-  "ruby",
-  "php",
-  "scala",
-  "haskell",
-  "elixir",
-];
-
 const BUILT_WITH_SKIP_IDS = new Set([
   ...PADDING_CHUNK_IDS,
   "stack",
@@ -819,27 +767,6 @@ const BUILT_OR_USED_SKIP_IDS = new Set([
 
 function questionContentWords(question: string): string[] {
   return tokenize(question).filter((t) => !FALLBACK_STOPWORDS.has(t));
-}
-
-function stemVariants(word: string): string[] {
-  const w = word.toLowerCase();
-  const out = new Set([w]);
-  if (w.length <= 3) return [...out];
-  if (w.endsWith("ies") && w.length > 4) out.add(`${w.slice(0, -3)}y`);
-  if (w.endsWith("es") && w.length > 4) out.add(w.slice(0, -2));
-  if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && w.length > 3) {
-    out.add(w.slice(0, -1));
-  }
-  if (w.endsWith("ing") && w.length > 5) {
-    const stem = w.slice(0, -3);
-    out.add(stem);
-    out.add(`${stem}e`);
-  }
-  if (w.endsWith("ed") && w.length > 4) {
-    out.add(w.slice(0, -2));
-    out.add(w.slice(0, -1));
-  }
-  return [...out];
 }
 
 function buildKbEntityIndex(): { terms: Set<string>; phrases: string[] } {
@@ -941,27 +868,6 @@ function distinctiveSubjectTerms(question: string): string[] {
   return [...new Set([...phrases, ...singles])].filter((term) => isKbEntityOrTech(term));
 }
 
-function hasWholeWord(hay: string, word: string): boolean {
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${escaped}\\b`, "i").test(hay);
-}
-
-function termMatchNeedles(term: string): string[] {
-  const related = RELATED_TERMS[term.toLowerCase()];
-  if (related) return related;
-  if (term.includes(".") || term.includes("&") || term.includes(" ")) return [term];
-  return stemVariants(term);
-}
-
-function passageHasTerm(hay: string, term: string): boolean {
-  return termMatchNeedles(term).some((needle) => {
-    if (needle.includes(".") || needle.includes("&") || needle.includes(" ")) {
-      return hay.toLowerCase().includes(needle.toLowerCase());
-    }
-    return hasWholeWord(hay, needle);
-  });
-}
-
 function passageHasAnyTerm(hay: string, terms: string[]): boolean {
   return terms.some((term) => passageHasTerm(hay, term));
 }
@@ -986,67 +892,23 @@ function isBuiltOrUsedQuestion(question: string): boolean {
   );
 }
 
-function kbHasTerm(term: string): boolean {
-  return knowledgeAsRetrieved().some((c) => passageHasTerm(`${c.title}\n${c.text}`, term));
-}
-
-function prettySubject(term: string): string {
-  const lower = term.toLowerCase();
-  if (lower === "nlp") return "NLP";
-  if (lower === "mlops") return "MLOps";
-  if (lower === "ci/cd") return "CI/CD";
-  if (lower === "gcp") return "GCP";
-  if (lower === "golang") return "Go";
-  return lower.replace(/\b([a-z])/g, (ch) => ch.toUpperCase());
-}
-
-function questionHasKnownTech(question: string, term: string): boolean {
-  const lower = question.toLowerCase();
-  if (term === "go") {
-    return /\bgolang\b/.test(lower) || /\b(?:knows?|used?|using|built with)\s+go\b/.test(lower)
-      || /\band\s+go\b/.test(lower) || /\bgo\s+and\b/.test(lower);
-  }
-  if (term.includes(" ") || term.includes(".") || term.includes("/")) {
-    return lower.includes(term);
-  }
-  return hasWholeWord(question, term);
-}
-
-function listedTechInQuestion(question: string): string[] {
-  const extra: string[] = [];
-  if (/\bgo\b/i.test(question) && questionHasKnownTech(question, "go") && !/\bgolang\b/i.test(question)) {
-    extra.push("go");
-  }
-  return [...new Set([
-    ...KNOWN_TECH_TERMS.filter((term) => questionHasKnownTech(question, term)),
-    ...extra,
-  ])];
-}
-
 function withUnknownTermNote(question: string, result: AnswerResult): AnswerResult {
   if (isRefusal(result.response)) return result;
-  if (result.via !== "static") return result;
   if (/isn'?t listed in Mike's portfolio|aren't listed in Mike's portfolio|not listed in Mike's portfolio/i.test(result.response)) {
     return result;
   }
-  const listed = listedTechInQuestion(question);
-  const unknown = listed.filter((term) => !kbHasTerm(term));
-  if (unknown.length === 0) return result;
-  const knownListed = listed.filter((term) => kbHasTerm(term));
-  const knownOther = distinctiveSubjectTerms(question).filter((term) => kbHasTerm(term));
-  if (knownListed.length === 0 && knownOther.length === 0) return result;
-  const names = unknown.map(prettySubject);
-  const verb = names.length === 1 ? "isn't" : "aren't";
+  const grounded = evaluateGrounding(question, result.response);
+  const listed = listedTechInQuestion(question).filter((term) => !kbHasTerm(term));
+  const unknown = [...new Set([...grounded.unknownTech, ...listed])];
+  const note = unknownTechNote(unknown);
+  if (!note) return result;
+  if (grounded.knownTerms.length === 0 && distinctiveSubjectTerms(question).filter((t) => kbHasTerm(t)).length === 0) {
+    return result;
+  }
   return {
     ...result,
-    response: `${result.response.replace(/\s+$/, "")} ${joinList(names)} ${verb} listed in Mike's portfolio.`,
+    response: `${result.response.replace(/\s+$/, "")} ${note}`,
   };
-}
-
-function knowledgeAsRetrieved(): RetrievedChunk[] {
-  return KNOWLEDGE_CHUNKS
-    .filter((c) => c.sourceUrl.startsWith("http"))
-    .map((c) => ({ ...c, score: 0.75 }));
 }
 
 function mergeChunksById(chunks: RetrievedChunk[]): RetrievedChunk[] {
@@ -1082,90 +944,85 @@ function injectionDefenceReply(chunks: RetrievedChunk[]): AnswerResult {
   }, chunks);
 }
 
-function pythonFallbackChunks(chunks: RetrievedChunk[]): RetrievedChunk[] {
-  return chunks.filter(
-    (c) =>
-      !PADDING_CHUNK_IDS.has(c.id ?? "")
-      && /\bpython\b/i.test(`${c.title}\n${c.text}`),
-  );
+function gatedStatic(question: string, answer: StaticAnswer): AnswerResult | null {
+  const grounded = evaluateGrounding(question, answer.answer);
+  if (!grounded.ok) return null;
+  return withUnknownTermNote(question, {
+    response: answer.answer,
+    sources: sourcesFor(answer),
+    via: "static",
+  });
 }
 
-// Short cited answer from retrieved passages only when the question is on-topic and relevant.
+function citedFromChunk(chunk: RetrievedChunk, question: string): string {
+  const pythonQuestion = /\bpython\b/i.test(question);
+  const rewritten = fallbackSentenceFromChunk(chunk, question, pythonQuestion);
+  if (rewritten) return rewritten;
+  const terms = contentTerms(question);
+  const parts = splitIntoSentences(chunk.text).map((p) => p.trim()).filter(Boolean);
+  const kept = parts.filter((part) =>
+    terms.length === 0 || terms.some((term) => passageHasTerm(part, term)),
+  );
+  const use = (kept.length > 0 ? kept : parts).slice(0, 3);
+  return use
+    .map((part) => rewriteFallbackSentence(part, chunk.title))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function composeFromProvidedChunks(
+  question: string,
+  chunks: RetrievedChunk[],
+): AnswerResult | null {
+  const http = chunks.filter((c) => c.sourceUrl.startsWith("http") && !c.cannedAnswer);
+  const ranked = [...http].sort((a, b) => b.score - a.score);
+  for (const chunk of ranked) {
+    if (PADDING_CHUNK_IDS.has(chunk.id ?? "")) continue;
+    const text = citedFromChunk(chunk, question);
+    if (!text) continue;
+    const cited = /\[\d+\]/.test(text) ? text : `${text.replace(/[.!?]+$/, "")} [1].`;
+    const grounded = evaluateGrounding(question, cited);
+    if (!grounded.ok) continue;
+    return withUnknownTermNote(question, {
+      response: cited,
+      sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
+      via: "static",
+    });
+  }
+  return null;
+}
+
+// Grounded cited answer from the provided chunks only (no global static corpus).
 export function citedFallbackFromChunks(
   question: string,
   chunks: RetrievedChunk[],
 ): AnswerResult | null {
-  if (isOffTopicQuestion(question)) return null;
-  const http = chunks.filter((c) => c.sourceUrl.startsWith("http"));
-  const pythonQuestion = /\bpython\b/i.test(question);
-  const terms = distinctiveSubjectTerms(question);
-  const kb = knowledgeAsRetrieved();
-  const skillPhrases = MULTIWORD_SUBJECTS.filter((p) => question.toLowerCase().includes(p));
-  if (skillPhrases.some((p) => !kb.some((c) => passageHasTerm(`${c.title}\n${c.text}`, p)))) {
-    return null;
-  }
-  const present = terms.filter((term) =>
-    kb.some((c) => passageHasTerm(`${c.title}\n${c.text}`, term)),
-  );
-  if (terms.length === 0 || present.length === 0) return null;
-  const builtWith = isBuiltWithTechQuestion(question);
-  const builtOrUsed = isBuiltOrUsedQuestion(question);
-  const pool = mergeChunksById([
-    ...http.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
-    ...kb.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
-  ]);
-  const retrievedMatching = http.filter((c) => {
-    if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
-    if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
-    if (builtOrUsed && BUILT_OR_USED_SKIP_IDS.has(c.id ?? "")) return false;
-    return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
-  });
-  const kbMatching = kb.filter((c) => {
-    if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
-    if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
-    if (builtOrUsed && BUILT_OR_USED_SKIP_IDS.has(c.id ?? "")) return false;
-    return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
-  });
-  const matching = pythonQuestion
-    ? pythonFallbackChunks(retrievedMatching.length > 0 ? http : pool)
-    : (builtWith ? kbMatching : (retrievedMatching.length > 0 ? retrievedMatching : kbMatching))
-      .slice()
-      .sort((a, b) => b.score - a.score);
-  const top = builtWith && !pythonQuestion ? matching : matching.slice(0, 3);
-  if (top.length === 0) return null;
-  const seen = new Set<string>();
-  const pieces: string[] = [];
-  const sources: AnswerSource[] = [];
-  for (const chunk of top) {
-    const raw = fallbackSentenceFromChunk(chunk, question, pythonQuestion);
-    const sentence = raw.replace(/[.!?]+$/, "").trim();
-    if (!sentence) continue;
-    const key = fallbackSentenceKey(sentence);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    pieces.push(`${sentence} [${pieces.length + 1}].`);
-    sources.push({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl });
-  }
-  if (pieces.length === 0) return null;
-  return withUnknownTermNote(question, { response: pieces.join(" "), sources, via: "static" });
+  if (isUnknowableQuestion(question)) return null;
+  return composeFromProvidedChunks(question, chunks);
 }
 
-function recruiterIntentReply(question: string): AnswerResult | null {
+function composeGroundedAnswer(
+  question: string,
+  retrieved: RetrievedChunk[],
+): AnswerResult | null {
+  // Named-project topics are a rank boost, not a Mike-wide classify-first return.
   const project = matchProjectScopedAnswer(question);
   if (project) {
-    return {
-      response: project.answer.answer,
-      sources: sourcesFor(project.answer),
-      via: "static",
-    };
+    const gated = gatedStatic(question, project.answer);
+    if (gated) return gated;
   }
-  const hit = matchRecruiterIntent(question);
-  if (!hit) return null;
-  return {
-    response: hit.answer.answer,
-    sources: sourcesFor(hit.answer),
-    via: "static",
-  };
+  for (const chunk of retrieved) {
+    if (chunk.cannedAnswer) {
+      const gated = gatedStatic(question, chunk.cannedAnswer);
+      if (gated) return gated;
+    }
+  }
+  const exact = matchStaticAnswer(question);
+  if (exact && staticHitFitsNamedProjects(question, exact)) {
+    const gated = gatedStatic(question, exact);
+    if (gated) return gated;
+  }
+  return composeFromProvidedChunks(question, retrieved);
 }
 
 function staticOrSafeReply(
@@ -1173,12 +1030,12 @@ function staticOrSafeReply(
   chunks: RetrievedChunk[],
   modelText?: string,
 ): AnswerResult {
-  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) return refusalResult();
+  if (isUnknowableQuestion(question)) return refusalResult();
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
   }
-  const intent = recruiterIntentReply(question);
-  if (intent) return polishResult(question, intent, chunks);
+  const grounded = composeGroundedAnswer(question, chunks);
+  if (grounded) return polishResult(question, grounded, chunks);
   if (isBareCourseTrainingQuestion(question)) {
     const course = courseTrainingReply(chunks);
     if (course) return course;
@@ -1198,15 +1055,16 @@ function staticOrSafeReply(
     }, chunks);
   }
   if (isWorkQuestion(question)) {
-    return polishResult(question, {
-      response: CANONICAL_WORK_ANSWER,
-      sources: workSystemSources([]),
-      via: "static",
-    }, chunks);
+    const work = { response: CANONICAL_WORK_ANSWER, sources: workSystemSources([]), via: "static" as const };
+    if (evaluateGrounding(question, work.response).ok) {
+      return polishResult(question, work, chunks);
+    }
   }
   if (isExperienceQuestion(question)) {
     const experience = experienceStaticReply();
-    if (experience) return polishResult(question, experience, chunks);
+    if (experience && evaluateGrounding(question, experience.response).ok) {
+      return polishResult(question, experience, chunks);
+    }
   }
   if (isAwsQuestion(question)) {
     return withUnknownTermNote(question, polishResult(question, {
@@ -1215,24 +1073,8 @@ function staticOrSafeReply(
       via: "static",
     }, chunks));
   }
-  const staticHit = matchStaticAnswer(question);
-  if (staticHit && staticHitFitsNamedProjects(question, staticHit)) {
-    return withUnknownTermNote(question, polishResult(question, {
-      response: staticHit.answer,
-      sources: sourcesFor(staticHit),
-      via: "static",
-    }, chunks));
-  }
   if (modelText && isRefusal(modelText)) {
-    const retrievedAfterRefusal = citedFallbackFromChunks(question, chunks);
-    if (retrievedAfterRefusal) {
-      return polishResult(question, retrievedAfterRefusal, chunks);
-    }
     return refusalResult();
-  }
-  const retrieved = citedFallbackFromChunks(question, chunks);
-  if (retrieved) {
-    return polishResult(question, retrieved, chunks);
   }
   if (isContactQuestion(question)) {
     return polishResult(question, contactStaticReply(), chunks);
@@ -1585,12 +1427,8 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   if (isInjectionDefenceQuestion(question)) {
     return withContactEmail(question, injectionDefenceReply([]));
   }
-  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) {
+  if (isUnknowableQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
-  }
-  const intent = recruiterIntentReply(question);
-  if (intent) {
-    return withContactEmail(question, polishResult(question, intent, []));
   }
 
   const audience = input.audience ?? "developer";
@@ -1603,13 +1441,15 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     console.error("retrieve failed:", err);
   }
 
-  let relevant = chunks.filter((c) => c.score >= MIN_RELEVANCE_SCORE);
+  // retrieve() already applied BM25/cosine floors; RRF scores are small ranks, not 0-1 cosine.
+  let relevant = chunks.filter((c) => c.score > 0);
   if (relevant.length === 0 && /\bmike\b/i.test(question)) {
-    relevant = retrieveKeyword(question).filter((c) => c.score >= MIN_RELEVANCE_SCORE);
+    relevant = retrieveKeyword(question).filter((c) => c.score > 0);
   }
 
   if (relevant.length > 0) {
-    const prompt = buildPrompt(question, relevant, audience);
+    const forPrompt = promptChunks(relevant);
+    const prompt = buildPrompt(question, forPrompt, audience);
     const wantLlm = Boolean(input.generateGemini || input.generateGroq);
     const slot = wantLlm ? acquireGenerationSlot() : false;
 
@@ -1622,18 +1462,29 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
             if (isRefusal(geminiText)) {
               return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
             }
+            const validated = validateModelSentences(
+              geminiText,
+              forPrompt.map((c) => `${c.title}\n${c.text}`),
+            );
+            if (!validated.trim()) {
+              return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
+            }
             return withContactEmail(question, polishResult(question, {
-              ...finaliseModelText(geminiText, relevant),
+              ...finaliseModelText(validated, forPrompt),
               via: "gemini",
-            }, relevant));
+            }, forPrompt));
           }
         }
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
-            const grounded = groundGroqAnswer(groqText, relevant);
+            const validated = validateModelSentences(
+              groqText,
+              forPrompt.map((c) => `${c.title}\n${c.text}`),
+            );
+            const grounded = validated.trim() ? groundGroqAnswer(validated, forPrompt) : null;
             if (grounded) {
-              return withContactEmail(question, polishResult(question, grounded, relevant));
+              return withContactEmail(question, polishResult(question, grounded, forPrompt));
             }
             return withContactEmail(question, staticOrSafeReply(question, relevant, groqText));
           }
@@ -1644,68 +1495,5 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     }
   }
 
-  if (isOffTopicQuestion(question)) {
-    return refusalResult();
-  }
-
-  if (isBareCourseTrainingQuestion(question)) {
-    const course = courseTrainingReply(relevant);
-    if (course) return withContactEmail(question, course);
-  }
-
-  if (isCrmAndZdiLiveQuestion(question)) {
-    return withContactEmail(question, polishResult(question, {
-      response: CANONICAL_CRM_ZDI_LIVE_ANSWER,
-      sources: sourcesFor({
-        question: "What is the CRM?",
-        aliases: [],
-        answer: CANONICAL_CRM_ZDI_LIVE_ANSWER,
-        sourceIds: ["zororo-crm", "zdi-signature-workflow"],
-      }),
-      via: "static",
-    }, relevant));
-  }
-
-  if (isWorkQuestion(question)) {
-    return withContactEmail(question, polishResult(question, {
-      response: CANONICAL_WORK_ANSWER,
-      sources: workSystemSources([]),
-      via: "static",
-    }, relevant));
-  }
-
-  if (isExperienceQuestion(question)) {
-    const experience = experienceStaticReply();
-    if (experience) {
-      return withContactEmail(question, polishResult(question, experience, relevant));
-    }
-  }
-
-  if (isAwsQuestion(question)) {
-    return withContactEmail(question, withUnknownTermNote(question, polishResult(question, {
-      response: CANONICAL_AWS_ANSWER,
-      sources: awsSources([]),
-      via: "static",
-    }, relevant)));
-  }
-
-  const staticHit = matchStaticAnswer(question);
-  if (staticHit) {
-    return withContactEmail(question, polishResult(question, {
-      response: staticHit.answer,
-      sources: sourcesFor(staticHit),
-      via: "static",
-    }, relevant));
-  }
-
-  const retrieved = citedFallbackFromChunks(question, relevant);
-  if (retrieved) {
-    return withContactEmail(question, polishResult(question, retrieved, relevant));
-  }
-
-  if (isContactQuestion(question)) {
-    return withContactEmail(question, polishResult(question, contactStaticReply(), relevant));
-  }
-
-  return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  return withContactEmail(question, staticOrSafeReply(question, relevant));
 }

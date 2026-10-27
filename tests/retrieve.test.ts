@@ -117,6 +117,13 @@ describe("keyword retrieval fallback", () => {
     assert.match(hit!.text, /prototype/i);
   });
 
+  it("keeps absolute BM25 scores instead of max-normalising the top hit to 1", () => {
+    const hits = retrieveKeyword("What is Sitewarden LangGraph?");
+    assert.ok(hits.length >= 2, `expected multiple hits, got ${hits.map((h) => h.id).join(", ")}`);
+    assert.notEqual(hits[0].score, 1, `top score was ${hits[0].score}`);
+    assert.ok(hits[0].score > hits[1].score);
+  });
+
   it("falls back to BM25 when embeddings throw", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () => {

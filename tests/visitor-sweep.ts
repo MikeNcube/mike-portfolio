@@ -6,12 +6,10 @@ import {
   EMAIL_FALLBACK,
   isContactQuestion,
 } from "../lib/answer";
-import { matchRecruiterIntent } from "../lib/intent";
 import { isExperienceQuestion, isWorkQuestion } from "../lib/status-copy";
 import { isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
-import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 import type { RetrievedChunk } from "../lib/rag";
 
 export type SweepExpect =
@@ -208,10 +206,6 @@ export const VISITOR_SWEEP: Array<{ question: string; expect: SweepExpect }> = [
   { question: "What is Mike's time zone?", expect: { kind: "refuse" } },
 ];
 
-const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
-  .filter((c) => c.sourceUrl.startsWith("http"))
-  .map((c) => ({ ...c, score: 0.9 }));
-
 const misleadingChunks: RetrievedChunk[] = [
   {
     id: "zororo-claims",
@@ -249,7 +243,6 @@ type SweepMode = (typeof modes)[number];
 async function ask(question: string, mode: SweepMode) {
   return answerQuestion({
     question,
-    retrieveFn: async () => [...misleadingChunks, ...kbChunks],
     ...(mode === "gemini-refuse"
       ? {
           generateGemini: async () => "I don't have information about that.",
@@ -288,19 +281,11 @@ describe("round 48 visitor sweep", () => {
     assert.equal(isWorkQuestion("Give me an overview of Mike's work"), true);
   });
 
-  it("matches recruiter intents before any model or chunk fallback", () => {
-    for (const item of VISITOR_SWEEP) {
-      if (item.expect.kind !== "intent") continue;
-      const hit = matchRecruiterIntent(item.question);
-      assert.ok(hit, item.question);
-      assert.equal(hit.id, item.expect.id, item.question);
-    }
-  });
-
-  it("does not match honest unknowns to a recruiter intent", () => {
+  it("refuses honest-unknown visitor questions before retrieval", async () => {
     for (const item of VISITOR_SWEEP) {
       if (item.expect.kind !== "refuse") continue;
-      assert.equal(matchRecruiterIntent(item.question), null, item.question);
+      const result = await ask(item.question, "none");
+      assert.equal(result.response, EMAIL_FALLBACK, item.question);
     }
   });
 

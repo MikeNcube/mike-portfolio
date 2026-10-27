@@ -1,5 +1,7 @@
-// Exemplar bank for recruiter-intent classification.
-// Varied phrasings only — held-out eval questions must not appear here.
+// Exemplar bank: indexed as aliases on static answers, not used as a classifier.
+
+import { KNOWLEDGE_CHUNKS } from "./knowledge";
+import { STATIC_ANSWERS } from "./static-answers";
 
 export type RecruiterIntentId =
   | "linkedin"
@@ -838,6 +840,16 @@ const EXEMPLAR_NORMALIZED = new Set(
 
 export function isInExemplarBank(question: string): boolean {
   return EXEMPLAR_NORMALIZED.has(normalizeQuestion(question));
+}
+
+export function isIndexedPhrase(question: string): boolean {
+  const norm = normalizeQuestion(question);
+  if (EXEMPLAR_NORMALIZED.has(norm)) return true;
+  for (const sa of STATIC_ANSWERS) {
+    if (sa.aliases.some((a) => normalizeQuestion(a) === norm)) return true;
+  }
+  const kb = KNOWLEDGE_CHUNKS.map((c) => `${c.title}\n${c.text}\n${(c.keywords ?? []).join(" ")}`).join("\n");
+  return kb.toLowerCase().includes(norm) && norm.length > 12;
 }
 
 export function exemplarCount(id: ClassifiedIntentId): number {

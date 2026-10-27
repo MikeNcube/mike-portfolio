@@ -7,7 +7,7 @@ import {
   isHonestUnknownQuestion,
   kbEntityTechTerms,
 } from "../lib/answer";
-import { matchProjectScopedAnswer, matchRecruiterIntent } from "../lib/intent";
+import { matchProjectScopedAnswer } from "../lib/intent";
 import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
@@ -24,7 +24,6 @@ type SweepMode = (typeof modes)[number];
 async function ask(question: string, mode: SweepMode) {
   return answerQuestion({
     question,
-    retrieveFn: async () => kbChunks,
     ...(mode === "gemini-refuse"
       ? {
           generateGemini: async () => "I don't have information about that.",
@@ -54,14 +53,14 @@ function twenty(prefix: string, stems: string[]): string[] {
   return out.slice(0, 20);
 }
 
-const B21_CASES: Array<{ question: string; match: RegExp }> = [
+export const B21_CASES: Array<{ question: string; match: RegExp }> = [
   { question: "Has Mike built a SOC?", match: /SOC|Sentinel/i },
   { question: "Has Mike used Airflow?", match: /Airflow/i },
   { question: "Has Mike built a state machine?", match: /state machine/i },
   { question: "Has Mike done security and compliance?", match: /compliance|POPIA/i },
 ];
 
-const B23_CASES: Array<{ question: string; intent: string; match: RegExp; notMatch?: RegExp }> = [
+export const B23_CASES: Array<{ question: string; intent: string; match: RegExp; notMatch?: RegExp }> = [
   { question: "What part of South Africa is Mike in?", intent: "location", match: /Johannesburg/ },
   { question: "Is Mike currently job hunting?", intent: "roles", match: /Generative AI Engineer/ },
   { question: "What job is Mike hoping to land?", intent: "roles", match: /Generative AI Engineer/ },
@@ -307,7 +306,6 @@ describe("round 50 derived allow-list and broader intents", () => {
 
   it("answers B21 built/used questions that previously refused", async () => {
     for (const item of B21_CASES) {
-      assert.equal(matchRecruiterIntent(item.question), null, item.question);
       for (const mode of modes) {
         const result = await ask(item.question, mode);
         const label = `${mode} ${item.question}`;
@@ -324,7 +322,6 @@ describe("round 50 derived allow-list and broader intents", () => {
       "When can Mike start?",
     ]) {
       assert.equal(isHonestUnknownQuestion(question), true, question);
-      assert.equal(matchRecruiterIntent(question), null, question);
       for (const mode of modes) {
         const result = await ask(question, mode);
         assert.equal(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
@@ -333,13 +330,8 @@ describe("round 50 derived allow-list and broader intents", () => {
     }
   });
 
-  it("matches B23 broadened phrasings", () => {
-    for (const item of B23_CASES) {
-      const hit = matchRecruiterIntent(item.question);
-      assert.ok(hit, item.question);
-      assert.equal(hit.id, item.intent, item.question);
-    }
-  });
+  // r52: classify-first intent ids are gone. B23 is enforced by the
+  // answer-path tests below (real retrieve + grounding gate).
 
   for (const mode of modes) {
     it(`answers B23 cases with ${mode}`, async () => {
@@ -358,9 +350,6 @@ describe("round 50 derived allow-list and broader intents", () => {
       for (const [id, spec] of Object.entries(PARAPHRASES)) {
         assert.equal(spec.questions.length, 20, id);
         for (const question of spec.questions) {
-          const intent = matchRecruiterIntent(question);
-          assert.ok(intent, `${id} ${question}`);
-          assert.equal(intent.id, id, `${id} ${question}`);
           const result = await ask(question, mode);
           assert.equal(isRefusal(result.response), false, `${mode} ${question} => ${result.response}`);
           assert.match(result.response, spec.match, `${mode} ${question} => ${result.response}`);
@@ -374,7 +363,6 @@ describe("round 50 derived allow-list and broader intents", () => {
       const remote = await ask("Does ZDI work remotely?", mode);
       assert.doesNotMatch(remote.response, /remote-first/i, remote.response);
       assert.match(remote.response, /ZDI|not yet live|production rollout/i, remote.response);
-      assert.equal(matchRecruiterIntent("Does ZDI work remotely?"), null);
 
       const rollout = await ask("Has ZDI been rolled out?", mode);
       assert.match(rollout.response, /^(?:No\. )?ZDI is approved for production rollout/i, rollout.response);
