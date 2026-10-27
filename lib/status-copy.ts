@@ -1,6 +1,7 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
+import { evaluateGrounding } from "./grounding";
 import {
   capitaliseAfterCiteStops,
   insertMissingSentenceSpaces,
@@ -64,7 +65,7 @@ const WORK_FILLER_RE =
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
 const ZDI_LIVE_QUESTION_RE =
-  /\b(?:is zdi\b.{0,32}\b(?:live|rolled out|deployed)|has zdi been (?:rolled out|deployed|launched)|zdi\b.{0,24}\b(?:rolled out|rollout|rolling out))\b/i;
+  /\b(?:is zdi\b.{0,32}\b(?:live|rolled out|deployed|in production)|has zdi been (?:rolled out|deployed|launched)|zdi\b.{0,24}\b(?:rolled out|rollout|rolling out|in production))\b/i;
 
 const OTHER_LIVE_PROJECT_RE = /\bcrm\b|\bdigi\b|\bsentinel\b|\bsitewarden\b/i;
 
@@ -1154,13 +1155,13 @@ function applyCanonicalGuards(question: string, text: string): string {
   if (isTechLeadCrmQuestion(question) && !techLeadAnswerIsCanonical(out)) {
     out = CANONICAL_TECH_LEAD_CRM_ANSWER;
   }
-  if (isAwsQuestion(question) && !awsAnswerIsCanonical(out)) {
+  if (isAwsQuestion(question) && !awsAnswerIsCanonical(out) && evaluateGrounding(question, CANONICAL_AWS_ANSWER).ok) {
     out = CANONICAL_AWS_ANSWER;
   }
-  if (isProductionSystemsQuestion(question)) {
+  if (isProductionSystemsQuestion(question) && evaluateGrounding(question, CANONICAL_PRODUCTION_ANSWER).ok) {
     out = CANONICAL_PRODUCTION_ANSWER;
   }
-  if (isWorkQuestion(question)) {
+  if (isWorkQuestion(question) && evaluateGrounding(question, CANONICAL_WORK_ANSWER).ok) {
     out = CANONICAL_WORK_ANSWER;
   }
   return out;

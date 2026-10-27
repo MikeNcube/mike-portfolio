@@ -174,7 +174,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'sitewarden',
     title: 'Sitewarden — governed AI operations platform (prototype)',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Sitewarden is a governed AI operations platform prototype, not deployed. FastAPI backend. LangGraph state graph with plan, analyse, self-check, write-report, await-approval, and revise steps. Role-scoped steps, human interrupt approval before consequential actions, Postgres checkpoints. Risk-tiered tool gateway, MCP-style JSON-RPC endpoint. pgvector hybrid keyword and vector search with citations. 89 tests, retrieval and trajectory evals, CI with import rules.',
+    text: 'Sitewarden is a governed AI operations platform prototype, not deployed. FastAPI backend. LangGraph state graph with plan, analyse, self-check, write-report, await-approval, and revise steps. Role-scoped steps, human interrupt approval before consequential actions, Postgres (PostgreSQL) checkpoints. Risk-tiered tool gateway, MCP-style JSON-RPC endpoint. pgvector hybrid keyword and vector search with citations. 89 tests, retrieval and trajectory evals, CI with import rules.',
   },
   {
     id: 'cube-agent',

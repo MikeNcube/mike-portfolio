@@ -211,7 +211,10 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
   const topic = projectTopic(question);
   switch (topic) {
     case "general":
-      return null;
+      return {
+        id: `project-${project.id}-general`,
+        answer: staticByQuestion(project.staticQuestion),
+      };
     case "lead":
       if (project.id !== "crm") return null;
       return {

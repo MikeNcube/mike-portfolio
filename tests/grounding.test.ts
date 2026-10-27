@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  cannedFitsQuestion,
   contentTerms,
   evaluateGrounding,
   unknownTechNote,
@@ -68,6 +69,21 @@ describe("r52 grounding gate", () => {
       "Mike is based in Johannesburg, South Africa [1].",
     );
     assert.equal(g.ok, true, JSON.stringify({ terms, g }));
+  });
+
+  it("rejects a tech-lead canned question on a generic CRM ask", () => {
+    assert.equal(
+      cannedFitsQuestion("Does Mike know the CRM?", "Did Mike act as tech lead on the CRM?"),
+      false,
+    );
+    assert.equal(
+      cannedFitsQuestion("Did Mike act as tech lead on the CRM?", "Did Mike act as tech lead on the CRM?"),
+      true,
+    );
+    assert.equal(
+      cannedFitsQuestion("Does Mike know the CRM?", "What is the CRM?"),
+      true,
+    );
   });
 
   it("does not treat 'living' as a match for production-live copy", () => {

@@ -622,7 +622,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "apis and dashboards",
     ],
     answer:
-      "Yes. The multi-agent content pipeline waits for human approval in a FastAPI dashboard [1]. Digi App Form includes a staff admin dashboard [2].",
+      "Yes. Mike writes APIs in Python with FastAPI and Flask [1]. The multi-agent content pipeline waits for human approval in a FastAPI dashboard [1]. Digi App Form includes a staff admin dashboard [2].",
     sourceIds: ["ai-social-agent", "digi-app-form"],
   },
   {

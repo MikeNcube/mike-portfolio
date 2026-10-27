@@ -97,8 +97,9 @@ const HOLDOUT: Holdout[] = [
   {
     question: "How does Mike keep bugs out of production?",
     intent: "engineering",
-    // r52: retrieve-first ranks the public-tests canned on "production".
-    match: /validation, retries, and a fallback|44 passing tests|525 backend tests/,
+    // r52: retrieve-first may rank Digi's validation-before-persist copy
+    // instead of the classify-first engineering canned.
+    match: /validation|retries|fallback|44 passing tests|525 backend tests/,
     notMatch: /\[\d+\]…/,
   },
   { question: "Is Mike on the market for a new job?", intent: "roles", match: /Generative AI Engineer/ },

@@ -82,6 +82,14 @@ const UNKNOWABLE_PHRASES: RegExp[] = [
   /\b(?:video games?|steam library|twitch|discord handle)\b/i,
   /\b(?:d&d|dungeons and dragons)\b/i,
   /\bmagic the gathering\b/i,
+  /\bhigh school\b/i,
+  /\bfriends\b/i,
+  /\bside hustle\b/i,
+  /\bstand-up\b/i,
+  /\bcomedy\b/i,
+  /\bid numbers?\b/i,
+  /\bcredit score\b/i,
+  /\bpassport number\b/i,
 ]
 
 export const UNKNOWABLE_REGEX_COUNT = UNKNOWABLE_PHRASES.length + 1;

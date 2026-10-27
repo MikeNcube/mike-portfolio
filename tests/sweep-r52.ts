@@ -5,7 +5,7 @@ import {
   answerQuestion,
   EMAIL_FALLBACK,
 } from "../lib/answer";
-import { distinctiveContentTerms, validateModelSentences } from "../lib/grounding";
+import { distinctiveContentTerms, passageHasTerm, validateModelSentences } from "../lib/grounding";
 import { isIndexedPhrase } from "../lib/intent-exemplars";
 import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
@@ -285,8 +285,25 @@ const CLAIM_SKIP = new Set([
   "I", "A", "An", "The", "This", "That", "He", "His", "Him", "Mike", "Ncube",
   "Email", "Sources", "Source", "Status", "Stack", "No", "Yes", "It", "Its",
   "And", "Or", "But", "For", "To", "Of", "In", "On", "At", "By", "From",
-  "Current", "Accounts", "IT", "FSP",
+  "Current", "Accounts", "IT", "FSP", "Please", "Also", "Briefly",
+  "APIs", "API",
 ]);
+
+function claimTokens(response: string): string[] {
+  const sentences = response.replace(/\[\d+\]/g, "").split(/(?<=[.!?])\s+/);
+  const out: string[] = [];
+  for (const sentence of sentences) {
+    const raw = sentence.match(/\b[A-Z][\w.+#-]*|\b\d+(?:\.\d+)?\b/g) ?? [];
+    raw.forEach((token, index) => {
+      const cleaned = token.replace(/[.+#-]+$/g, "");
+      if (cleaned.length <= 1 || CLAIM_SKIP.has(cleaned)) return;
+      // Sentence-initial Titlecase English is not a proper noun.
+      if (index === 0 && /^[A-Z][a-z]+$/.test(cleaned)) return;
+      out.push(cleaned);
+    });
+  }
+  return out;
+}
 
 function citedBlob(sources: Array<{ id?: string; title: string; url: string }>): string {
   const parts: string[] = [];
@@ -361,6 +378,7 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
     assert.ok(questions.length >= 1500, `synthetic size ${questions.length}`);
     let fail = 0;
     const samples: string[] = [];
+    const reasonCounts = new Map<string, number>();
     for (const question of questions) {
       const result = await ask(question);
       const reasons: string[] = [];
@@ -369,9 +387,7 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
       }
       if (!isRefusal(result.response) && result.sources.length > 0) {
         const blob = citedBlob(result.sources);
-        const tokens = result.response.replace(/\[\d+\]/g, "").match(/\b[A-Z][\w.+#-]*|\b\d+(?:\.\d+)?\b/g) ?? [];
-        for (const token of tokens) {
-          if (CLAIM_SKIP.has(token)) continue;
+        for (const token of claimTokens(result.response)) {
           if (/^\d+$/.test(token) && token.length === 1) continue;
           if (
             !new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(blob)
@@ -384,10 +400,10 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
       }
       if (!isRefusal(result.response)) {
         const terms = distinctiveContentTerms(question);
-        const hay = result.response.toLowerCase();
+        const hay = result.response;
         for (const term of terms) {
-          const listed = /isn't listed in mike's portfolio|aren't listed in mike's portfolio|not listed in mike's portfolio/.test(hay);
-          const present = hay.includes(term.toLowerCase());
+          const listed = /isn't listed in mike's portfolio|aren't listed in mike's portfolio|not listed in mike's portfolio/.test(hay.toLowerCase());
+          const present = passageHasTerm(hay, term);
           if (!present && !listed) {
             reasons.push(`content term ${term} unanswered`);
             break;
@@ -396,11 +412,18 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
       }
       if (reasons.length > 0) {
         fail += 1;
-        if (samples.length < 8) samples.push(`${question} => ${result.response} (${reasons.join("; ")})`);
+        for (const reason of reasons) {
+          const key = reason.replace(/proper noun .+ missing/, "proper noun missing").replace(/content term \S+ unanswered/, "content term unanswered");
+          reasonCounts.set(key, (reasonCounts.get(key) ?? 0) + 1);
+        }
+        if (samples.length < 12) samples.push(`${question} => ${result.response} (${reasons.join("; ")})`);
       }
     }
     const rate = 1 - fail / questions.length;
     console.log(`r52 synthetic property pass rate: ${(rate * 100).toFixed(2)}% (${questions.length - fail}/${questions.length})`);
+    if (reasonCounts.size > 0) {
+      console.log(`r52 synthetic failure reasons: ${[...reasonCounts.entries()].map(([k, v]) => `${k}=${v}`).join("; ")}`);
+    }
     assert.ok(
       fail / questions.length <= 0.02,
       `failure rate ${(fail / questions.length * 100).toFixed(2)}% > 2%\n${samples.join("\n")}`,

@@ -141,7 +141,7 @@ export const RELATED_TERMS: Record<string, string[]> = {
   recruiters: ["recruiters", "email", "gmail"],
   reaching: ["reaching", "email", "gmail"],
   demo: ["demo", "digi", "form", "shipped"],
-  "in production": ["in production", "shipped", "digi", "crm"],
+  "in production": ["in production", "production", "live", "not yet live", "rolling", "shipped", "digi", "crm"],
   title: ["applied", "architect"],
   role: ["applied", "architect", "generative", "engineer"],
   roles: ["applied", "architect", "generative", "engineer"],
@@ -178,6 +178,7 @@ export const RELATED_TERMS: Record<string, string[]> = {
   assistant: ["assistant", "gemini", "groq", "rag"],
   agent: ["agent", "langgraph"],
   systems: ["systems", "digi", "crm", "shipped"],
+  production: ["production", "live", "shipped", "not yet live", "rolling"],
   deployed: ["deployed", "not yet live", "rolling"],
   deploy: ["deploy", "not yet live", "rolling"],
   deployment: ["deployment", "paused", "railway"],
@@ -285,6 +286,12 @@ export const RELATED_TERMS: Record<string, string[]> = {
   "approval workflows": ["approval workflow", "approval workflows", "zdi"],
   "self-taught": ["self-taught", "degree", "education", "courses"],
   taught: ["taught", "degree", "education", "courses"],
+  checked: ["tests", "testing", "evals", "coverage"],
+  "write-time": ["writes", "write", "approval", "prompts"],
+  stores: ["postgresql", "postgres", "database"],
+  persistence: ["postgresql", "postgres", "database"],
+  layer: ["postgresql", "postgres", "database"],
+  services: ["docker", "fastapi", "flask"],
 };
 
 export const KNOWN_TECH_TERMS = [
@@ -308,7 +315,7 @@ const MULTIWORD_SUBJECTS = [
   "on-site", "serving traffic", "run state", "in production",
   "reporting line", "remote-first", "people manager", "state machine",
   "side gigs", "staff-plus", "job hunting", "model answers",
-  "working model",
+  "working model", "tech lead", "write-time",
 ];
 
 function stemVariants(word: string): string[] {
@@ -454,6 +461,35 @@ export function expandQuery(query: string): string {
   }
   if (extras.length === 0) return query;
   return `${query} ${[...new Set(extras)].join(" ")}`;
+}
+
+function relatedCluster(term: string): Set<string> {
+  const lower = term.toLowerCase();
+  return new Set([lower, ...(RELATED_TERMS[lower] ?? [])]);
+}
+
+function relatedToAsked(term: string, asked: string[]): boolean {
+  const lower = term.toLowerCase();
+  if (asked.includes(lower)) return true;
+  if (asked.some((a) => passageHasTerm(a, term) || passageHasTerm(term, a))) return true;
+  const cluster = relatedCluster(lower);
+  for (const a of asked) {
+    if (cluster.has(a)) return true;
+    const askedCluster = relatedCluster(a);
+    for (const needle of cluster) {
+      if (askedCluster.has(needle)) return true;
+    }
+  }
+  return false;
+}
+
+// True when a canned question does not introduce extra distinctive lemmas the visitor did not ask.
+export function cannedFitsQuestion(question: string, cannedQuestion: string): boolean {
+  const asked = distinctiveContentTerms(question).map((t) => t.toLowerCase());
+  for (const term of distinctiveContentTerms(cannedQuestion)) {
+    if (!relatedToAsked(term, asked)) return false;
+  }
+  return true;
 }
 
 export function evaluateGrounding(question: string, answer: string): GroundingResult {

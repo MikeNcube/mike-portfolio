@@ -14,8 +14,10 @@ import { canonicalQuestionForPhrase } from "./intent-exemplars";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
   contentTerms,
+  cannedFitsQuestion,
   distinctiveContentTerms,
   evaluateGrounding,
+  expandQuery,
   kbHasTerm,
   listedTechInQuestion,
   passageHasTerm,
@@ -27,6 +29,7 @@ import {
   DEFAULT_K,
   promptChunks,
   retrieve,
+  retrieveKeyword,
   type RetrievedChunk,
 } from "./rag";
 import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
@@ -955,6 +958,7 @@ function injectionDefenceReply(chunks: RetrievedChunk[]): AnswerResult {
 function gatedStatic(question: string, answer: StaticAnswer): AnswerResult | null {
   // Jaccard/canned hits without a distinctive asked term are ranking hijacks.
   if (distinctiveContentTerms(question).length === 0) return null;
+  if (!cannedFitsQuestion(question, answer.question)) return null;
   const grounded = evaluateGrounding(question, answer.answer);
   if (!grounded.ok) return null;
   return withUnknownTermNote(question, {
@@ -967,7 +971,7 @@ function gatedStatic(question: string, answer: StaticAnswer): AnswerResult | nul
 function citedFromChunk(chunk: RetrievedChunk, question: string): string {
   const pythonQuestion = /\bpython\b/i.test(question);
   const rewritten = fallbackSentenceFromChunk(chunk, question, pythonQuestion);
-  if (rewritten) return rewritten;
+  if (rewritten && evaluateGrounding(question, rewritten).ok) return rewritten;
   const terms = contentTerms(question);
   const parts = splitIntoSentences(chunk.text).map((p) => p.trim()).filter(Boolean);
   const kept = parts.filter((part) =>
@@ -1044,24 +1048,33 @@ function composeGroundedAnswer(
     const gated = gatedStatic(question, multi);
     if (gated) return gated;
   }
-  // Named-project topics are a rank boost, not a Mike-wide classify-first return.
+  // Specific project topics (status, stack, deploy) are a rank boost, still gated.
   const project = matchProjectScopedAnswer(question);
   if (project) {
     const gated = gatedStatic(question, project.answer);
     if (gated) return gated;
   }
+  // Walk retrieve order: remaining canned answers and KB chunks compete by rank.
   for (const chunk of retrieved) {
     if (chunk.cannedAnswer) {
       const gated = gatedStatic(question, chunk.cannedAnswer);
       if (gated) return gated;
+      continue;
     }
+    const composed = composeFromProvidedChunks(question, [chunk]);
+    if (composed) return composed;
   }
   const exact = matchStaticAnswer(question);
   if (exact && staticHitFitsNamedProjects(question, exact)) {
     const gated = gatedStatic(question, exact);
     if (gated) return gated;
   }
-  return composeFromProvidedChunks(question, retrieved);
+  const fromRetrieved = composeFromProvidedChunks(question, retrieved);
+  if (fromRetrieved) return fromRetrieved;
+  if (distinctiveContentTerms(question).some((term) => kbHasTerm(term))) {
+    return composeFromProvidedChunks(question, retrieveKeyword(expandQuery(question), DEFAULT_K));
+  }
+  return null;
 }
 
 function staticOrSafeReply(
@@ -1294,17 +1307,17 @@ function polishResult(
       ensureCrmSource(from, chunks),
       out === CANONICAL_TECH_LEAD_CRM_ANSWER,
     ));
-  } else if (isAwsQuestion(question)) {
+  } else if (isAwsQuestion(question) && evaluateGrounding(question, CANONICAL_AWS_ANSWER).ok) {
     ({ text: out, sources } = applySourceList(
       out,
       from,
       awsSources(from),
       out === CANONICAL_AWS_ANSWER,
     ));
-  } else if (isProductionSystemsQuestion(question)) {
+  } else if (isProductionSystemsQuestion(question) && evaluateGrounding(question, CANONICAL_PRODUCTION_ANSWER).ok) {
     out = CANONICAL_PRODUCTION_ANSWER;
     sources = productionSystemSources(from);
-  } else if (isWorkQuestion(question)) {
+  } else if (isWorkQuestion(question) && evaluateGrounding(question, CANONICAL_WORK_ANSWER).ok) {
     ({ text: out, sources } = applySourceList(
       out,
       from,
@@ -1315,6 +1328,7 @@ function polishResult(
 
   if (
     isProductionSystemsQuestion(question)
+    && evaluateGrounding(question, CANONICAL_PRODUCTION_ANSWER).ok
     && !citationsMatchNamedProjects(out, sources).pass
   ) {
     out = CANONICAL_PRODUCTION_ANSWER;
