@@ -1,20 +1,28 @@
 // One lemma table for topics this assistant must not invent.
 // Replaces OFF_TOPIC_QUESTION_RE, HONEST_UNKNOWN_RE, start-join, and off-topic overrides.
 
-const WORK_NOUN_RE =
-  /\b(?:project|projects|build|builds|system|systems|role|roles|stack|language|languages|programming|framework|frameworks|tool|tools|code|engineer|engineering|job|jobs|work|ship|shipped|test|tests|title|titles)\b/i;
+const FAVOURITE_WORK_RE =
+  /\b(?:favourites?|favorites?|preferred|favour|favor)\b[\s\w]{0,24}\b(?:language|languages|framework|frameworks|tool|tools|stack|project|projects|role|roles|build|builds)\b/i;
 
 const UNKNOWABLE_PHRASES: RegExp[] = [
   /\b(?:current\s+)?salary\b/i,
   /\bsalaries\b/i,
   /\bcompensation\b/i,
   /\bpay(?:\s*package|check|cheque)?\b/i,
+  /\bpackage is mike on\b/i,
+  /\bwhat(?:'s| is) mike'?s package\b/i,
   /\bwages?\b/i,
   /\bctc\b/i,
   /\b(?:day|daily|hourly)\s+rate\b/i,
+  /\btake home\b/i,
+  /\bcharge per\b/i,
+  /\bper day\b/i,
   /\bnotice period\b/i,
   /\bwhat notice\b/i,
+  /\b(?:his |mike'?s )?notice\b/i,
   /\brelocat(?:e|ion|ing)\b/i,
+  /\bmove for\b/i,
+  /\bwilling to move\b/i,
   /\bvisa\b/i,
   /\bsponsorship\b/i,
   /\btime ?zone\b/i,
@@ -43,20 +51,27 @@ const UNKNOWABLE_PHRASES: RegExp[] = [
   /\bpolitics?\b/i,
   /\bpolitical party\b/i,
   /\bvoting\b/i,
+  /\bvote\b/i,
   /\bpizza\b/i,
   /\bpasta\b/i,
   /\bfavourite foods?\b/i,
   /\bfavorite foods?\b/i,
   /\bcapital of\b/i,
+  /\bthe capital\b/i,
+  /\bcapital\b/i,
   /\bwho won\b/i,
   /\blanguages? (?:does mike |does he )?speak\b/i,
   /\bspeak(?:s|ing)? (?:any )?languages?\b/i,
   /\bspoken languages?\b/i,
+  /\bspeak(?:s|ing)?\s+(?:french|zulu|mandarin|xhosa|afrikaans)\b/i,
+  /\bspeak(?:s|ing)? .*\bat home\b/i,
+  /\bspoken language\b/i,
   /\bnews\b/i,
   /\bcurrent events?\b/i,
   /\bgeneral knowledge\b/i,
   /\btrivia\b/i,
   /\b\d+\s*[+\-×x*/]\s*\d+\b/,
+  /\b\d+\s+plus\s+\d+\b/i,
   /\bwhat is\s+\d+\b/i,
   /\b(?:cats?|dogs?|pets?)\b/i,
   /\bblood type\b/i,
@@ -82,8 +97,8 @@ export function isUnknowableQuestion(question: string): boolean {
   const hay = question.toLowerCase();
   if (UNKNOWABLE_PHRASES.some((re) => re.test(question))) return true;
   if (
-    /\b(?:favourites?|favorites?)\b/.test(hay)
-    && !WORK_NOUN_RE.test(hay)
+    /\b(?:favourites?|favorites?|preferred)\b/.test(hay)
+    && !FAVOURITE_WORK_RE.test(hay)
   ) {
     return true;
   }

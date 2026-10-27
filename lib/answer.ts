@@ -27,7 +27,6 @@ import {
   DEFAULT_K,
   promptChunks,
   retrieve,
-  retrieveKeyword,
   type RetrievedChunk,
 } from "./rag";
 import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
@@ -954,6 +953,8 @@ function injectionDefenceReply(chunks: RetrievedChunk[]): AnswerResult {
 }
 
 function gatedStatic(question: string, answer: StaticAnswer): AnswerResult | null {
+  // Jaccard/canned hits without a distinctive asked term are ranking hijacks.
+  if (distinctiveContentTerms(question).length === 0) return null;
   const grounded = evaluateGrounding(question, answer.answer);
   if (!grounded.ok) return null;
   return withUnknownTermNote(question, {
@@ -983,12 +984,8 @@ function composeFromProvidedChunks(
   question: string,
   chunks: RetrievedChunk[],
 ): AnswerResult | null {
-  if (
-    distinctiveContentTerms(question).length === 0
-    && contentTerms(question).length === 0
-  ) {
-    return null;
-  }
+  // Empty distinctive terms are identity-only; do not pick a random KB chunk.
+  if (distinctiveContentTerms(question).length === 0) return null;
   const http = chunks.filter((c) => c.sourceUrl.startsWith("http") && !c.cannedAnswer);
   const ranked = [...http].sort((a, b) => b.score - a.score);
   for (const chunk of ranked) {
@@ -1485,10 +1482,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   }
 
   // retrieve() already applied BM25/cosine floors; RRF scores are small ranks, not 0-1 cosine.
-  let relevant = chunks.filter((c) => c.score > 0);
-  if (relevant.length === 0 && /\bmike\b/i.test(question)) {
-    relevant = retrieveKeyword(question).filter((c) => c.score > 0);
-  }
+  const relevant = chunks.filter((c) => c.score > 0);
 
   if (relevant.length > 0) {
     const forPrompt = promptChunks(relevant);

@@ -6,6 +6,7 @@ import { bm25Scores } from "./bm25";
 import { STATIC_ANSWERS, type StaticAnswer } from "./static-answers";
 import { INTENT_CANONICAL, INTENT_EXEMPLARS, type RecruiterIntentId } from "./intent-exemplars";
 import { projectBoostIds } from "./intent";
+import { expandQuery } from "./grounding";
 
 const EMBED_MODEL = "gemini-embedding-001";
 const BATCH_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:batchEmbedContents`;
@@ -100,7 +101,7 @@ export function retrieveKeyword(query: string, k = DEFAULT_K): RetrievedChunk[] 
 }
 
 function retrieveUnifiedKeyword(query: string, k = DEFAULT_K): RetrievedChunk[] {
-  return rankBm25(query, CORPUS, k, MIN_BM25_SCORE);
+  return rankBm25(expandQuery(query), CORPUS, k, MIN_BM25_SCORE);
 }
 
 let kbEmbeddingsPromise: Promise<number[][]> | null = null;

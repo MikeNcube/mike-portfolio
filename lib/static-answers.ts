@@ -30,6 +30,11 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "summary of who mike is",
       "cv highlights",
       "resume highlights",
+      "cv highlights of who mike is",
+      "what are the resume highlights for mike",
+      "blurb",
+      "elevator",
+      "one-sentence",
     ],
     answer:
       "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
@@ -84,6 +89,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what has mike shipped",
       "production systems",
       "what did mike ship at zororo",
+      "in production",
+      "ship live",
     ],
     answer: CANONICAL_PRODUCTION_ANSWER,
     sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
@@ -163,6 +170,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "reach mike",
       "mike's email",
       "email mike",
+      "mailbox",
+      "outreach",
     ],
     answer:
       "Email Mike at mikencube03@gmail.com [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
@@ -203,6 +212,11 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "where does mike live",
       "where is he based",
       "what part of south africa is mike in",
+      "metro",
+      "stationed",
+      "urban",
+      "geography",
+      "overlap",
     ],
     answer:
       "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
@@ -214,6 +228,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "does mike work remotely",
       "is mike remote",
       "does mike work remote-first",
+      "office-first",
+      "on-site",
+      "distributed",
     ],
     answer:
       "Mike works remote-first from South Africa [1].",
@@ -237,6 +254,12 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's job title",
       "what is mike's current role",
       "what is mike's title",
+      "heading",
+      "styled",
+      "designated",
+      "org chart",
+      "linkedin headline",
+      "email signature",
     ],
     answer:
       "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2].",
@@ -248,6 +271,10 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "where does mike work",
       "who does mike work for",
       "what company does mike work for",
+      "clocked",
+      "payroll",
+      "employment record",
+      "funeral-assurance",
     ],
     answer:
       "Mike works at Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider [1]. He is based in Johannesburg, South Africa [2].",
@@ -262,6 +289,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "is mike currently job hunting",
       "what job is mike hoping to land",
       "what type of role suits mike",
+      "opening",
+      "staff-plus",
+      "ic role",
     ],
     answer:
       "Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. He is available for full-time or contract [1].",
@@ -274,6 +304,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's tech stack",
       "tech stack",
       "mike's stack",
+      "web framework",
+      "backends",
     ],
     answer:
       "Mike's stack lists Python, FastAPI, Flask, Next.js, TypeScript, React, PostgreSQL, pgvector, Redis, AWS (S3, EC2, IAM, CloudWatch, Bedrock), Docker, and GitHub Actions [1]. AI/LLM: RAG with Gemini embeddings, LangGraph, Anthropic Claude API, and OpenAI API [1].",
@@ -285,6 +317,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what programming languages does mike use",
       "what languages does mike use",
       "programming languages",
+      "apis",
+      "backend language",
     ],
     answer:
       "The stack lists Python and TypeScript [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
@@ -306,6 +340,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's education",
       "does mike have a degree",
       "mike's education",
+      "credential",
+      "academic",
     ],
     answer:
       "Mike has no named certifications and no formal degree [1]. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",
@@ -318,6 +354,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how big is mike's team",
       "how many people are in mike's it department",
       "has mike ever supervised other developers",
+      "it unit",
+      "it crew",
     ],
     answer:
       "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
@@ -351,6 +389,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "is mike a good fit for a senior ai engineer role",
       "what makes mike different",
       "give me three reasons to interview mike",
+      "interview",
     ],
     answer:
       "Mike has shipped live production systems at Zororo-Phumulani in a regulated funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
@@ -362,6 +401,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's strongest project",
       "what is mike's best project",
       "what is mike's proudest build",
+      "demo",
     ],
     answer:
       `The sources do not rank a strongest project. ${CANONICAL_PRODUCTION_ANSWER}`,
@@ -418,6 +458,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "would mike consider a contract role",
       "is mike open to contract",
       "does mike take freelance work",
+      "permanent",
+      "employment mode",
+      "fixed-term",
     ],
     answer:
       "Mike is available for full-time or contract [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",

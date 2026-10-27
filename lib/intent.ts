@@ -179,7 +179,9 @@ function projectTopic(question: string): ProjectTopic {
   const hay = question.toLowerCase();
   if (/\b(?:tech lead|team lead|engineering lead)\b/i.test(hay)) return "lead";
   if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews)\b/i.test(hay)) return "approvers";
-  if (/\b(?:still running|paused|currently paused)\b/i.test(hay)) return "status";
+  if (/\b(?:still running|paused|currently paused|serving traffic|run state|stay up)\b/i.test(hay)) {
+    return "status";
+  }
   if (
     /\b(?:deploy(?:ed|ment)?|where is .{0,24}hosted|live|production rollout|rolled out|rollout|rolling out)\b/i
       .test(hay)

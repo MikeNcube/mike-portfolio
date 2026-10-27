@@ -291,9 +291,9 @@ const CLAIM_SKIP = new Set([
 function citedBlob(sources: Array<{ id?: string; title: string; url: string }>): string {
   const parts: string[] = [];
   for (const source of sources) {
-    const chunk = KNOWLEDGE_CHUNKS.find(
-      (c) => c.id === source.id || c.title === source.title || c.sourceUrl === source.url,
-    );
+    const chunk = source.id
+      ? KNOWLEDGE_CHUNKS.find((c) => c.id === source.id)
+      : KNOWLEDGE_CHUNKS.find((c) => c.title === source.title);
     if (chunk) parts.push(`${chunk.title}\n${chunk.text}\n${(chunk.keywords ?? []).join(" ")}`);
     parts.push(source.title);
   }

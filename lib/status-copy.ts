@@ -42,7 +42,7 @@ export const CANONICAL_TECH_LEAD_CRM_ANSWER =
   "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";
 
 const PRODUCTION_QUESTION_RE =
-  /\b(production systems|what has mike shipped|what did mike ship|shipped at zororo)\b/i;
+  /\b(production systems?|what has mike shipped|what did mike ship|shipped at zororo|in production|ship(?:ped)? live)\b/i;
 
 const WORK_CORE_RE =
   /(?:^|[.!?,]\s*)(?:so |hey,? |and )?(?:what (?:does mike work on|has mike built|did mike build)|what projects (?:has|did) mike (?:built|build|work on)|show me (?:mike'?s projects|what mike has built|mike'?s work)|(?:give me (?:an? )?)?(?:overview|summary) of mike'?s (?:work|projects)|list mike'?s projects)(.*)$/i;

@@ -47,6 +47,19 @@ describe("r52 grounding gate", () => {
     assert.equal(g.ok, true, JSON.stringify(g));
   });
 
+  it("grounds metro/stationed paraphrases on Johannesburg", () => {
+    const g = evaluateGrounding(
+      "Which metro is Mike stationed in?",
+      "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
+    );
+    assert.equal(g.ok, true, JSON.stringify(g));
+  });
+
+  it("does not treat bare go as a golang distinctive term", () => {
+    const terms = contentTerms("Is ZDI still waiting to go live?");
+    assert.equal(terms.includes("go"), false, JSON.stringify(terms));
+  });
+
   it("treats 'specific' as a question-function word on location paraphrases", () => {
     const terms = contentTerms("Is Mike based in a specific city?");
     assert.equal(terms.includes("specific"), false, JSON.stringify(terms));
