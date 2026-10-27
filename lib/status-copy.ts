@@ -3,11 +3,12 @@
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   insertMissingSentenceSpaces,
+  insertSpaceBeforeCites,
   moveTrailingCitesBeforeStop,
   splitIntoSentences,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r41";
+export const ANSWER_CACHE_VERSION = "r42";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -978,6 +979,7 @@ export function sanitisePunctuation(text: string): string {
     .replace(/(^|[.!?]\s+),+\s*/g, "$1");
   out = moveTrailingCitesBeforeStop(out);
   out = insertMissingSentenceSpaces(out);
+  out = insertSpaceBeforeCites(out);
   return out.replace(/ {2,}/g, " ").trim();
 }
 

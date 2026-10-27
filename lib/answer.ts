@@ -478,7 +478,7 @@ function fallbackSentenceFromChunk(
   const ranked = [...parts].sort((a, b) => {
     const score = (part: string): number => {
       if (pythonQuestion && /\bpython\b/i.test(part)) return 2;
-      if (contentWords.some((w) => part.toLowerCase().includes(w))) return 1;
+      if (contentWords.some((w) => hasWholeWord(part, w))) return 1;
       return 0;
     };
     return score(b) - score(a);
@@ -490,17 +490,82 @@ function fallbackSentenceFromChunk(
   return "";
 }
 
+const FALLBACK_STOPWORDS = new Set([
+  ...NAME_TOKENS,
+  "know",
+  "knows",
+  "knew",
+  "use",
+  "used",
+  "using",
+  "has",
+  "have",
+  "had",
+  "does",
+  "did",
+  "do",
+  "work",
+  "worked",
+  "working",
+  "works",
+  "experience",
+  "experienced",
+  "hold",
+  "holds",
+  "held",
+  "get",
+  "got",
+  "take",
+  "taken",
+  "any",
+  "some",
+  "tell",
+  "like",
+]);
+
+const WEAK_SUBJECT_TERMS = new Set([
+  "detail",
+  "details",
+  "more",
+  "also",
+  "specifically",
+  "exactly",
+  "briefly",
+  "please",
+  "really",
+  "currently",
+  "still",
+]);
+
+const SKILL_STACK_CHUNK_IDS = new Set(["stack", "aws-web-tier"]);
+
 function questionContentWords(question: string): string[] {
-  return tokenize(question).filter((t) => !NAME_TOKENS.has(t));
+  return tokenize(question).filter((t) => !FALLBACK_STOPWORDS.has(t));
+}
+
+function questionSubjectTerms(question: string): string[] {
+  const unique = [...new Set(questionContentWords(question))];
+  const strong = unique.filter((t) => !WEAK_SUBJECT_TERMS.has(t));
+  return strong.length > 0 ? strong : unique;
+}
+
+function hasWholeWord(hay: string, word: string): boolean {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(hay);
+}
+
+function isSkillProbeQuestion(question: string): boolean {
+  return (
+    /\bknows?\b/i.test(question)
+    || /\b(?:has|have|had|did)\s+(?:\w+\s+){0,4}used\b/i.test(question)
+    || /\bexperience(?:d)?\s+(?:with|in|using)\b/i.test(question)
+  );
 }
 
 function passageHasQuestionWords(question: string, passage: string): boolean {
-  const words = questionContentWords(question);
+  const words = questionSubjectTerms(question);
   if (words.length === 0) return false;
-  const hay = passage.toLowerCase();
-  const hits = words.filter((w) => hay.includes(w));
-  if (hits.length === 0) return false;
-  return hits.length >= Math.ceil(words.length / 2);
+  return words.every((w) => hasWholeWord(passage, w));
 }
 
 function refusalResult(response = EMAIL_FALLBACK): AnswerResult {
@@ -536,12 +601,16 @@ export function citedFallbackFromChunks(
   const topScore = Math.max(...http.map((c) => c.score));
   if (topScore < CITED_FALLBACK_MIN_SCORE) return null;
   const pythonQuestion = /\bpython\b/i.test(question);
-  const matching = pythonQuestion
+  const skillProbe = isSkillProbeQuestion(question);
+  const pool = skillProbe
+    ? http.filter((c) =>
+        SKILL_STACK_CHUNK_IDS.has(c.id ?? "")
+        || (pythonQuestion && !PADDING_CHUNK_IDS.has(c.id ?? "") && /\bpython\b/i.test(`${c.title}\n${c.text}`)),
+      )
+    : http.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? ""));
+  const matching = pythonQuestion && !skillProbe
     ? pythonFallbackChunks(http)
-    : http.filter((c) =>
-        !PADDING_CHUNK_IDS.has(c.id ?? "")
-        && passageHasQuestionWords(question, `${c.title}\n${c.text}`),
-      );
+    : pool.filter((c) => passageHasQuestionWords(question, `${c.title}\n${c.text}`));
   const top = matching.slice(0, 3);
   if (top.length === 0) return null;
   const seen = new Set<string>();
@@ -592,12 +661,16 @@ function staticOrSafeReply(
       via: "static",
     }, chunks);
   }
+  if (modelText && isRefusal(modelText)) {
+    const retrievedAfterRefusal = citedFallbackFromChunks(question, chunks);
+    if (retrievedAfterRefusal) {
+      return polishResult(question, retrievedAfterRefusal, chunks);
+    }
+    return refusalResult();
+  }
   const retrieved = citedFallbackFromChunks(question, chunks);
   if (retrieved) {
     return polishResult(question, retrieved, chunks);
-  }
-  if (modelText && isRefusal(modelText)) {
-    return { response: stripSourceFooter(normaliseModelText(modelText)), sources: [], via: "email" };
   }
   return refusalResult();
 }

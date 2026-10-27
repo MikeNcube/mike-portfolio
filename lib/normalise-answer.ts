@@ -131,10 +131,18 @@ export function insertMissingSentenceSpaces(text: string): string {
   return restoreDottedNames(spaced, protectedNames.names);
 }
 
+export function insertSpaceBeforeCites(text: string): string {
+  return text.replace(/([A-Za-z0-9.,;:!?…'"])(\[\d+\])/g, "$1 $2");
+}
+
 export function moveTrailingCitesBeforeStop(text: string): string {
   return text.replace(
     /(…|\.\.\.|[.!?])\s*((?:\[\d+\]\s*)+)(?:\.)?(?=\s|$)/g,
-    (_m, punct: string, cites: string) => {
+    (match, punct: string, cites: string, offset: number, full: string) => {
+      if (punct === ".") {
+        const prefix = full.slice(Math.max(0, offset - 8), offset + 1);
+        if (ABBREV_BEFORE_DOT.test(prefix)) return match;
+      }
       const nums = [...cites.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
       const unique = [...new Set(nums)].sort((a, b) => a - b);
       const end = punct === "..." ? "…" : punct;
@@ -151,5 +159,5 @@ export function normaliseModelText(text: string): string {
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
   const plain = insertMissingSentenceSpaces(stripMarkdown(cited));
   const collapsed = collapseCitationClusters(plain);
-  return moveTrailingCitesBeforeStop(collapsed);
+  return insertSpaceBeforeCites(moveTrailingCitesBeforeStop(collapsed));
 }

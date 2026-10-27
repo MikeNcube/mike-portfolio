@@ -18,7 +18,7 @@ import {
   selectCitedSources,
   shouldCacheAnswer,
 } from "../lib/answer";
-import { moveTrailingCitesBeforeStop, normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
+import { insertSpaceBeforeCites, moveTrailingCitesBeforeStop, normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
 import { matchMultiProjectAnswer, matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
@@ -1933,15 +1933,23 @@ describe("production-system and ZDI status copy", () => {
         score: 0.8,
       },
     ];
-    const fallback = citedFallbackFromChunks("What database does the CRM use?", chunks);
+    assert.equal(citedFallbackFromChunks("What database does the CRM use?", chunks), null);
+    const withDb = [
+      {
+        ...chunks[0],
+        text: "The lead-management CRM uses PostgreSQL as its database, plus Redis and Celery.",
+      },
+      chunks[1],
+    ];
+    const fallback = citedFallbackFromChunks("What database does the CRM use?", withDb);
     assert.ok(fallback);
-    assert.match(fallback.response, /lead-management CRM used by over 40 people \[1\]/);
+    assert.match(fallback.response, /PostgreSQL as its database/);
     assert.doesNotMatch(fallback.response, /Digi App Form/);
     assert.equal(fallback.sources.length, 1);
     assert.equal(fallback.sources[0]?.id, "zororo-crm");
     const result = await answerQuestion({
       question: "What database does the CRM use?",
-      retrieveFn: async () => chunks,
+      retrieveFn: async () => withDb,
       generateGemini: async () => {
         throw new Error("429");
       },
@@ -2825,7 +2833,7 @@ describe("round 41 ready answers beat model refusals, and cite punctuation", () 
     assert.equal(shouldCacheAnswer(result), false);
   });
 
-  it("replaces a Groq refusal with the chunk fallback when it has relevant content", async () => {
+  it("replaces a Groq refusal with the chunk fallback only when the key subject is in the chunk", async () => {
     const result = await answerQuestion({
       question: "What database does the CRM use?",
       retrieveFn: async () => [
@@ -2833,7 +2841,7 @@ describe("round 41 ready answers beat model refusals, and cite punctuation", () 
           id: "zororo-crm",
           title: "Lead-management CRM",
           sourceUrl: "https://github.com/MikeNcube",
-          text: "Shipped live production system at Zororo-Phumulani: lead-management CRM used by over 40 people.",
+          text: "The lead-management CRM uses PostgreSQL as its database.",
           score: 0.9,
         },
       ],
@@ -2843,7 +2851,7 @@ describe("round 41 ready answers beat model refusals, and cite punctuation", () 
       generateGroq: async () => EMAIL_FALLBACK,
     });
     assert.equal(isRefusal(result.response), false);
-    assert.match(result.response, /lead-management CRM used by over 40 people/);
+    assert.match(result.response, /PostgreSQL as its database/);
     assert.ok(result.sources.length > 0);
     assert.equal(shouldCacheAnswer(result), false);
   });
@@ -2882,6 +2890,151 @@ describe("round 41 ready answers beat model refusals, and cite punctuation", () 
     );
   });
 });
+
+describe("round 42 off-scope skills, multi-project pairs, and cite nits", () => {
+  const liveLikeChunks: RetrievedChunk[] = [
+    {
+      id: "this-assistant",
+      title: "About this AI assistant",
+      sourceUrl: "https://github.com/MikeNcube/mike-portfolio",
+      text: "This assistant is a RAG pipeline on Mike's Next.js portfolio. It answers questions grounded in a curated knowledge base, cites its sources, and refuses questions outside that scope.",
+      score: 0.92,
+    },
+    {
+      id: "zororo-crm",
+      title: "Lead-management CRM",
+      sourceUrl: "https://github.com/MikeNcube",
+      text: "Shipped live production system at Zororo-Phumulani: lead-management CRM used by over 40 people across around 10 roles. FastAPI, PostgreSQL, Redis, Celery, Docker.",
+      score: 0.88,
+    },
+    {
+      id: "zororo-ai-os",
+      title: "Zororo AI OS — governed AI control plane",
+      sourceUrl: "https://github.com/MikeNcube",
+      text: "Zororo AI OS is a governed AI control plane. Stack: Python 3.12, FastAPI, Presidio, OPA/Rego, Pydantic, Terraform, pytest.",
+      score: 0.84,
+    },
+    {
+      id: "stack",
+      title: "Mike's tech stack",
+      sourceUrl: "https://github.com/MikeNcube",
+      text: "AI/LLM: RAG with Gemini embeddings. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask. Cloud: AWS (S3, EC2, IAM, CloudWatch, Bedrock). Infra: Docker.",
+      score: 0.8,
+    },
+  ];
+
+  it("refuses Kubernetes, Rust, Go, Azure, Snowflake, Terraform, and Java", async () => {
+    const questions = [
+      "Does Mike know Kubernetes?",
+      "Does Mike know Rust?",
+      "Does Mike know Go?",
+      "Has Mike used Azure?",
+      "Does Mike know Snowflake?",
+      "Does Mike know Terraform?",
+      "Does Mike know Java?",
+    ];
+    for (const question of questions) {
+      assert.equal(citedFallbackFromChunks(question, liveLikeChunks), null, question);
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => liveLikeChunks,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => "I don't have information about that.",
+      });
+      assert.equal(result.response, EMAIL_FALLBACK, question);
+      assert.equal(result.via, "email", question);
+      assert.equal(result.sources.length, 0, question);
+      assert.doesNotMatch(result.response, /curated knowledge base/, question);
+      assert.doesNotMatch(result.response, /lead-management CRM/, question);
+    }
+  });
+
+  it("still grounds AWS, Python, RAG, Next.js, and Bedrock questions", async () => {
+    const cases: Array<{ question: string; expect: RegExp }> = [
+      { question: "Does Mike know AWS?", expect: /\bS3\b/ },
+      { question: "What has Mike built with Python?", expect: /Python/i },
+      { question: "How does the RAG pipeline work technically?", expect: /Gemini embedding-001|cosine similarity/ },
+      { question: "Does Mike know Next.js?", expect: /Next\.js/ },
+      { question: "Has Mike used Bedrock?", expect: /Bedrock/ },
+    ];
+    for (const { question, expect } of cases) {
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => liveLikeChunks,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => {
+          throw new Error("429");
+        },
+      });
+      assert.equal(isRefusal(result.response), false, question);
+      assert.notEqual(result.response, EMAIL_FALLBACK, question);
+      assert.match(result.response, expect, `${question} => ${result.response}`);
+      assert.ok(result.sources.length > 0, question);
+    }
+  });
+
+  it("answers ZDI+CRM, Digi+CRM, and bare Sentinel pairs", async () => {
+    const pairs = [
+      {
+        question: "Tell me about ZDI and the CRM",
+        first: /ZDI/,
+        second: /lead-management CRM|CRM is a shipped/i,
+      },
+      {
+        question: "Tell me about Digi App Form and the CRM",
+        first: /Digi App Form/,
+        second: /lead-management CRM|CRM is a shipped/i,
+      },
+      {
+        question: "Tell me about ZDI and Sentinel",
+        first: /ZDI/,
+        second: /Sentinel/,
+      },
+      {
+        question: "Tell me about Digi App Form and Sentinel",
+        first: /Digi App Form/,
+        second: /Sentinel/,
+      },
+    ];
+    for (const { question, first, second } of pairs) {
+      const multi = matchMultiProjectAnswer(question);
+      assert.ok(multi, question);
+      assert.match(multi.answer, first, question);
+      assert.match(multi.answer, second, question);
+      const firstAt = multi.answer.search(first);
+      const secondAt = multi.answer.search(second);
+      assert.ok(firstAt >= 0 && secondAt > firstAt, question);
+      const result = await answerQuestion({
+        question,
+        retrieveFn: async () => liveLikeChunks,
+        generateGemini: async () => {
+          throw new Error("429");
+        },
+        generateGroq: async () => {
+          throw new Error("429");
+        },
+      });
+      assert.match(result.response, first, question);
+      assert.match(result.response, second, question);
+    }
+  });
+
+  it("inserts a space before glued cites and keeps abbreviation dots", () => {
+    assert.equal(insertSpaceBeforeCites("credentials[1]"), "credentials [1]");
+    assert.equal(normaliseModelText("courses, not credentials[1]."), "courses, not credentials [1].");
+    assert.equal(sanitisePunctuation("credentials[1]"), "credentials [1]");
+    assert.equal(moveTrailingCitesBeforeStop("Stack items include FastAPI, e.g. [1]"), "Stack items include FastAPI, e.g. [1]");
+    assert.equal(normaliseModelText("Stack items include FastAPI, e.g. [1]"), "Stack items include FastAPI, e.g. [1]");
+    assert.doesNotMatch(normaliseModelText("See the lab, e.g. [1]"), /e\.g \[1\]\./);
+    assert.equal(moveTrailingCitesBeforeStop("Event correlation. [1][2]"), "Event correlation [1][2].");
+  });
+});
+
+
 
 
 

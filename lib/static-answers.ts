@@ -238,6 +238,29 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     sourceIds: ["zororo-claims"],
   },
   {
+    question: "What is the CRM?",
+    aliases: [
+      "tell me about the crm",
+      "what is the lead-management crm",
+      "explain the crm",
+      "what is zororo crm",
+    ],
+    answer:
+      "The lead-management CRM is a shipped live production system at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. Deterministic lead grading, strict round-robin routing, role-based access, and an adapter isolating the policy system of record. FastAPI, PostgreSQL, Redis, Celery, and Docker.",
+    sourceIds: ["zororo-crm"],
+  },
+  {
+    question: "What is Digi App Form?",
+    aliases: [
+      "tell me about digi app form",
+      "explain digi app form",
+      "what is the digi app form",
+    ],
+    answer:
+      "Digi App Form is a shipped live production system for regulated funeral-assurance intake at Zororo-Phumulani [1]. Full-stack Flask: multi-step intake, server-side validation, automated policy-PDF generation, document upload, and a staff admin dashboard.",
+    sourceIds: ["digi-app-form"],
+  },
+  {
     question: "What is the multi-agent content pipeline?",
     aliases: [
       "tell me about the multi-agent content pipeline",
@@ -280,7 +303,16 @@ const PROJECT_STATIC_MENTIONS: Array<{ mention: RegExp; question: string }> = [
   { mention: /\bcube(?:\s+agent)?\b/i, question: "What is Cube?" },
   { mention: /\bsitewarden\b/i, question: "What is Sitewarden?" },
   {
+    mention: /\b(?:the\s+)?crm\b|\blead-management crm\b/i,
+    question: "What is the CRM?",
+  },
+  { mention: /\bdigi app form\b/i, question: "What is Digi App Form?" },
+  {
     mention: /\bproactive sentinel\b/i,
+    question: "Walk me through Proactive Sentinel's architecture.",
+  },
+  {
+    mention: /\bsentinel\b/i,
     question: "Walk me through Proactive Sentinel's architecture.",
   },
 ];
