@@ -46,6 +46,31 @@ describe("r52 grounding gate", () => {
     );
     assert.equal(g.ok, true, JSON.stringify(g));
   });
+
+  it("treats 'specific' as a question-function word on location paraphrases", () => {
+    const terms = contentTerms("Is Mike based in a specific city?");
+    assert.equal(terms.includes("specific"), false, JSON.stringify(terms));
+    const g = evaluateGrounding(
+      "Is Mike based in a specific city?",
+      "Mike is based in Johannesburg, South Africa [1].",
+    );
+    assert.equal(g.ok, true, JSON.stringify({ terms, g }));
+  });
+
+  it("does not treat 'living' as a match for production-live copy", () => {
+    const terms = contentTerms("Where is Mike living?");
+    assert.equal(terms.includes("living"), false, JSON.stringify(terms));
+    const location = evaluateGrounding(
+      "Where is Mike living?",
+      "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
+    );
+    assert.equal(location.ok, true, JSON.stringify(location));
+    const zdi = evaluateGrounding(
+      "Does Mike have experience with Kubernetes?",
+      "ZDI is approved for production rollout and not yet live [1].",
+    );
+    assert.equal(zdi.ok, false, JSON.stringify(zdi));
+  });
 });
 
 describe("r52 model-output validator", () => {

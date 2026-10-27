@@ -14,7 +14,8 @@ const MODIFIERS = new Set([
   "main", "best", "current", "strongest", "proudest", "flagship", "headline",
   "open", "still", "really", "please", "also", "quick", "brief", "summary",
   "tell", "give", "describe", "introduce", "explain", "share", "show",
-  "looking", "want", "wants", "hoping", "after", "next", "big", "part",
+  "looking", "want", "wants", "hoping", "seeking", "after", "next", "big", "part",
+  "compare", "compared", "versus", "vs",
   "know", "knows", "knew", "used", "using", "use", "uses",
   "built", "build", "building", "done", "hold", "holds", "held",
   "work", "works", "working", "worked", "experience", "experienced",
@@ -23,12 +24,14 @@ const MODIFIERS = new Set([
   "people", "person", "someone", "anyone", "anything", "something",
   "available", "availability", "hire", "hiring", "hireable",
   "good", "fit", "different", "standout", "new", "our", "company",
+  "senior", "junior", "mid", "staff",
   "org", "organisation", "organization", "value", "bring", "benefit",
-  "title", "role", "roles", "job", "jobs", "position",
+  "title", "role", "roles", "job", "jobs", "position", "positions",
   "tool", "tools", "skill", "skills", "year", "years",
   "team", "remote", "remotely", "city", "contract", "start",
   "manage", "manager", "month", "live", "based", "currently",
-  "detail", "details", "more", "specifically", "exactly", "briefly",
+  "detail", "details", "more", "specifically", "specific", "exactly", "briefly",
+  "particular", "certain", "actual", "typical", "usual",
   "rate", "notice", "relocate", "relocation", "timezone", "zone",
   "ai", "llm", "tech", "most", "much", "many", "does", "mike",
   "part", "region", "area", "province", "country", "metro", "place",
@@ -44,6 +47,22 @@ const MODIFIERS = new Set([
   "strong", "candidate", "candidates", "impressive", "proudest",
   "interview", "reasons",
   "systems", "framework", "frameworks",
+  "employer", "employs", "employed", "company", "firm",
+  "written", "language", "languages",
+  "located", "locate", "deployed", "deploy", "deployment", "hosted", "hosting",
+  "days", "today", "nowadays", "moment", "presently", "lately", "present",
+  "reside", "resides", "residing", "education", "degree", "studied", "study",
+  "living", "lives",
+  "official", "actually", "listed", "prefer", "include", "primary",
+  "option", "accept", "mentioned", "formally", "background", "advertise",
+  "recruiter", "expect", "fluent", "coding", "develop", "program",
+  "tooling", "integrated", "thorough", "published", "evidence", "industry",
+  "craft", "engagements", "colleagues", "teammates", "reports", "direct",
+  "leadership", "university", "college", "school", "qualification",
+  "qualifications", "his", "paragraph", "introduction", "provide",
+  "powers", "implemented", "coverage", "ensure", "practices", "talking",
+  "focused", "software", "engineer", "engineering", "freelance",
+  "consulting", "consult", "attend", "formally",
 ]);
 
 export const RELATED_TERMS: Record<string, string[]> = {
@@ -74,10 +93,27 @@ export const RELATED_TERMS: Record<string, string[]> = {
   writing: ["writing", "writes", "write", "files"],
   files: ["files", "file", "writes", "write"],
   chatbot: ["chatbot", "assistant", "gemini", "groq", "rag"],
+  "chat assistant": ["chat assistant", "assistant", "chatbot", "gemini"],
+  "this assistant": ["this assistant", "assistant", "chatbot", "gemini"],
   reliable: ["reliable", "reliability", "tests", "testing", "validation"],
   quality: ["quality", "tests", "testing"],
   frameworks: ["frameworks", "framework", "langgraph", "langchain"],
   framework: ["framework", "frameworks", "langgraph", "langchain"],
+  freelance: ["freelance", "contract"],
+  consulting: ["consulting", "consult", "contract"],
+  consult: ["consult", "consulting", "contract"],
+  university: ["university", "degree", "education"],
+  college: ["college", "degree", "education"],
+  school: ["school", "degree", "education", "courses"],
+  qualification: ["qualification", "degree", "certifications"],
+  qualifications: ["qualifications", "degree", "certifications"],
+  "computer science": ["computer science", "degree", "education"],
+  "state machine": ["state machine", "state graph", "langgraph"],
+  "e-signature": ["e-signature", "e-signatures", "signature", "zdi"],
+  "e-signatures": ["e-signatures", "e-signature", "signature", "zdi"],
+  "approval workflows": ["approval workflow", "approval workflows", "zdi"],
+  "self-taught": ["self-taught", "degree", "education", "courses"],
+  taught: ["taught", "degree", "education", "courses"],
 };
 
 export const KNOWN_TECH_TERMS = [
@@ -93,8 +129,10 @@ const MULTIWORD_SUBJECTS = [
   "machine learning", "deep learning", "data engineering", "prompt engineering",
   "computer vision", "natural language processing", "nlp", "data science",
   "ci/cd", "mlops", "github actions", "grounding prompt", "approval workflow",
-  "cape town", "south africa", "world cup",
+  "cape town", "south africa", "world cup", "computer science",
   "proactive sentinel", "chat assistant", "this assistant",
+  "state machine", "e-signature", "e-signatures", "approval workflow",
+  "approval workflows", "self-taught",
 ];
 
 function stemVariants(word: string): string[] {
@@ -106,7 +144,8 @@ function stemVariants(word: string): string[] {
   if (w.endsWith("ing") && w.length > 5) {
     const stem = w.slice(0, -3);
     out.add(stem);
-    out.add(`${stem}e`);
+    // Avoid "living" → "live" homographs (production-live vs reside).
+    if (stem.length >= 4) out.add(`${stem}e`);
     out.add(`${stem}s`);
     out.add(`${stem}es`);
   }
@@ -152,10 +191,19 @@ export function kbHasTerm(term: string): boolean {
   return passageHasTerm(KB_BLOB, term);
 }
 
+const LISTED_TECH_TOKENS = new Set([
+  "jwt", "redis", "react", "flask", "kafka", "postgres", "postgresql",
+  "sql", "docker", "fastapi", "python", "typescript", "celery", "pgvector",
+  "presidio", "terraform", "opa", "ollama", "langchain", "langgraph",
+  "n8n", "opentelemetry", "agent", "agents",
+]);
+
 function looksLikeTech(term: string): boolean {
   const lower = term.toLowerCase();
+  // Bare "go" is the English verb in recruiter copy; golang is the tech token.
+  if (lower === "go") return false;
   if (KNOWN_TECH_TERMS.includes(lower)) return true;
-  if (RELATED_TERMS[lower]) return true;
+  if (LISTED_TECH_TOKENS.has(lower)) return true;
   if (/[.#+]/.test(term)) return true;
   if (/\d/.test(term) && /[a-z]/i.test(term)) return true;
   return false;
@@ -181,14 +229,42 @@ export type GroundingResult = {
   unmatchedNonTech: string[];
 };
 
-function isDistinctiveUnmatched(term: string): boolean {
+const QUESTION_STARTERS = new Set([
+  "What", "Where", "Which", "Who", "Why", "How", "Does", "Did", "Do",
+  "Has", "Have", "Had", "Is", "Are", "Was", "Were", "Can", "Could",
+  "Would", "Will", "Should", "Tell", "Give", "Please", "Also", "Briefly",
+  "Open", "Walk", "Name", "Explain", "Introduce", "Share", "Show",
+]);
+
+function capitalisedProperNouns(question: string): Set<string> {
+  const out = new Set<string>();
+  const tokens = question.match(/\b[A-Z][A-Za-z]{1,}\b/g) ?? [];
+  for (const token of tokens) {
+    if (QUESTION_STARTERS.has(token)) continue;
+    if (token === "Mike" || token === "Ncube") continue;
+    out.add(token.toLowerCase());
+  }
+  return out;
+}
+
+function isDistinctiveUnmatched(term: string, proper: Set<string>): boolean {
   if (term.includes(" ")) return true;
+  if (MULTIWORD_SUBJECTS.includes(term.toLowerCase())) return true;
+  if (RELATED_TERMS[term.toLowerCase()]) return true;
   if (looksLikeTech(term)) return true;
-  return term.length > 5;
+  // In-domain capitalised entities (Sentinel, ZDI) must appear in the candidate.
+  // Visitor names and off-domain proper nouns are not asked-for content.
+  return proper.has(term.toLowerCase()) && kbHasTerm(term);
+}
+
+export function distinctiveContentTerms(question: string): string[] {
+  const proper = capitalisedProperNouns(question);
+  return contentTerms(question).filter((term) => isDistinctiveUnmatched(term, proper));
 }
 
 export function evaluateGrounding(question: string, answer: string): GroundingResult {
   const terms = contentTerms(question);
+  const proper = capitalisedProperNouns(question);
   const knownTerms: string[] = [];
   const unknownTech: string[] = [];
   const unmatchedNonTech: string[] = [];
@@ -197,11 +273,15 @@ export function evaluateGrounding(question: string, answer: string): GroundingRe
       knownTerms.push(term);
       continue;
     }
+    if (term === "go" && proper.has("go") && !kbHasTerm("go") && !kbHasTerm("golang")) {
+      unknownTech.push(term);
+      continue;
+    }
     if (looksLikeTech(term) && !kbHasTerm(term)) {
       unknownTech.push(term);
       continue;
     }
-    if (isDistinctiveUnmatched(term)) unmatchedNonTech.push(term);
+    if (isDistinctiveUnmatched(term, proper)) unmatchedNonTech.push(term);
   }
   const genericOnly = unmatchedNonTech.length === 0 && unknownTech.length === 0;
   return {
@@ -254,6 +334,7 @@ export function listedTechInQuestion(question: string): string[] {
 }
 
 const CLAIM_TOKEN_RE = /\b[A-Z][\w.+-]*|\b\d+(?:\.\d+)?\b/g;
+const CLAIM_SKIP = /^(I|A|An|The|This|That|He|His|Him|Mike|Ncube|Sources|Source|Status|Stack|PROJECT|Email|Current|Accounts|IT)$/;
 
 export function validateModelSentences(
   text: string,
@@ -271,7 +352,7 @@ export function validateModelSentences(
     const tokens = sentence.replace(/\[\d+\]/g, "").match(CLAIM_TOKEN_RE) ?? [];
     let ok = true;
     for (const token of tokens) {
-      if (/^(I|A|The|This|That|He|His|Mike|Ncube)$/.test(token)) continue;
+      if (CLAIM_SKIP.test(token)) continue;
       if (!hasWholeWord(cited, token) && !cited.toLowerCase().includes(token.toLowerCase())) {
         ok = false;
         break;

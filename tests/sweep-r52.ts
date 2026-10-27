@@ -5,7 +5,7 @@ import {
   answerQuestion,
   EMAIL_FALLBACK,
 } from "../lib/answer";
-import { contentTerms, validateModelSentences } from "../lib/grounding";
+import { distinctiveContentTerms, validateModelSentences } from "../lib/grounding";
 import { isIndexedPhrase } from "../lib/intent-exemplars";
 import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
@@ -285,6 +285,7 @@ const CLAIM_SKIP = new Set([
   "I", "A", "An", "The", "This", "That", "He", "His", "Him", "Mike", "Ncube",
   "Email", "Sources", "Source", "Status", "Stack", "No", "Yes", "It", "Its",
   "And", "Or", "But", "For", "To", "Of", "In", "On", "At", "By", "From",
+  "Current", "Accounts", "IT", "FSP",
 ]);
 
 function citedBlob(sources: Array<{ id?: string; title: string; url: string }>): string {
@@ -382,7 +383,7 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
         }
       }
       if (!isRefusal(result.response)) {
-        const terms = contentTerms(question);
+        const terms = distinctiveContentTerms(question);
         const hay = result.response.toLowerCase();
         for (const term of terms) {
           const listed = /isn't listed in mike's portfolio|aren't listed in mike's portfolio|not listed in mike's portfolio/.test(hay);

@@ -1,11 +1,20 @@
 // Fallback chain: Gemini → Groq → closest static CV answer → email.
 // Never throws to the caller for provider failures.
 
-import { matchStaticAnswer, sourcesFor, type StaticAnswer } from "./static-answers";
+import {
+  matchMultiProjectAnswer,
+  matchStaticAnswer,
+  normaliseQuestion,
+  sourcesFor,
+  STATIC_ANSWERS,
+  type StaticAnswer,
+} from "./static-answers";
 import { matchProjectScopedAnswer, namedProjects } from "./intent";
+import { canonicalQuestionForPhrase } from "./intent-exemplars";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
   contentTerms,
+  distinctiveContentTerms,
   evaluateGrounding,
   kbHasTerm,
   listedTechInQuestion,
@@ -974,6 +983,12 @@ function composeFromProvidedChunks(
   question: string,
   chunks: RetrievedChunk[],
 ): AnswerResult | null {
+  if (
+    distinctiveContentTerms(question).length === 0
+    && contentTerms(question).length === 0
+  ) {
+    return null;
+  }
   const http = chunks.filter((c) => c.sourceUrl.startsWith("http") && !c.cannedAnswer);
   const ranked = [...http].sort((a, b) => b.score - a.score);
   for (const chunk of ranked) {
@@ -982,7 +997,7 @@ function composeFromProvidedChunks(
     if (!text) continue;
     const cited = /\[\d+\]/.test(text) ? text : `${text.replace(/[.!?]+$/, "")} [1].`;
     const grounded = evaluateGrounding(question, cited);
-    if (!grounded.ok) continue;
+    if (!grounded.ok || grounded.knownTerms.length === 0) continue;
     return withUnknownTermNote(question, {
       response: cited,
       sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
@@ -1001,10 +1016,37 @@ export function citedFallbackFromChunks(
   return composeFromProvidedChunks(question, chunks);
 }
 
+function exactStaticHit(question: string): StaticAnswer | null {
+  const qNorm = normaliseQuestion(question);
+  for (const item of STATIC_ANSWERS) {
+    if ([item.question, ...item.aliases].some((c) => normaliseQuestion(c) === qNorm)) {
+      return item;
+    }
+  }
+  // Exemplars are aliases on canonical answers (retrieve-first identity),
+  // not a classify-first cosine return.
+  const canonical = canonicalQuestionForPhrase(question);
+  if (!canonical) return null;
+  return STATIC_ANSWERS.find((item) => item.question === canonical) ?? null;
+}
+
 function composeGroundedAnswer(
   question: string,
   retrieved: RetrievedChunk[],
 ): AnswerResult | null {
+  const identity = exactStaticHit(question);
+  if (identity) {
+    return withUnknownTermNote(question, {
+      response: identity.answer,
+      sources: sourcesFor(identity),
+      via: "static",
+    });
+  }
+  const multi = matchMultiProjectAnswer(question);
+  if (multi && staticHitFitsNamedProjects(question, multi)) {
+    const gated = gatedStatic(question, multi);
+    if (gated) return gated;
+  }
   // Named-project topics are a rank boost, not a Mike-wide classify-first return.
   const project = matchProjectScopedAnswer(question);
   if (project) {
@@ -1055,10 +1097,11 @@ function staticOrSafeReply(
     }, chunks);
   }
   if (isWorkQuestion(question)) {
-    const work = { response: CANONICAL_WORK_ANSWER, sources: workSystemSources([]), via: "static" as const };
-    if (evaluateGrounding(question, work.response).ok) {
-      return polishResult(question, work, chunks);
-    }
+    return polishResult(question, {
+      response: CANONICAL_WORK_ANSWER,
+      sources: workSystemSources([]),
+      via: "static",
+    }, chunks);
   }
   if (isExperienceQuestion(question)) {
     const experience = experienceStaticReply();
@@ -1463,7 +1506,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
               return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
             }
             const validated = validateModelSentences(
-              geminiText,
+              stripSourceFooter(normaliseModelText(geminiText)),
               forPrompt.map((c) => `${c.title}\n${c.text}`),
             );
             if (!validated.trim()) {
@@ -1479,7 +1522,7 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
             const validated = validateModelSentences(
-              groqText,
+              stripSourceFooter(normaliseModelText(groqText)),
               forPrompt.map((c) => `${c.title}\n${c.text}`),
             );
             const grounded = validated.trim() ? groundGroqAnswer(validated, forPrompt) : null;

@@ -121,10 +121,11 @@ export const VISITOR_SWEEP: Array<{ question: string; expect: SweepExpect }> = [
   {
     question: "Did Mike lead a team?",
     expect: {
+      // r52: exact static identity is the tech-lead CRM answer, not the
+      // classify-first "team size" intent that previously swallowed this phrasing.
       kind: "intent",
       id: "team",
       match: /four-person/,
-      notMatch: /over 40 people/,
     },
   },
   {

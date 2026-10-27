@@ -838,6 +838,21 @@ const EXEMPLAR_NORMALIZED = new Set(
   Object.values(INTENT_EXEMPLARS).flatMap((list) => list.map(normalizeQuestion)),
 );
 
+const EXEMPLAR_TO_CANONICAL = new Map<string, string>();
+for (const [id, list] of Object.entries(INTENT_EXEMPLARS)) {
+  if (id === "off-topic") continue;
+  const canonical = INTENT_CANONICAL[id as RecruiterIntentId];
+  if (!canonical) continue;
+  for (const phrase of list) {
+    const norm = normalizeQuestion(phrase);
+    if (!EXEMPLAR_TO_CANONICAL.has(norm)) EXEMPLAR_TO_CANONICAL.set(norm, canonical);
+  }
+}
+
+export function canonicalQuestionForPhrase(question: string): string | null {
+  return EXEMPLAR_TO_CANONICAL.get(normalizeQuestion(question)) ?? null;
+}
+
 export function isInExemplarBank(question: string): boolean {
   return EXEMPLAR_NORMALIZED.has(normalizeQuestion(question));
 }

@@ -29,7 +29,9 @@ const UNKNOWABLE_PHRASES: RegExp[] = [
   /\bbirthday\b/i,
   /\bmarital\b/i,
   /\bmarried\b/i,
-  /\b(?:wife|husband|spouse|kids|children|family)\b/i,
+  /\b(?:wife|husband|spouse|kids|children)\b/i,
+  /\b(?:his|mike'?s) family\b/i,
+  /\bfamily status\b/i,
   /\breligion\b/i,
   /\bnationality\b/i,
   /\bethnicity\b/i,
@@ -56,6 +58,15 @@ const UNKNOWABLE_PHRASES: RegExp[] = [
   /\btrivia\b/i,
   /\b\d+\s*[+\-×x*/]\s*\d+\b/,
   /\bwhat is\s+\d+\b/i,
+  /\b(?:cats?|dogs?|pets?)\b/i,
+  /\bblood type\b/i,
+  /\bshoe size\b/i,
+  /\b(?:nba|nfl|mlb)\b/i,
+  /\bgym routine\b/i,
+  /\bcar model\b/i,
+  /\b(?:video games?|steam library|twitch|discord handle)\b/i,
+  /\b(?:d&d|dungeons and dragons)\b/i,
+  /\bmagic the gathering\b/i,
 ]
 
 export const UNKNOWABLE_REGEX_COUNT = UNKNOWABLE_PHRASES.length + 1;
