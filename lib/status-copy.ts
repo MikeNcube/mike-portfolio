@@ -2,6 +2,7 @@
 
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
+  capitaliseAfterCiteStops,
   insertMissingSentenceSpaces,
   insertSpaceBeforeCites,
   moveTrailingCitesBeforeStop,
@@ -9,7 +10,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r45";
+export const ANSWER_CACHE_VERSION = "r46";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -992,6 +993,7 @@ export function sanitisePunctuation(text: string): string {
   out = insertMissingSentenceSpaces(out);
   out = insertSpaceBeforeCites(out);
   out = stripSourceAndPathLeakage(out);
+  out = capitaliseAfterCiteStops(out);
   return out.replace(/ {2,}/g, " ").trim();
 }
 

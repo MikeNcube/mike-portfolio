@@ -458,6 +458,9 @@ function rewriteFallbackSentence(raw: string, title: string): string {
   if (label) {
     const body = sentence.slice(label[0].length).replace(/[.!?]+$/, "").trim();
     if (!body) return "";
+    if (/Gemini embedding-001 batch-embeds/i.test(body)) {
+      return `${project} uses Gemini embedding-001 to batch-embed the knowledge base once per server instance.`;
+    }
     return `${project} uses ${joinTechList(body)}.`;
   }
   if (/^It is\b/i.test(sentence)) {

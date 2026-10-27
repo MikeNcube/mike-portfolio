@@ -85,10 +85,20 @@ function asSentence(item: string): string {
   const trimmed = item.trim();
   if (!trimmed) return "";
   const core = trimmed.replace(/\s*\[\d+\]\s*$/, "");
-  if (/[.!?]$/.test(core)) return trimmed;
+  if (/[.!?]$/.test(core)) return capitaliseSentenceStart(trimmed);
   const cite = trimmed.match(/\s*(\[\d+\])\s*$/);
-  if (cite) return `${core}. ${cite[1]}`.replace(/ {2,}/g, " ");
-  return `${trimmed}.`;
+  if (cite) return capitaliseSentenceStart(`${core}. ${cite[1]}`.replace(/ {2,}/g, " "));
+  return capitaliseSentenceStart(`${trimmed}.`);
+}
+
+function capitaliseSentenceStart(text: string): string {
+  return text.replace(/^[a-z]/, (ch) => ch.toUpperCase());
+}
+
+export function capitaliseAfterCiteStops(text: string): string {
+  return text.replace(/(\[\d+\]\.)(\s+)([a-z])/g, (_m, cite: string, space: string, ch: string) =>
+    `${cite}${space}${ch.toUpperCase()}`,
+  );
 }
 
 function stripMarkdown(text: string): string {
@@ -173,5 +183,7 @@ export function normaliseModelText(text: string): string {
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
   const plain = insertMissingSentenceSpaces(stripMarkdown(cited));
   const collapsed = collapseCitationClusters(plain);
-  return stripSourceAndPathLeakage(insertSpaceBeforeCites(moveTrailingCitesBeforeStop(collapsed)));
+  return capitaliseAfterCiteStops(
+    stripSourceAndPathLeakage(insertSpaceBeforeCites(moveTrailingCitesBeforeStop(collapsed))),
+  );
 }

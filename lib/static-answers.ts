@@ -259,6 +259,16 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     sourceIds: ["zororo-crm"],
   },
   {
+    question: "Has Mike built APIs and dashboards?",
+    aliases: [
+      "has mike built apis and dashboards",
+      "apis and dashboards",
+    ],
+    answer:
+      "Yes. The multi-agent content pipeline waits for human approval in a FastAPI dashboard [1]. Digi App Form includes a staff admin dashboard [2].",
+    sourceIds: ["ai-social-agent", "digi-app-form"],
+  },
+  {
     question: "What is Digi App Form?",
     aliases: [
       "tell me about digi app form",
