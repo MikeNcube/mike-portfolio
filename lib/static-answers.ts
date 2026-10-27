@@ -44,6 +44,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "bm25",
       "does mike know bm25",
       "has mike used bm25",
+      "how does this assistant work",
+      "how does the assistant work",
+      "how does the fact assistant work",
     ],
     answer:
       "The live RAG assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer [2].",
@@ -174,7 +177,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's background",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. Title: Applied AI Engineer and Systems Architect, 2022 to present [2]. He has been the sole AI engineer in a four-person IT team since 2022 [1]. Six-plus years in software, about three focused on generative AI [1].",
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI [1].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -188,6 +191,197 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     answer:
       "Mike's GitHub profile is https://github.com/MikeNcube [1].",
     sourceIds: ["availability"],
+  },
+  {
+    question: "Where is Mike based?",
+    aliases: [
+      "where is mike based",
+      "where does mike live",
+      "where is he based",
+    ],
+    answer:
+      "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
+    sourceIds: ["positioning", "availability"],
+  },
+  {
+    question: "Does Mike work remotely?",
+    aliases: [
+      "does mike work remotely",
+      "is mike remote",
+      "does mike work remote-first",
+    ],
+    answer:
+      "Mike works remote-first from South Africa [1].",
+    sourceIds: ["availability", "positioning"],
+  },
+  {
+    question: "How many years of experience does Mike have?",
+    aliases: [
+      "how many years of experience does mike have",
+      "years of experience",
+      "how long has mike been an engineer",
+    ],
+    answer:
+      "Mike has six-plus years in software, about three focused on generative AI [1]. He has been the sole AI engineer in a four-person IT team at Zororo-Phumulani since 2022 [1].",
+    sourceIds: ["positioning", "employer"],
+  },
+  {
+    question: "What is Mike's current job title?",
+    aliases: [
+      "what is mike's current job title",
+      "what is mike's job title",
+      "what is mike's current role",
+      "what is mike's title",
+    ],
+    answer:
+      "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2].",
+    sourceIds: ["positioning", "employer"],
+  },
+  {
+    question: "Where does Mike work?",
+    aliases: [
+      "where does mike work",
+      "who does mike work for",
+      "what company does mike work for",
+    ],
+    answer:
+      "Mike works at Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider [1]. He is based in Johannesburg, South Africa [2].",
+    sourceIds: ["employer", "positioning"],
+  },
+  {
+    question: "What roles is Mike looking for?",
+    aliases: [
+      "what roles is mike looking for",
+      "what is mike looking for",
+      "target roles",
+    ],
+    answer:
+      "Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. He is available for full-time or contract [1].",
+    sourceIds: ["availability"],
+  },
+  {
+    question: "What are Mike's main skills?",
+    aliases: [
+      "what are mike's main skills",
+      "what is mike's tech stack",
+      "tech stack",
+      "mike's stack",
+    ],
+    answer:
+      "Mike's stack lists Python, FastAPI, Flask, Next.js, TypeScript, React, PostgreSQL, pgvector, Redis, AWS (S3, EC2, IAM, CloudWatch, Bedrock), Docker, and GitHub Actions [1]. AI/LLM: RAG with Gemini embeddings, LangGraph, Anthropic Claude API, and OpenAI API [1].",
+    sourceIds: ["stack"],
+  },
+  {
+    question: "What programming languages does Mike use?",
+    aliases: [
+      "what programming languages does mike use",
+      "what languages does mike use",
+      "programming languages",
+    ],
+    answer:
+      "The stack lists Python and TypeScript [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
+    sourceIds: ["stack"],
+  },
+  {
+    question: "What AI tools does Mike use?",
+    aliases: [
+      "what ai tools does mike use",
+      "ai tools",
+    ],
+    answer:
+      "Mike's stack lists Gemini embeddings, Anthropic Claude API, OpenAI API, LangGraph, and AWS Bedrock [1]. The live RAG assistant uses Gemini and Groq [2].",
+    sourceIds: ["stack", "portfolio-rag-assistant"],
+  },
+  {
+    question: "What is Mike's education?",
+    aliases: [
+      "what is mike's education",
+      "does mike have a degree",
+      "mike's education",
+    ],
+    answer:
+      "Mike has no named certifications and no formal degree [1]. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",
+    sourceIds: ["certifications"],
+  },
+  {
+    question: "What is Mike's team size?",
+    aliases: [
+      "what is mike's team size",
+      "how big is mike's team",
+    ],
+    answer:
+      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
+    sourceIds: ["positioning", "employer"],
+  },
+  {
+    question: "Did Mike lead a team?",
+    aliases: [
+      "did mike lead a team",
+      "has mike led a team",
+      "does mike have leadership experience",
+    ],
+    answer: CANONICAL_TECH_LEAD_CRM_ANSWER,
+    sourceIds: ["zororo-crm", "employer"],
+  },
+  {
+    question: "What is Mike's LinkedIn?",
+    aliases: [
+      "what is mike's linkedin",
+      "mike's linkedin",
+      "linkedin profile",
+    ],
+    answer:
+      "Mike's LinkedIn is https://www.linkedin.com/in/mike-ncube-669563a7/ [1].",
+    sourceIds: ["availability"],
+  },
+  {
+    question: "Why should we hire Mike?",
+    aliases: [
+      "why should we hire mike",
+      "is mike a good fit for a senior ai engineer role",
+      "what makes mike different",
+    ],
+    answer:
+      "Mike has shipped live production systems at Zororo-Phumulani in a regulated, document-heavy funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
+    sourceIds: ["employer", "stack", "positioning"],
+  },
+  {
+    question: "What is Mike's strongest project?",
+    aliases: [
+      "what is mike's strongest project",
+      "what is mike's best project",
+    ],
+    answer:
+      `The sources do not rank a strongest project. ${CANONICAL_PRODUCTION_ANSWER}`,
+    sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
+  },
+  {
+    question: "How does this assistant work?",
+    aliases: [
+      "how does this assistant work",
+      "how does the assistant work",
+      "how does the fact assistant work",
+    ],
+    answer:
+      "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. It embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded cited answer [2]. If embeddings fail, it falls back to BM25 keyword search. Generation tries Gemini 2.5 Flash first, then Groq, then a static CV answer [2]. It refuses questions outside that scope. The grounding prompt is server-side [1].",
+    sourceIds: ["this-assistant", "portfolio-rag-assistant"],
+  },
+  {
+    question: "What testing has Mike done?",
+    aliases: [
+      "what testing has mike done",
+      "what testing does mike do",
+      "test coverage",
+    ],
+    answer:
+      "Public tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
+    sourceIds: [
+      "proactive-sentinel-overview",
+      "sitewarden",
+      "zororo-ai-os",
+      "zdi-signature-workflow",
+      "cube-agent",
+    ],
   },
   {
     question: "Did Mike act as tech lead on the CRM?",

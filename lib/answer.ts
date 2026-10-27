@@ -2,6 +2,7 @@
 // Never throws to the caller for provider failures.
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
+import { matchRecruiterIntent } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   DEFAULT_K,
@@ -72,7 +73,16 @@ const CONTACT_QUESTION_RE =
   /\b(available|availability|hiring|hire|contact(?:ing|s)?|email|reach|get in touch|contract|full[ -]?time)\b/i;
 
 export function isContactQuestion(question: string): boolean {
+  if (/\bwhy\b.{0,40}\bhire\b/i.test(question)) return false;
+  if (/\b(?:good fit|should we hire|what makes mike different)\b/i.test(question)) return false;
   return CONTACT_QUESTION_RE.test(question);
+}
+
+const HONEST_UNKNOWN_RE =
+  /\b(?:day rate|hourly rate|daily rate|notice period|relocat(?:e|ion)|time ?zone|timezone)\b/i;
+
+export function isHonestUnknownQuestion(question: string): boolean {
+  return HONEST_UNKNOWN_RE.test(question);
 }
 
 export function ensureContactEmail(text: string): string {
@@ -608,6 +618,34 @@ const FALLBACK_STOPWORDS = new Set([
   "delivered",
   "delivering",
   "delivers",
+  "based",
+  "current",
+  "role",
+  "roles",
+  "tool",
+  "tools",
+  "skill",
+  "skills",
+  "title",
+  "year",
+  "years",
+  "team",
+  "remote",
+  "remotely",
+  "good",
+  "fit",
+  "different",
+  "main",
+  "hire",
+  "looking",
+  "rate",
+  "notice",
+  "relocate",
+  "relocation",
+  "timezone",
+  "zone",
+  "ai",
+  "llm",
 ]);
 
 const WEAK_SUBJECT_TERMS = new Set([
@@ -622,6 +660,34 @@ const WEAK_SUBJECT_TERMS = new Set([
   "really",
   "currently",
   "still",
+  "based",
+  "current",
+  "role",
+  "roles",
+  "tool",
+  "tools",
+  "skill",
+  "skills",
+  "title",
+  "year",
+  "years",
+  "team",
+  "remote",
+  "remotely",
+  "good",
+  "fit",
+  "different",
+  "main",
+  "hire",
+  "looking",
+  "rate",
+  "notice",
+  "relocate",
+  "relocation",
+  "timezone",
+  "zone",
+  "ai",
+  "llm",
 ]);
 
 const MULTIWORD_SUBJECTS = [
@@ -947,12 +1013,24 @@ export function citedFallbackFromChunks(
   return withUnknownTermNote(question, { response: pieces.join(" "), sources, via: "static" });
 }
 
+function recruiterIntentReply(question: string): AnswerResult | null {
+  const hit = matchRecruiterIntent(question);
+  if (!hit) return null;
+  return {
+    response: hit.answer.answer,
+    sources: sourcesFor(hit.answer),
+    via: "static",
+  };
+}
+
 function staticOrSafeReply(
   question: string,
   chunks: RetrievedChunk[],
   modelText?: string,
 ): AnswerResult {
-  if (isOffTopicQuestion(question)) return refusalResult();
+  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) return refusalResult();
+  const intent = recruiterIntentReply(question);
+  if (intent) return polishResult(question, intent, chunks);
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
   }
@@ -1320,7 +1398,14 @@ export type AnswerInput = {
 
 export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> {
   const question = input.question.trim();
-  if (isJailbreakPrompt(question) || isOffTopicQuestion(question)) {
+  if (isJailbreakPrompt(question)) {
+    return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
+  const intent = recruiterIntentReply(question);
+  if (intent) {
+    return withContactEmail(question, polishResult(question, intent, []));
+  }
+  if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
   }
   if (isInjectionDefenceQuestion(question)) {

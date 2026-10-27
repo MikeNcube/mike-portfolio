@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/fallback.test.ts tests/retrieve.test.ts tests/providers.test.ts tests/chat-route.test.ts"
+    "test": "tsx --test tests/fallback.test.ts tests/retrieve.test.ts tests/providers.test.ts tests/chat-route.test.ts tests/visitor-sweep.ts"
   },
   "dependencies": {
     "next": "14.2.15",
