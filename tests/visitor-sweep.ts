@@ -122,7 +122,12 @@ export const VISITOR_SWEEP: Array<{ question: string; expect: SweepExpect }> = [
   },
   {
     question: "Did Mike lead a team?",
-    expect: { kind: "intent", id: "leadership", match: /do not use the title tech lead/i },
+    expect: {
+      kind: "intent",
+      id: "team",
+      match: /four-person/,
+      notMatch: /over 40 people/,
+    },
   },
   {
     question: "What is Mike's LinkedIn?",
@@ -143,7 +148,7 @@ export const VISITOR_SWEEP: Array<{ question: string; expect: SweepExpect }> = [
   },
   {
     question: "What makes Mike different?",
-    expect: { kind: "intent", id: "why-hire", match: /document-heavy/ },
+    expect: { kind: "intent", id: "why-hire", match: /regulated funeral-assurance/ },
   },
   {
     question: "What is Mike's strongest project?",

@@ -2,12 +2,13 @@
 // Never throws to the caller for provider failures.
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
-import { matchRecruiterIntent } from "./intent";
+import { matchProjectScopedAnswer, matchRecruiterIntent } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   DEFAULT_K,
   MIN_RELEVANCE_SCORE,
   retrieve,
+  retrieveKeyword,
   type RetrievedChunk,
 } from "./rag";
 import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
@@ -74,12 +75,17 @@ const CONTACT_QUESTION_RE =
 
 export function isContactQuestion(question: string): boolean {
   if (/\bwhy\b.{0,40}\bhire\b/i.test(question)) return false;
-  if (/\b(?:good fit|should we hire|what makes mike different)\b/i.test(question)) return false;
+  if (/\b(?:good fit|should we hire|what makes mike different|strong candidate)\b/i.test(question)) {
+    return false;
+  }
+  if (/\b(?:start (?:date|next|this)|can mike start|when can (?:mike|he) start)\b/i.test(question)) {
+    return false;
+  }
   return CONTACT_QUESTION_RE.test(question);
 }
 
 const HONEST_UNKNOWN_RE =
-  /\b(?:day rate|hourly rate|daily rate|notice period|relocat(?:e|ion)|time ?zone|timezone)\b/i;
+  /\b(?:day rate|hourly rate|daily rate|notice period|relocat(?:e|ion)|time ?zone|timezone|start (?:date|next|this|tomorrow)|when can (?:mike|he) start|can mike start|available from)\b/i;
 
 export function isHonestUnknownQuestion(question: string): boolean {
   return HONEST_UNKNOWN_RE.test(question);
@@ -646,6 +652,16 @@ const FALLBACK_STOPWORDS = new Set([
   "zone",
   "ai",
   "llm",
+  "city",
+  "contract",
+  "start",
+  "manage",
+  "people",
+  "live",
+  "month",
+  "consider",
+  "want",
+  "wants",
 ]);
 
 const WEAK_SUBJECT_TERMS = new Set([
@@ -688,6 +704,16 @@ const WEAK_SUBJECT_TERMS = new Set([
   "zone",
   "ai",
   "llm",
+  "city",
+  "contract",
+  "start",
+  "manage",
+  "people",
+  "live",
+  "month",
+  "consider",
+  "want",
+  "wants",
 ]);
 
 const MULTIWORD_SUBJECTS = [
@@ -791,6 +817,85 @@ function stemVariants(word: string): string[] {
   return [...out];
 }
 
+const KB_ENTITY_TECH_TERMS = new Set([
+  "zdi",
+  "crm",
+  "digi",
+  "sitewarden",
+  "cube",
+  "sentinel",
+  "claims",
+  "zororo",
+  "portfolio",
+  "assistant",
+  "chatbot",
+  "rag",
+  "agent",
+  "agents",
+  "github",
+  "signature",
+  "signatures",
+  "python",
+  "fastapi",
+  "flask",
+  "typescript",
+  "javascript",
+  "react",
+  "postgresql",
+  "postgres",
+  "pgvector",
+  "sqlite",
+  "redis",
+  "docker",
+  "celery",
+  "sqlalchemy",
+  "alembic",
+  "prisma",
+  "nextauth",
+  "aws",
+  "s3",
+  "ec2",
+  "iam",
+  "cloudwatch",
+  "bedrock",
+  "gemini",
+  "groq",
+  "claude",
+  "openai",
+  "anthropic",
+  "langgraph",
+  "langchain",
+  "ollama",
+  "presidio",
+  "opa",
+  "rego",
+  "pydantic",
+  "terraform",
+  "pytest",
+  "jinja2",
+  "n8n",
+  "jwt",
+  "railway",
+  "gunicorn",
+  "opentelemetry",
+  "mitre",
+  "popia",
+  "bm25",
+  "embeddings",
+  "embedding",
+  "sql",
+  "database",
+  "databases",
+  "postgres",
+]);
+
+function isKbEntityOrTech(term: string): boolean {
+  const lower = term.toLowerCase();
+  if (KB_ENTITY_TECH_TERMS.has(lower)) return true;
+  if (MULTIWORD_SUBJECTS.includes(lower)) return true;
+  return tokenize(lower).some((token) => KB_ENTITY_TECH_TERMS.has(token));
+}
+
 function distinctiveSubjectTerms(question: string): string[] {
   const lower = question.toLowerCase();
   const phrases = MULTIWORD_SUBJECTS.filter((p) => lower.includes(p));
@@ -801,7 +906,7 @@ function distinctiveSubjectTerms(question: string): string[] {
   const singles = questionContentWords(question).filter(
     (t) => !WEAK_SUBJECT_TERMS.has(t) && !covered.has(t),
   );
-  return [...new Set([...phrases, ...singles])];
+  return [...new Set([...phrases, ...singles])].filter((term) => isKbEntityOrTech(term));
 }
 
 function hasWholeWord(hay: string, word: string): boolean {
@@ -1014,6 +1119,14 @@ export function citedFallbackFromChunks(
 }
 
 function recruiterIntentReply(question: string): AnswerResult | null {
+  const project = matchProjectScopedAnswer(question);
+  if (project) {
+    return {
+      response: project.answer.answer,
+      sources: sourcesFor(project.answer),
+      via: "static",
+    };
+  }
   const hit = matchRecruiterIntent(question);
   if (!hit) return null;
   return {
@@ -1029,11 +1142,11 @@ function staticOrSafeReply(
   modelText?: string,
 ): AnswerResult {
   if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) return refusalResult();
-  const intent = recruiterIntentReply(question);
-  if (intent) return polishResult(question, intent, chunks);
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
   }
+  const intent = recruiterIntentReply(question);
+  if (intent) return polishResult(question, intent, chunks);
   if (isBareCourseTrainingQuestion(question)) {
     const course = courseTrainingReply(chunks);
     if (course) return course;
@@ -1401,15 +1514,15 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   if (isJailbreakPrompt(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
   }
+  if (isInjectionDefenceQuestion(question)) {
+    return withContactEmail(question, injectionDefenceReply([]));
+  }
   const intent = recruiterIntentReply(question);
   if (intent) {
     return withContactEmail(question, polishResult(question, intent, []));
   }
   if (isOffTopicQuestion(question) || isHonestUnknownQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
-  }
-  if (isInjectionDefenceQuestion(question)) {
-    return withContactEmail(question, injectionDefenceReply([]));
   }
 
   const audience = input.audience ?? "developer";
@@ -1422,7 +1535,10 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     console.error("retrieve failed:", err);
   }
 
-  const relevant = chunks.filter((c) => c.score >= MIN_RELEVANCE_SCORE);
+  let relevant = chunks.filter((c) => c.score >= MIN_RELEVANCE_SCORE);
+  if (relevant.length === 0 && /\bmike\b/i.test(question)) {
+    relevant = retrieveKeyword(question).filter((c) => c.score >= MIN_RELEVANCE_SCORE);
+  }
 
   if (relevant.length > 0) {
     const prompt = buildPrompt(question, relevant, audience);

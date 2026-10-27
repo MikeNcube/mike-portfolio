@@ -10,7 +10,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r48";
+export const ANSWER_CACHE_VERSION = "r49";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -77,7 +77,7 @@ const AWS_QUESTION_RE = /\baws\b/i;
 const AWS_OVERCLAIM_RE = /\bextensive(?:ly)?\b|\bproduction-grade\b/i;
 
 const TECH_LEAD_RE =
-  /\btech lead\b|\bteam lead\b|\bleadership\b|\bengineering lead\b/i;
+  /\b(?:tech lead|team lead|engineering lead)\b/i;
 
 const TECH_LEAD_TITLE_CLAIM_RE =
   /\b(?:the tech lead|as tech lead|was tech lead|is tech lead)\b/i;

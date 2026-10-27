@@ -26,6 +26,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about mike",
       "who are you",
       "introduce mike ncube",
+      "give me a quick summary of who mike is",
+      "summary of who mike is",
     ],
     answer:
       "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
@@ -310,7 +312,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how big is mike's team",
     ],
     answer:
-      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
+      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1]. The sources do not say he manages the CRM's users.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -342,7 +344,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what makes mike different",
     ],
     answer:
-      "Mike has shipped live production systems at Zororo-Phumulani in a regulated, document-heavy funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
+      "Mike has shipped live production systems at Zororo-Phumulani in a regulated funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
     sourceIds: ["employer", "stack", "positioning"],
   },
   {
@@ -372,6 +374,8 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what testing has mike done",
       "what testing does mike do",
       "test coverage",
+      "how does mike approach testing and quality",
+      "how does mike keep code reliable",
     ],
     answer:
       "Public tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
@@ -382,6 +386,39 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "zdi-signature-workflow",
       "cube-agent",
     ],
+  },
+  {
+    question: "Would Mike consider a contract role?",
+    aliases: [
+      "would mike consider a contract role",
+      "is mike open to contract",
+      "does mike take freelance work",
+    ],
+    answer:
+      "Mike is available for full-time or contract [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",
+    sourceIds: ["availability"],
+  },
+  {
+    question: "Who approves ZDI requests?",
+    aliases: [
+      "who approves zdi requests",
+      "who approves zdi",
+      "zdi approval workflow",
+    ],
+    answer:
+      "ZDI uses a requester → manager → Accounts approval workflow [1]. A requester can never approve their own request [1].",
+    sourceIds: ["zdi-signature-workflow"],
+  },
+  {
+    question: "Where is ZDI deployed?",
+    aliases: [
+      "where is zdi deployed",
+      "is zdi deployed",
+      "where does zdi run",
+    ],
+    answer:
+      "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
+    sourceIds: ["zdi-signature-workflow"],
   },
   {
     question: "Did Mike act as tech lead on the CRM?",
