@@ -1,223 +1,220 @@
 import Link from "next/link";
-import type { Project } from "@/lib/content";
-import StatusBadge from "./StatusBadge";
+import { statusLabel, type Project } from "@/lib/content";
+import { hasProjectDiagram } from "@/lib/diagram-slugs";
+import ProjectDiagram from "./ProjectDiagram";
 
-type Props = {
-  project: Project;
-  prev: Project;
-  next: Project;
-};
+type Props = { project: Project; prev: Project; next: Project };
+
+// All opacity-based text colors replaced with semantic tokens
+// to ensure WCAG AA across light and dark modes:
+//   text-ink-muted = #6B6258 light (5.2:1) / #A0988F dark (7.0:1)
+//   text-ink-faint = #716860 light (4.9:1) / #8F877E dark (5.9:1)
+
+function statusColor(status: Project["status"]): string {
+  switch (status) {
+    case "Live demo":            return "text-signal";
+    case "Shipped":              return "text-signal";
+    case "Rolling out":          return "text-signal";
+    case "Approved · standby":   return "text-accent";
+    case "Prototype":            return "text-accent";
+    case "Built":                return "text-accent";
+    case "Paused":     return "text-ink-muted";
+    case "Reference":  return "text-ink-muted";
+    case "Lab":        return "text-ink-muted";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
 
 export default function ProjectDetail({ project, prev, next }: Props) {
   const systemOverview = project.systemOverview ?? project.built;
 
   return (
-    <article className="pt-28 sm:pt-32">
+    <article className="pt-24 sm:pt-32 pb-20">
       <div className="container-edge">
-        <div className="mb-10 flex items-center justify-between gap-3 text-micro text-ink-400">
+        {/* Breadcrumb */}
+        <div className="mb-10 flex items-center justify-between text-sm text-ink-muted">
           <Link
             href="/#work"
-            className="group inline-flex items-center gap-2 text-ink-300 transition hover:text-white"
+            className="group inline-flex items-center gap-1.5 transition hover:text-ink"
           >
-            <span aria-hidden className="transition group-hover:-translate-x-0.5">
-              ←
-            </span>
-            Back to portfolio
+            <span aria-hidden className="transition group-hover:-translate-x-0.5">←</span>
+            Back to work
           </Link>
-          <div className="flex items-center gap-3 font-mono">
-            <span className="text-ink-300">{project.domain}</span>
-            <span className="h-3 w-px bg-white/15" aria-hidden />
-            <span>{project.year}</span>
-          </div>
+          <span className="text-ink-faint">{project.year}</span>
         </div>
 
-        <header className="flex flex-col gap-5">
-          <div className="flex items-center gap-3">
-            <span className="eyebrow">
-              <span className="eyebrow-dot" />
-              Case study
+        {/* Header */}
+        <header className="mb-12 max-w-3xl">
+          <div className="mb-4 flex items-center gap-3">
+            <span className={`font-mono text-sm ${statusColor(project.status)}`}>
+              {statusLabel(project.status)}
             </span>
-            <StatusBadge status={project.status} />
+            <span className="text-ink-faint" aria-hidden>·</span>
+            <span className="text-sm text-ink-muted">{project.domain}</span>
+            {project.privateRepo && (
+              <>
+                <span className="text-ink-faint" aria-hidden>·</span>
+                <span className="font-mono text-sm text-ink-muted">Private repo</span>
+              </>
+            )}
           </div>
-          <h1 className="font-display text-display-lg tracking-tightest text-white text-balance">
+          <h1
+            className="font-display-hero font-medium text-ink text-balance mb-4"
+            style={{ fontSize: "clamp(2rem, 4vw, 3.25rem)", lineHeight: 1.07, letterSpacing: "-0.03em" }}
+          >
             {project.name}
           </h1>
-          <p className="font-mono text-caption text-ink-300">{project.role}</p>
-          <p className="max-w-3xl text-body-lg text-ink-200 text-pretty">
+          <p className="text-base text-ink-muted">{project.role}</p>
+          <p className="mt-3 text-lg text-ink-muted max-w-2xl text-pretty leading-[1.55]">
             {project.tagline}
           </p>
         </header>
-      </div>
 
-      <div className="container-edge mt-14 grid gap-10 lg:grid-cols-[280px_1fr]">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
-          <div className="card-lg flex flex-col gap-5">
-            <MetaRow label="Status" value={project.status} />
-            <MetaRow label="Role" value={project.role} />
-            <MetaRow label="Domain" value={project.domain} />
-            <MetaRow label="Year" value={project.year} />
+        {/* Main content */}
+        <div className="grid gap-10 lg:grid-cols-[200px_1fr] lg:items-start">
 
-            <div className="h-px w-full bg-white/10" aria-hidden />
+          {/* Sidebar — dl contains only dt/dd groups; links sit outside */}
+          <aside className="lg:sticky lg:top-20">
+            <div className="rounded-xl border border-ink/[0.08] p-5 space-y-4 text-sm">
+              <dl className="space-y-4">
+                <Row label="Status" value={statusLabel(project.status)} />
+                <Row label="Domain" value={project.domain} />
+                <Row label="Year" value={project.year} />
+                <div>
+                  <dt className="text-sm text-ink-muted mb-1">Stack</dt>
+                  <dd className="text-ink-muted leading-relaxed">
+                    {project.stack.join(" · ")}
+                  </dd>
+                </div>
+              </dl>
 
-            <div className="flex flex-col gap-1">
-              <span className="mono uppercase tracking-[0.18em]">Repo</span>
-              {project.repoUrl ? (
-                <a
-                  href={project.repoUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
-                >
-                  Open on GitHub
-                  <span aria-hidden className="transition group-hover:translate-x-0.5">
-                    ↗
-                  </span>
-                </a>
-              ) : (
-                <span className="text-body-sm text-ink-300">
-                  Private client work — happy to walk through it in interview.
-                </span>
-              )}
-            </div>
-
-            {project.demoUrl && (
-              <div className="flex flex-col gap-1">
-                <span className="mono uppercase tracking-[0.18em]">Demo</span>
-                <a
-                  href={project.demoUrl}
-                  className="group inline-flex items-center gap-2 text-body-sm text-white transition hover:text-accent-glow"
-                >
-                  {project.demoLabel ?? "Open demo"}
-                  <span aria-hidden className="transition group-hover:translate-x-0.5">
-                    →
-                  </span>
-                </a>
+              <div className="pt-3 border-t border-ink/[0.07] space-y-2">
+                {project.privateRepo ? (
+                  <p className="font-mono text-sm text-ink-muted">Private repo</p>
+                ) : project.repoUrl ? (
+                  <a
+                    href={project.repoUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="link text-sm"
+                  >
+                    View on GitHub
+                  </a>
+                ) : (
+                  <p className="text-sm text-ink-muted">
+                    Private codebase. Architecture walk-through in interview.
+                  </p>
+                )}
+                {project.demoUrl && (
+                  <div>
+                    <a href={project.demoUrl} className="link text-sm">
+                      {project.demoLabel ?? "Live demo"}
+                    </a>
+                  </div>
+                )}
               </div>
+            </div>
+          </aside>
+
+          {/* Body — diagrams use the full 1fr column so 14px labels never scale down */}
+          <div className="min-w-0 space-y-10">
+            {hasProjectDiagram(project.slug) && (
+              <section>
+                <h2
+                  className="font-display-section font-medium text-ink mb-4"
+                  style={{ fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", letterSpacing: "-0.02em" }}
+                >
+                  Architecture
+                </h2>
+                <div className="overflow-visible rounded-xl border border-ink/[0.07] bg-surface/40 p-4 sm:p-6">
+                  <ProjectDiagram slug={project.slug} />
+                </div>
+              </section>
             )}
 
-            <div className="h-px w-full bg-white/10" aria-hidden />
+            <div className="max-w-2xl space-y-10">
+              <ContentSection title="Problem">
+                <p>{project.problem}</p>
+              </ContentSection>
 
-            <div>
-              <div className="mono mb-2 uppercase tracking-[0.18em]">Stack</div>
-              <ul className="flex flex-wrap gap-1.5">
-                {project.stack.map((s) => (
-                  <li key={s} className="chip">
-                    {s}
-                  </li>
-                ))}
-              </ul>
+              <ContentSection title="What I built">
+                <p>{systemOverview}</p>
+              </ContentSection>
+
+              {project.engineeringDecisions && project.engineeringDecisions.length > 0 && (
+                <ContentSection title="Engineering decisions">
+                  <ol className="space-y-3">
+                    {project.engineeringDecisions.map((d, i) => (
+                      <li key={i} className="flex gap-3 text-sm text-ink-muted leading-relaxed">
+                        <span className="font-mono text-micro text-ink-faint mt-1 shrink-0">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <p>{d}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </ContentSection>
+              )}
+
+              <div className="rounded-xl border border-ink/[0.07] bg-surface/40 p-5">
+                <p className="text-xs text-ink-muted mb-2 uppercase tracking-wider">Outcome</p>
+                <p className="text-base text-ink">{project.outcome}</p>
+              </div>
             </div>
           </div>
-        </aside>
+        </div>
 
-        <div className="flex flex-col gap-14">
-          <Section title="Problem">
-            <p>{project.problem}</p>
-          </Section>
-
-          <Section title="What I built">
-            <p>{systemOverview}</p>
-          </Section>
-
-          {project.engineeringDecisions &&
-            project.engineeringDecisions.length > 0 && (
-              <Section title="Key engineering decisions">
-                <ol className="flex flex-col gap-3">
-                  {project.engineeringDecisions.map((d, i) => (
-                    <li
-                      key={i}
-                      className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4"
-                    >
-                      <span
-                        aria-hidden
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] font-mono text-micro text-ink-200"
-                      >
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <p className="text-body text-ink-100">
-                        {d}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </Section>
-            )}
-
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-            <div className="mono mb-2 uppercase tracking-[0.18em]">
-              Outcome
-            </div>
-            <p className="text-body text-ink-100">
-              {project.outcome}
+        {/* Navigation */}
+        <nav
+          aria-label="Case study navigation"
+          className="mt-16 border-t border-ink/[0.07] pt-8 grid gap-4 sm:grid-cols-2"
+        >
+          <Link
+            href={`/projects/${prev.slug}`}
+            className="group rounded-xl border border-ink/[0.08] p-5 transition hover:border-ink/[0.15]"
+          >
+            <p className="text-xs text-ink-muted mb-1 uppercase tracking-wider">Previous</p>
+            <p className="text-base font-medium text-ink group-hover:text-accent transition-colors">
+              ← {prev.name}
             </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="container-edge mt-20 border-t border-white/10 pt-10">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <NeighbourLink direction="prev" project={prev} />
-          <NeighbourLink direction="next" project={next} />
-        </div>
+          </Link>
+          <Link
+            href={`/projects/${next.slug}`}
+            className="group rounded-xl border border-ink/[0.08] p-5 transition hover:border-ink/[0.15] sm:text-right"
+          >
+            <p className="text-xs text-ink-muted mb-1 uppercase tracking-wider">Next</p>
+            <p className="text-base font-medium text-ink group-hover:text-accent transition-colors">
+              {next.name} →
+            </p>
+          </Link>
+        </nav>
       </div>
     </article>
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <section className="flex flex-col gap-5">
-      <h2 className="font-display text-display-md tracking-tightest text-white">
-        {title}
-      </h2>
-      <div className="max-w-none text-body text-ink-200 text-pretty">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="mono uppercase tracking-[0.18em]">{label}</span>
-      <span className="text-body-sm text-white">{value}</span>
+    <div>
+      <dt className="text-xs text-ink-muted mb-0.5 uppercase tracking-wider">{label}</dt>
+      <dd className="text-ink text-sm">{value}</dd>
     </div>
   );
 }
 
-function NeighbourLink({
-  direction,
-  project,
-}: {
-  direction: "prev" | "next";
-  project: Project;
-}) {
-  const isNext = direction === "next";
+function ContentSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={`/projects/${project.slug}`}
-      className={[
-        "group card flex flex-col gap-2",
-        isNext ? "sm:col-start-2 sm:text-right" : "",
-      ].join(" ")}
-    >
-      <span className="mono uppercase tracking-[0.18em]">
-        {isNext ? "Next" : "Previous"}
-      </span>
-      <span className="font-display text-body-lg font-semibold tracking-tight text-white transition group-hover:text-accent-glow">
-        {isNext ? "→ " : "← "}
-        {project.name}
-      </span>
-      <span className="line-clamp-2 text-caption text-ink-300">
-        {project.tagline}
-      </span>
-    </Link>
+    <section>
+      <h2
+        className="font-display-section font-medium text-ink mb-4"
+        style={{ fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", letterSpacing: "-0.02em" }}
+      >
+        {title}
+      </h2>
+      <div className="text-base text-ink-muted leading-relaxed text-pretty">{children}</div>
+    </section>
   );
 }

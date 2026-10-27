@@ -1,83 +1,73 @@
-import Image from "next/image";
-import { profile } from "@/lib/content";
+import { engineeringApproach, profile } from "@/lib/content";
 
 export default function About() {
   return (
     <section id="about" className="section">
       <div className="container-edge">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-          <div className="flex flex-col gap-5">
-            <span className="eyebrow">
-              <span className="eyebrow-dot" />
-              About
-            </span>
-            <h2 className="section-heading">
-              Built where mistakes are expensive.
+        <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-20">
+
+          {/* Bio */}
+          <div>
+            <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-3">About</p>
+            <h2
+              className="font-display-section font-medium text-ink mb-6"
+              style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", letterSpacing: "-0.025em" }}
+            >
+              Mike S Ncube.
             </h2>
-            <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-              <span className="relative inline-flex h-14 w-14 overflow-hidden rounded-full border border-white/20">
-                <Image
-                  src={profile.avatar}
-                  alt={`Portrait of ${profile.name}`}
-                  width={128}
-                  height={128}
-                  unoptimized
-                  className="h-full w-full object-cover object-top"
-                />
-              </span>
-              <div className="flex flex-col">
-                <span className="font-display text-body font-semibold text-white">
-                  {profile.name}
-                </span>
-                <span className="font-mono text-micro text-ink-300">
-                  {profile.location}
-                </span>
-              </div>
+
+            <div className="space-y-4 text-base text-ink-muted leading-relaxed">
+              <p>
+                Applied AI Engineer and Systems Architect at{" "}
+                <strong className="text-ink font-medium">Zororo-Phumulani Funeral Assurance</strong>{" "}
+                (FSP 48558), where I have been the sole AI engineer since 2022. I built
+                Digi App Form, the lead-management CRM used by over 40 people, and
+                ZDI (approved for production rollout) in a four-person IT team.
+              </p>
+              <p>
+                Six-plus years in software, about three focused on generative AI.
+                My strongest public proof is the live assistant above: open devtools,
+                read the network calls, click the citations. No formal degree.
+                Capability evidenced by shipped systems and a{" "}
+                <a
+                  href={profile.github}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="link"
+                >
+                  public GitHub portfolio
+                </a>
+                .
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-5 text-body text-ink-200">
-            <p>
-              I&rsquo;m Mike — an Applied AI Engineer based in South Africa,
-              remote-first. 4+ years across software development, AWS cloud
-              architecture, data engineering and applied AI, including 2+ years
-              working as an AI Engineer since June 2024. I build full-stack AI
-              systems: the Next.js surface, the Python API, the retrieval
-              layer, and the observability around it. Shipped backends in
-              regulated insurance taught me to treat every model call as a
-              fallible dependency.
-            </p>
-            <p>
-              My strongest public proof is the RAG assistant on this page — open
-              devtools and read the citations. Alongside that: shipped Flask web
-              apps, a multi-tenant SOC platform deployed to Railway for
-              evaluation (not an LLM product, but the kind of backend AI
-              features need — currently paused), and AWS/data work in clearly
-              labelled reference and lab repos.
-            </p>
-            <p className="text-ink-300">
-              Targeting {profile.targetRoles.join(", ")} — teams putting AI
-              into high-stakes, regulated, or operationally serious products.
-              Same positioning as my{" "}
-              <a
-                href={profile.github}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
-              >
-                GitHub profile
-              </a>{" "}
-              and{" "}
-              <a
-                href={profile.linkedin}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-white underline-offset-4 transition hover:text-accent-glow hover:underline"
-              >
-                LinkedIn
-              </a>
-              .
-            </p>
+          {/* How I build — 4 one-line principles */}
+          <div>
+            <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-6">How I build</p>
+            {/* dl > div > dt/dd — valid per HTML5 spec (one div level only) */}
+            <dl className="space-y-5">
+              {engineeringApproach.map((item) => (
+                <div key={item.title}>
+                  <dt className="flex gap-3 items-start text-base font-semibold text-ink">
+                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+                    {item.title}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-ink-muted pl-[1.375rem]">{item.body}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {/* Training */}
+            <div className="mt-8 pt-8 border-t border-ink/[0.07]">
+              <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-4">Training</p>
+              <ul className="space-y-2 text-sm text-ink-muted">
+                <li>AWS Becoming an AI Practitioner Series — Sep 2026</li>
+                <li>Retrieval-Augmented Generation — DeepLearning.AI</li>
+                <li>Generative AI with LLMs — DeepLearning.AI</li>
+                <li>Agentic AI — DeepLearning.AI</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

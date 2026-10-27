@@ -36,7 +36,9 @@ export default function ProjectCard({
           ))}
         </ul>
         <div className="mt-auto flex flex-wrap items-center gap-4 pt-2">
-          {project.repoUrl && (
+          {project.privateRepo ? (
+            <span className="text-caption font-medium text-ink-300">Private repo</span>
+          ) : project.repoUrl ? (
             <a
               href={project.repoUrl}
               target="_blank"
@@ -45,7 +47,7 @@ export default function ProjectCard({
             >
               GitHub repo ↗
             </a>
-          )}
+          ) : null}
           <Link
             href={caseStudyHref}
             className="inline-flex items-center gap-1.5 text-caption font-medium text-ink-300 underline-offset-4 transition hover:text-white hover:underline"
@@ -166,7 +168,9 @@ function CardActions({
         compact ? "pt-1" : "border-t border-white/10 pt-5",
       ].join(" ")}
     >
-      {project.repoUrl ? (
+      {project.privateRepo ? (
+        <span className="text-body-sm text-ink-300">Private repo</span>
+      ) : project.repoUrl ? (
         <a
           href={project.repoUrl}
           target="_blank"

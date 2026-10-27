@@ -25,6 +25,7 @@ export function generateMetadata({
       title: project.name,
       description: project.tagline,
       type: "article",
+      url: `/projects/${project.slug}`,
     },
   };
 }
