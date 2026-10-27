@@ -18,7 +18,7 @@ import {
   selectCitedSources,
   shouldCacheAnswer,
 } from "../lib/answer";
-import { insertSpaceBeforeCites, moveTrailingCitesBeforeStop, normaliseModelText, splitIntoSentences } from "../lib/normalise-answer";
+import { insertSpaceBeforeCites, moveTrailingCitesBeforeStop, normaliseModelText, splitIntoSentences, stripSourceAndPathLeakage } from "../lib/normalise-answer";
 import { matchMultiProjectAnswer, matchStaticAnswer, STATIC_ANSWERS } from "../lib/static-answers";
 import { getProjectBySlug, getProjectNeighbours, statusLabel } from "../lib/content";
 import {
@@ -3159,6 +3159,169 @@ describe("round 43 in-scope tech, live pairs, and FastAPI listing", () => {
     assert.ok((result.response.match(/\[(\d+)\]/g) ?? []).length >= 4);
   });
 });
+
+describe("round 44 fallback quality, phrases, and partial coverage", () => {
+  const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
+    .filter((c) => c.sourceUrl.startsWith("http"))
+    .map((c) => ({ ...c, score: 0.9 }));
+
+  async function ask(question: string, mode: "none" | "refuse" = "none") {
+    return answerQuestion({
+      question,
+      retrieveFn: async () => kbChunks,
+      ...(mode === "refuse"
+        ? {
+            generateGemini: async () => "I don't have information about that.",
+            generateGroq: async () => EMAIL_FALLBACK,
+          }
+        : {}),
+    });
+  }
+
+  const leakRe = /\blib\/|\bapp\/|\.tsx?\b|\bSource:/;
+
+  it("answers RAG built questions from the portfolio RAG static, not Source: or courses", async () => {
+    for (const question of [
+      "Has Mike built RAG systems?",
+      "Has Mike built RAG?",
+      "What RAG work has Mike done?",
+    ]) {
+      for (const mode of ["none", "refuse"] as const) {
+        const result = await ask(question, mode);
+        assert.equal(isRefusal(result.response), false, `${mode} ${question}`);
+        assert.match(result.response, /Gemini embedding-001|cosine similarity/i, `${mode} ${question}`);
+        assert.doesNotMatch(result.response, /jailbreak defences/i, `${mode} ${question}`);
+        assert.doesNotMatch(result.response, /no named certifications/i, `${mode} ${question}`);
+        assert.doesNotMatch(result.response, leakRe, `${mode} ${question}`);
+        assert.doesNotMatch(result.response, / — /, `${mode} ${question}`);
+      }
+    }
+  });
+
+  it("keeps the certifications chunk out of built/used project answers, including GitHub", async () => {
+    const github = await ask("Has Mike used GitHub?");
+    assert.equal(isRefusal(github.response), false);
+    assert.match(github.response, /GitHub/i);
+    assert.doesNotMatch(github.response, /no named certifications/i);
+    assert.doesNotMatch(github.response, /DeepLearning\.AI/);
+    assert.ok(!github.sources.some((s) => s.id === "certifications"));
+  });
+
+  it("sanitises every answer path so no lib/, app/, .ts, or Source: leaks", async () => {
+    assert.equal(stripSourceAndPathLeakage("Useful sentence. Source: lib/rag.ts, app/api/chat/route.ts."), "Useful sentence.");
+    const questions = [
+      ...EVAL_QUESTIONS.map((q) => q.question),
+      "Has Mike built RAG systems?",
+      "Has Mike used GitHub?",
+      "Does Mike know Gemini?",
+      "Does Mike know OpenAI?",
+      "How does Mike handle POPIA?",
+      "What has Mike built with FastAPI?",
+    ];
+    for (const question of questions) {
+      const none = await ask(question, "none");
+      assert.doesNotMatch(none.response, leakRe, `none ${question} => ${none.response}`);
+      const refuse = await ask(question, "refuse");
+      assert.doesNotMatch(refuse.response, leakRe, `refuse ${question} => ${refuse.response}`);
+    }
+  });
+
+  it("refuses two-word skills that are not in the KB as a phrase", async () => {
+    const phrases = [
+      "Does Mike know machine learning?",
+      "Does Mike know deep learning?",
+      "Does Mike know prompt engineering?",
+      "Does Mike know computer vision?",
+      "Does Mike know natural language processing?",
+      "Does Mike know NLP?",
+      "Does Mike know data science?",
+      "Does Mike know CI/CD?",
+      "Does Mike know MLOps?",
+    ];
+    for (const question of phrases) {
+      const result = await ask(question);
+      assert.equal(result.response, EMAIL_FALLBACK, question);
+      assert.doesNotMatch(result.response, /case state machine/i, question);
+      assert.doesNotMatch(result.response, /claims operations/i, question);
+    }
+  });
+
+  it("answers data engineering because the phrase is in the KB", async () => {
+    const result = await ask("Does Mike know data engineering?");
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /data engineering/i);
+  });
+
+  it("generalises live/deployed contradictions for ZDI, AI OS, claims, and Sentinel", async () => {
+    assert.equal(hasProjectFactContradiction("ZDI is already live in Johannesburg."), true);
+    assert.equal(hasProjectFactContradiction("ZDI went live last month."), true);
+    assert.equal(hasProjectFactContradiction("ZDI launched last week."), true);
+    assert.equal(hasProjectFactContradiction("Zororo AI OS is now live."), true);
+    assert.equal(hasProjectFactContradiction("The claims operations platform is the primary system."), true);
+    assert.equal(hasProjectFactContradiction("Proactive Sentinel is an AI-driven LLM-based SOC."), true);
+    assert.equal(hasProjectFactContradiction("Proactive Sentinel is a Python backend, not an LLM product."), false);
+    const zdi = await answerQuestion({
+      question: "What is ZDI?",
+      retrieveFn: async () => kbChunks,
+      generateGemini: async () => "ZDI is already live and went live last month [1].",
+    });
+    assert.match(zdi.response, /not yet live/i);
+    assert.doesNotMatch(zdi.response, /already live|went live last month/i);
+    const os = await answerQuestion({
+      question: "What is Zororo AI OS?",
+      retrieveFn: async () => kbChunks,
+      generateGemini: async () => "Zororo AI OS is deployed and live [1].",
+    });
+    assert.match(os.response, /not deployed|not yet deployed/i);
+    const sentinel = await answerQuestion({
+      question: "Walk me through Proactive Sentinel's architecture.",
+      retrieveFn: async () => kbChunks,
+      generateGemini: async () => "Proactive Sentinel is an AI-driven LLM-based SOC [1].",
+    });
+    assert.doesNotMatch(sentinel.response, /AI-driven|LLM-based/i);
+    assert.match(sentinel.response, /not an LLM product|Python backend|MITRE/i);
+  });
+
+  it("answers the known skill and notes the unknown term", async () => {
+    const kube = await ask("Kubernetes and Docker");
+    assert.match(kube.response, /Docker/i);
+    assert.match(kube.response, /Kubernetes is not listed in Mike's portfolio/);
+    assert.notEqual(kube.response, EMAIL_FALLBACK);
+
+    const rust = await ask("Python and Rust");
+    assert.match(rust.response, /Python/i);
+    assert.match(rust.response, /Rust is not listed in Mike's portfolio/);
+
+    const lambda = await ask("Has Mike used AWS Lambda?");
+    assert.match(lambda.response, /S3|EC2|AWS/i);
+    assert.match(lambda.response, /Lambda is not listed in Mike's portfolio/);
+  });
+
+  it("does not lead Gemini/OpenAI answers with a truncated rate-limit clause", async () => {
+    for (const question of ["Does Mike know Gemini?", "Has Mike used OpenAI?"]) {
+      const result = await ask(question);
+      assert.equal(isRefusal(result.response), false, question);
+      assert.doesNotMatch(result.response, /^if Gemini errors/i, question);
+      assert.doesNotMatch(result.response, /if Gemini errors or is rate-limited \[\d+\]…/, question);
+      assert.match(result.response, /Gemini|OpenAI/i, question);
+    }
+  });
+
+  it("keeps POPIA answers on POPIA sentences, not Sentinel MITRE", async () => {
+    const result = await ask("How does Mike handle POPIA?");
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /POPIA/i);
+    assert.doesNotMatch(result.response, /MITRE ATT&CK/i);
+    assert.doesNotMatch(result.response, /DetectionEngine/i);
+  });
+
+  it("rewrites stack fragments into sentences instead of Title — lists", async () => {
+    const result = await ask("What has Mike built with FastAPI?");
+    assert.doesNotMatch(result.response, / — /);
+    assert.match(result.response, /uses FastAPI/i);
+  });
+});
+
 
 
 

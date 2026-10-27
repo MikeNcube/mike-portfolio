@@ -6,9 +6,10 @@ import {
   insertSpaceBeforeCites,
   moveTrailingCitesBeforeStop,
   splitIntoSentences,
+  stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r43";
+export const ANSWER_CACHE_VERSION = "r44";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -990,6 +991,7 @@ export function sanitisePunctuation(text: string): string {
   out = moveTrailingCitesBeforeStop(out);
   out = insertMissingSentenceSpaces(out);
   out = insertSpaceBeforeCites(out);
+  out = stripSourceAndPathLeakage(out);
   return out.replace(/ {2,}/g, " ").trim();
 }
 
@@ -1022,7 +1024,23 @@ function stripKnownNegations(sentence: string): string {
     .replace(/\bnot(?: yet)? deployed\b/gi, " ")
     .replace(/\bundeployed\b/gi, " ")
     .replace(/\bnot(?: yet)? in production\b/gi, " ")
-    .replace(/not production/gi, " ");
+    .replace(/not production/gi, " ")
+    .replace(/\bnot an llm product\b/gi, " ")
+    .replace(/\bnot(?: an)? llm[ -]?based\b/gi, " ");
+}
+
+function hasLiveLaunchClaim(hay: string): boolean {
+  return (
+    /\balready\s+live\b/i.test(hay)
+    || /\bwent live\b/i.test(hay)
+    || /\bis live\b/i.test(hay)
+    || /\blive (?:system|production|platform)\b/i.test(hay)
+    || /\bin production\b/i.test(hay)
+    || /\bcurrently live\b/i.test(hay)
+    || /\bnow live\b/i.test(hay)
+    || /\blaunched\b/i.test(hay)
+    || /\bdeployed\b/i.test(hay)
+  );
 }
 
 function contradictsZdiAsAi(sentence: string): boolean {
@@ -1052,31 +1070,28 @@ function contradictsClaimsAsLive(sentence: string): boolean {
     return false;
   }
   const hay = stripKnownNegations(sentence);
-  return /\bis live\b|\blive (?:system|production|platform)\b|\bcurrently live\b|\bnow live\b/i.test(
-    hay,
-  );
+  return hasLiveLaunchClaim(hay) || /\bprimary\b/i.test(hay);
 }
 
 function contradictsAiOsAsDeployed(sentence: string): boolean {
   if (!AI_OS_RE.test(sentence)) return false;
   const hay = stripKnownNegations(sentence);
-  return (
-    /\bdeployed\b/i.test(hay)
-    || /\bin production\b/i.test(hay)
-    || /\bproduction systems?\b/i.test(hay)
-    || /\bis live\b/i.test(hay)
-  );
+  return hasLiveLaunchClaim(hay) || /\bproduction systems?\b/i.test(hay);
 }
 
 function contradictsZdiAsLive(sentence: string): boolean {
   if (!ZDI_RE.test(sentence)) return false;
   const hay = stripKnownNegations(sentence);
+  return hasLiveLaunchClaim(hay);
+}
+
+function contradictsSentinelAsLlm(sentence: string): boolean {
+  if (!/\b(?:proactive )?sentinel\b/i.test(sentence)) return false;
+  const hay = stripKnownNegations(sentence);
   return (
-    /\bis live\b/i.test(hay)
-    || /\blive (?:system|production|platform)\b/i.test(hay)
-    || /\bin production\b/i.test(hay)
-    || /\bcurrently live\b/i.test(hay)
-    || /\bnow live\b/i.test(hay)
+    /\bai[ -]?driven\b/i.test(hay)
+    || /\bllm[ -]?based\b/i.test(hay)
+    || /\bllm (?:product|system|tool)\b/i.test(hay)
   );
 }
 
@@ -1087,6 +1102,7 @@ function sentenceHasProjectFactContradiction(sentence: string): boolean {
     || contradictsShippedAsEarly(sentence)
     || contradictsClaimsAsLive(sentence)
     || contradictsAiOsAsDeployed(sentence)
+    || contradictsSentinelAsLlm(sentence)
   );
 }
 

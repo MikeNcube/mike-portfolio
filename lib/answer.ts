@@ -10,7 +10,7 @@ import {
   type RetrievedChunk,
 } from "./rag";
 import { isInjectionDefenceQuestion, isJailbreakPrompt, isRefusal } from "./refusal";
-import { normaliseModelText, splitIntoSentences } from "./normalise-answer";
+import { normaliseModelText, sentenceLeaksSourceOrPath, splitIntoSentences } from "./normalise-answer";
 import { tokenize } from "./bm25";
 import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
@@ -30,6 +30,9 @@ import {
   isTechLeadCrmQuestion,
   isWorkQuestion,
   isZdiLiveQuestion,
+  mentionsAiOs,
+  mentionsClaims,
+  mentionsZdi,
   productionAnswerIsCanonical,
   punctuationIsSane,
   sourcesWithCanonicalStatus,
@@ -383,8 +386,8 @@ export function firstSentence(text: string): string {
 }
 
 const TECH_LABEL_RE =
-  /^(Stack|Backend|Frontend|Full-stack|Full stack|AI\/LLM|Data|Cloud|Infra)\s*:\s*/i;
-const DROP_LABEL_RE = /^(Status|POPIA|Pipeline)\s*:\s*/i;
+  /^(Stack|Backend|Frontend|Full-stack|Full stack|AI\/LLM|Data|Cloud|Infra|Pipeline)\s*:\s*/i;
+const DROP_LABEL_RE = /^(Status)\s*:\s*/i;
 
 function projectNameFromTitle(title: string): string {
   const head = title.split(/\s+[—–]\s+/)[0] ?? title;
@@ -443,7 +446,14 @@ function rewriteCertificationPassage(text: string): string {
 function rewriteFallbackSentence(raw: string, title: string): string {
   const sentence = raw.replace(/\s+/g, " ").trim();
   if (!sentence || DROP_LABEL_RE.test(sentence)) return "";
+  if (sentenceLeaksSourceOrPath(sentence)) return "";
   const project = projectNameFromTitle(title);
+  const popia = sentence.match(/^POPIA\s*:\s*(.+)$/i);
+  if (popia) {
+    const body = popia[1].replace(/[.!?]+$/, "").trim();
+    if (!body) return "";
+    return `${project} implements POPIA with ${body}.`;
+  }
   const label = sentence.match(TECH_LABEL_RE);
   if (label) {
     const body = sentence.slice(label[0].length).replace(/[.!?]+$/, "").trim();
@@ -453,15 +463,23 @@ function rewriteFallbackSentence(raw: string, title: string): string {
   if (/^It is\b/i.test(sentence)) {
     return sentence.replace(/^It is\b/i, `${project} is`);
   }
+  const body = sentence.replace(/[.!?]+$/, "").trim();
   if (
     project
     && !sentence.toLowerCase().includes(project.toLowerCase())
-    && /^(FastAPI|Python|Flask|Next\.js|TypeScript|Docker|PostgreSQL)\b/i.test(sentence)
+    && (/^(FastAPI|Python|Flask|Next\.js|TypeScript|Docker|PostgreSQL)\b/i.test(body)
+      || /^[A-Za-z0-9.+#/-]+(?:,\s*[A-Za-z0-9.+#/-]+){1,}$/.test(body))
   ) {
-    return `${project} uses ${joinTechList(sentence.replace(/[.!?]+$/, "").trim())}.`;
+    return `${project} uses ${joinTechList(body)}.`;
   }
   if (project && !sentence.toLowerCase().includes(project.toLowerCase())) {
-    return `${project} — ${sentence.replace(/[.!?]+$/, "").trim()}.`;
+    const namedTech = body.match(/\b(FastAPI|Python|Flask|Next\.js|Docker|PostgreSQL|Gemini|OpenAI)\b/i);
+    if (namedTech && !/\b(is|are|was|were|maps|embeds|retrieves|defends|ships|share|shares)\b/i.test(body)) {
+      return `${project} uses ${namedTech[1]}.`;
+    }
+    if (namedTech || /\b(is|are|was|were|share|shares|uses)\b/i.test(body)) {
+      return `${project}: ${body}.`;
+    }
   }
   return sentence;
 }
@@ -472,6 +490,25 @@ function fallbackSentenceKey(sentence: string): string {
     .replace(/\s*\[\d+\]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function isWeakLeadClause(text: string): boolean {
+  return /^(if|when|because|although|while|after|before)\b/i.test(text.trim());
+}
+
+function sentenceQuality(part: string, terms: string[], pythonQuestion: boolean): number {
+  if (sentenceLeaksSourceOrPath(part) || isWeakLeadClause(part)) return -1000;
+  let score = 0;
+  if (pythonQuestion && /\bpython\b/i.test(part)) score += 50;
+  if (terms.some((term) => passageHasTerm(part, term))) score += 50;
+  const words = part.split(/\s+/).filter(Boolean).length;
+  score += Math.min(words, 36);
+  if (/^[A-Z]/.test(part.trim())) score += 8;
+  if (/\b(is|are|uses|embeds|retrieves|generates|defends|maps|ships|built)\b/i.test(part)) {
+    score += 6;
+  }
+  if (/\bif Gemini errors\b|\brate-limited\b/i.test(part)) score -= 50;
+  return score;
 }
 
 function fallbackSentenceFromChunk(
@@ -488,17 +525,25 @@ function fallbackSentenceFromChunk(
   }
   const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
   const contentWords = distinctiveSubjectTerms(question);
-  const ranked = [...parts].sort((a, b) => {
-    const score = (part: string): number => {
-      if (pythonQuestion && /\bpython\b/i.test(part)) return 2;
-      if (contentWords.some((w) => passageHasTerm(part, w))) return 2;
-      return 0;
-    };
-    return score(b) - score(a) || a.length - b.length;
-  });
+  const popiaQuestion = /\bpopia\b/i.test(question);
+  const ranked = [...parts].sort(
+    (a, b) => sentenceQuality(b, contentWords, pythonQuestion) - sentenceQuality(a, contentWords, pythonQuestion),
+  );
   for (const part of ranked) {
+    if (sentenceLeaksSourceOrPath(part) || isWeakLeadClause(part)) continue;
+    if (popiaQuestion && !/\bpopia\b/i.test(part)) continue;
     const rewritten = rewriteFallbackSentence(part, chunk.title);
-    if (rewritten) return firstSentence(rewritten);
+    if (!rewritten || sentenceLeaksSourceOrPath(rewritten) || isWeakLeadClause(rewritten)) continue;
+    const cut = firstSentence(rewritten);
+    if (sentenceLeaksSourceOrPath(cut) || isWeakLeadClause(cut)) continue;
+    if (/\bif Gemini errors\b|\brate-limited\b/i.test(cut)) continue;
+    if (
+      contentWords.length > 0
+      && !contentWords.some((term) => passageHasTerm(cut, term))
+    ) {
+      continue;
+    }
+    return cut;
   }
   return "";
 }
@@ -547,6 +592,13 @@ const FALLBACK_STOPWORDS = new Set([
   "training",
   "course",
   "courses",
+  "act",
+  "acts",
+  "acted",
+  "deliver",
+  "delivered",
+  "delivering",
+  "delivers",
 ]);
 
 const WEAK_SUBJECT_TERMS = new Set([
@@ -569,6 +621,16 @@ const MULTIWORD_SUBJECTS = [
   "next.js",
   "node.js",
   "open telemetry",
+  "machine learning",
+  "deep learning",
+  "data engineering",
+  "prompt engineering",
+  "computer vision",
+  "natural language processing",
+  "nlp",
+  "data science",
+  "ci/cd",
+  "mlops",
 ];
 
 const RELATED_TERMS: Record<string, string[]> = {
@@ -580,6 +642,12 @@ const BUILT_WITH_SKIP_IDS = new Set([
   "stack",
   "certifications",
   "aws-web-tier",
+  "interview-guide",
+]);
+
+const BUILT_OR_USED_SKIP_IDS = new Set([
+  "certifications",
+  "interview-guide",
 ]);
 
 function questionContentWords(question: string): string[] {
@@ -657,6 +725,58 @@ function isBuiltWithTechQuestion(question: string): boolean {
   );
 }
 
+function isBuiltOrUsedQuestion(question: string): boolean {
+  return (
+    /\b(?:has|have|did)\s+mike\s+(?:built|used|build|use)\b/i.test(question)
+    || /\bwhat\s+(?:has|did)\s+mike\s+(?:built|used|done|build)\b/i.test(question)
+    || isBuiltWithTechQuestion(question)
+  );
+}
+
+function kbHasTerm(term: string): boolean {
+  return knowledgeAsRetrieved().some((c) => passageHasTerm(`${c.title}\n${c.text}`, term));
+}
+
+function prettySubject(term: string): string {
+  const lower = term.toLowerCase();
+  if (lower === "nlp") return "NLP";
+  if (lower === "mlops") return "MLOps";
+  if (lower === "ci/cd") return "CI/CD";
+  return lower.replace(/\b([a-z])/g, (ch) => ch.toUpperCase());
+}
+
+function looksLikeSkillTerm(term: string): boolean {
+  if (term.includes(" ") || term.includes("/") || term.includes(".")) return true;
+  if (term.length <= 2) return false;
+  return !FALLBACK_STOPWORDS.has(term) && !WEAK_SUBJECT_TERMS.has(term);
+}
+
+function shouldNoteUnknownTerms(question: string): boolean {
+  return (
+    /\bknows?\b/i.test(question)
+    || isBuiltOrUsedQuestion(question)
+    || isAwsQuestion(question)
+    || /\b[a-z0-9.+#/-]+\s+and\s+[a-z0-9.+#/-]+/i.test(question)
+  );
+}
+
+function withUnknownTermNote(question: string, result: AnswerResult): AnswerResult {
+  if (isRefusal(result.response)) return result;
+  if (!shouldNoteUnknownTerms(question)) return result;
+  const known = distinctiveSubjectTerms(question).filter((term) => kbHasTerm(term));
+  const unknown = distinctiveSubjectTerms(question).filter(
+    (term) => !kbHasTerm(term) && looksLikeSkillTerm(term),
+  );
+  if (known.length === 0 || unknown.length === 0) return result;
+  if (/not listed in Mike's portfolio/i.test(result.response)) return result;
+  const names = unknown.map(prettySubject);
+  const verb = names.length === 1 ? "is" : "are";
+  return {
+    ...result,
+    response: `${result.response.replace(/\s+$/, "")} ${joinList(names)} ${verb} not listed in Mike's portfolio.`,
+  };
+}
+
 function knowledgeAsRetrieved(): RetrievedChunk[] {
   return KNOWLEDGE_CHUNKS
     .filter((c) => c.sourceUrl.startsWith("http"))
@@ -719,6 +839,7 @@ export function citedFallbackFromChunks(
   );
   if (terms.length === 0 || present.length === 0) return null;
   const builtWith = isBuiltWithTechQuestion(question);
+  const builtOrUsed = isBuiltOrUsedQuestion(question);
   const pool = mergeChunksById([
     ...http.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
     ...kb.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
@@ -726,11 +847,13 @@ export function citedFallbackFromChunks(
   const retrievedMatching = http.filter((c) => {
     if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
     if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
+    if (builtOrUsed && BUILT_OR_USED_SKIP_IDS.has(c.id ?? "")) return false;
     return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
   });
   const kbMatching = kb.filter((c) => {
     if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
     if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
+    if (builtOrUsed && BUILT_OR_USED_SKIP_IDS.has(c.id ?? "")) return false;
     return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
   });
   const matching = pythonQuestion
@@ -754,7 +877,7 @@ export function citedFallbackFromChunks(
     sources.push({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl });
   }
   if (pieces.length === 0) return null;
-  return { response: pieces.join(" "), sources, via: "static" };
+  return withUnknownTermNote(question, { response: pieces.join(" "), sources, via: "static" });
 }
 
 function staticOrSafeReply(
@@ -792,19 +915,19 @@ function staticOrSafeReply(
     }, chunks);
   }
   if (isAwsQuestion(question)) {
-    return polishResult(question, {
+    return withUnknownTermNote(question, polishResult(question, {
       response: CANONICAL_AWS_ANSWER,
       sources: awsSources([]),
       via: "static",
-    }, chunks);
+    }, chunks));
   }
   const staticHit = matchStaticAnswer(question);
   if (staticHit) {
-    return polishResult(question, {
+    return withUnknownTermNote(question, polishResult(question, {
       response: staticHit.answer,
       sources: sourcesFor(staticHit),
       via: "static",
-    }, chunks);
+    }, chunks));
   }
   if (modelText && isRefusal(modelText)) {
     const retrievedAfterRefusal = citedFallbackFromChunks(question, chunks);
@@ -1008,26 +1131,57 @@ function polishResult(
         { skipContradictionFallback: true },
       );
     }
-    const zdiHit = matchStaticAnswer("What is ZDI?");
-    if (
-      zdiHit
-      && /\bzdi\b/i.test(out)
-      && /\bis live\b|\bin production\b|\blive in production\b/i.test(out)
-    ) {
-      return polishResult(
-        question,
-        {
-          response: zdiHit.answer,
-          sources: sourcesFor(zdiHit),
-          via: "static",
-        },
-        chunks,
-        { skipContradictionFallback: true },
-      );
+    if (mentionsZdi(out)) {
+      const zdiHit = matchStaticAnswer("What is ZDI?");
+      if (zdiHit) {
+        return polishResult(
+          question,
+          { response: zdiHit.answer, sources: sourcesFor(zdiHit), via: "static" },
+          chunks,
+          { skipContradictionFallback: true },
+        );
+      }
+    }
+    if (mentionsAiOs(out)) {
+      const osHit = matchStaticAnswer("What is Zororo AI OS?");
+      if (osHit) {
+        return polishResult(
+          question,
+          { response: osHit.answer, sources: sourcesFor(osHit), via: "static" },
+          chunks,
+          { skipContradictionFallback: true },
+        );
+      }
+    }
+    if (mentionsClaims(out)) {
+      const claimsHit = matchStaticAnswer("What is the claims operations platform?");
+      if (claimsHit) {
+        return polishResult(
+          question,
+          { response: claimsHit.answer, sources: sourcesFor(claimsHit), via: "static" },
+          chunks,
+          { skipContradictionFallback: true },
+        );
+      }
+    }
+    if (/\bsentinel\b/i.test(out)) {
+      const sentinelHit = matchStaticAnswer("Walk me through Proactive Sentinel's architecture.");
+      if (sentinelHit) {
+        return polishResult(
+          question,
+          { response: sentinelHit.answer, sources: sourcesFor(sentinelHit), via: "static" },
+          chunks,
+          { skipContradictionFallback: true },
+        );
+      }
     }
   }
 
-  return { ...result, response: ensureInlineCitation(out, sources), sources };
+  return withUnknownTermNote(question, {
+    ...result,
+    response: ensureInlineCitation(out, sources),
+    sources,
+  });
 }
 
 async function tryGenerate(
@@ -1142,11 +1296,11 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   }
 
   if (isAwsQuestion(question)) {
-    return withContactEmail(question, polishResult(question, {
+    return withContactEmail(question, withUnknownTermNote(question, polishResult(question, {
       response: CANONICAL_AWS_ANSWER,
       sources: awsSources([]),
       via: "static",
-    }, relevant));
+    }, relevant)));
   }
 
   const staticHit = matchStaticAnswer(question);

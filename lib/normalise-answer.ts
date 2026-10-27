@@ -135,6 +135,20 @@ export function insertSpaceBeforeCites(text: string): string {
   return text.replace(/([A-Za-z0-9.,;:!?…'"])(\[\d+\])/g, "$1 $2");
 }
 
+const PATH_OR_SOURCE_RE = /\blib\/|\bapp\/|\.tsx?\b|\bSource:/i;
+
+export function sentenceLeaksSourceOrPath(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/^\s*source(?:\s+code)?\s*:/i.test(t)) return true;
+  return PATH_OR_SOURCE_RE.test(t);
+}
+
+export function stripSourceAndPathLeakage(text: string): string {
+  const kept = splitIntoSentences(text).filter((part) => !sentenceLeaksSourceOrPath(part));
+  return kept.join(" ").replace(/ {2,}/g, " ").trim();
+}
+
 export function moveTrailingCitesBeforeStop(text: string): string {
   return text.replace(
     /(…|\.\.\.|[.!?])\s*((?:\[\d+\]\s*)+)(?:\.)?(?=\s|$)/g,
@@ -159,5 +173,5 @@ export function normaliseModelText(text: string): string {
   const cited = straightened.replace(FULLWIDTH_CITE, "[$1]");
   const plain = insertMissingSentenceSpaces(stripMarkdown(cited));
   const collapsed = collapseCitationClusters(plain);
-  return insertSpaceBeforeCites(moveTrailingCitesBeforeStop(collapsed));
+  return stripSourceAndPathLeakage(insertSpaceBeforeCites(moveTrailingCitesBeforeStop(collapsed)));
 }

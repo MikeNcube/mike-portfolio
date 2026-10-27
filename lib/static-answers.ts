@@ -37,9 +37,13 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does the rag pipeline work",
       "explain the rag assistant",
       "how does retrieval work",
+      "has mike built rag",
+      "has mike built rag systems",
+      "what rag work has mike done",
+      "rag experience",
     ],
     answer:
-      "The live assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer. Source code is lib/rag.ts and app/api/chat/route.ts [2].",
+      "The live RAG assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer [2].",
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
   },
   {
