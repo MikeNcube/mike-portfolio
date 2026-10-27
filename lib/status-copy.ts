@@ -8,7 +8,7 @@ import {
   splitIntoSentences,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r42";
+export const ANSWER_CACHE_VERSION = "r43";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -29,6 +29,9 @@ export const CLAIMS_STATUS_SENTENCE =
 
 export const CANONICAL_ZDI_LIVE_ANSWER =
   "No. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].";
+
+export const CANONICAL_CRM_ZDI_LIVE_ANSWER =
+  "The lead-management CRM is a shipped live production system at Zororo-Phumulani [1]. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [2].";
 
 export const CANONICAL_AWS_ANSWER =
   "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
@@ -59,6 +62,8 @@ const WORK_FILLER_RE =
 const ZDI_RE = /\b(zdi|zororo document intelligence)\b/i;
 
 const ZDI_LIVE_QUESTION_RE = /\bis zdi\b.{0,24}\blive\b/i;
+
+const OTHER_LIVE_PROJECT_RE = /\bcrm\b|\bdigi\b|\bsentinel\b|\bsitewarden\b/i;
 
 const AI_OS_RE = /\bzororo ai os\b/i;
 
@@ -158,9 +163,14 @@ export function mentionsZdi(text: string): boolean {
   return ZDI_RE.test(text);
 }
 
-// True when the visitor asked whether ZDI is live.
+// True when the visitor asked whether ZDI is live, and only ZDI.
 export function isZdiLiveQuestion(question: string): boolean {
-  return ZDI_LIVE_QUESTION_RE.test(question);
+  return ZDI_LIVE_QUESTION_RE.test(question) && !OTHER_LIVE_PROJECT_RE.test(question);
+}
+
+// True when the visitor asked whether both the CRM and ZDI are live.
+export function isCrmAndZdiLiveQuestion(question: string): boolean {
+  return ZDI_LIVE_QUESTION_RE.test(question) && /\bcrm\b/i.test(question);
 }
 
 // True when the text names Zororo AI OS.
@@ -1058,9 +1068,22 @@ function contradictsAiOsAsDeployed(sentence: string): boolean {
   );
 }
 
+function contradictsZdiAsLive(sentence: string): boolean {
+  if (!ZDI_RE.test(sentence)) return false;
+  const hay = stripKnownNegations(sentence);
+  return (
+    /\bis live\b/i.test(hay)
+    || /\blive (?:system|production|platform)\b/i.test(hay)
+    || /\bin production\b/i.test(hay)
+    || /\bcurrently live\b/i.test(hay)
+    || /\bnow live\b/i.test(hay)
+  );
+}
+
 function sentenceHasProjectFactContradiction(sentence: string): boolean {
   return (
     contradictsZdiAsAi(sentence)
+    || contradictsZdiAsLive(sentence)
     || contradictsShippedAsEarly(sentence)
     || contradictsClaimsAsLive(sentence)
     || contradictsAiOsAsDeployed(sentence)
@@ -1073,7 +1096,9 @@ export function hasProjectFactContradiction(text: string): boolean {
 
 function applyCanonicalGuards(question: string, text: string): string {
   let out = text.trim();
-  if (isZdiLiveQuestion(question)) {
+  if (isCrmAndZdiLiveQuestion(question)) {
+    out = CANONICAL_CRM_ZDI_LIVE_ANSWER;
+  } else if (isZdiLiveQuestion(question)) {
     out = CANONICAL_ZDI_LIVE_ANSWER;
   }
   if (isTechLeadCrmQuestion(question) && !techLeadAnswerIsCanonical(out)) {

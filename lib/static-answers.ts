@@ -156,7 +156,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "does mike have any certifications",
       "mike certifications",
       "what courses has mike taken",
+      "what courses has mike completed",
       "what training courses does mike have",
+      "what training has mike done",
     ],
     answer:
       "Mike has no named certifications and no formal degree [1]. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",

@@ -25,6 +25,7 @@ import {
   aiOsStatusAppearsOnce,
   AI_OS_STATUS_SENTENCE,
   CANONICAL_AWS_ANSWER,
+  CANONICAL_CRM_ZDI_LIVE_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
   CANONICAL_WORK_ANSWER,
@@ -36,7 +37,9 @@ import {
   hasProjectFactContradiction,
   hasRepeatedStatus,
   isAwsQuestion,
+  isCrmAndZdiLiveQuestion,
   isTechLeadCrmQuestion,
+  isZdiLiveQuestion,
   isTopicalTechBuildQuestion,
   isWorkQuestion,
   sourcesWithCanonicalStatus,
@@ -52,6 +55,7 @@ import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
 import { RATE_LIMIT, RATE_WINDOW_SEC } from "../lib/rate-limit";
 import type { RetrievedChunk } from "../lib/rag";
+import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 
 function itIsSentenceCount(text: string): number {
   const parts = text.match(/[^.!?]+(?:[.!?]+(?:\s*\[\d+\])*)\s*|[^.!?]+$/g) ?? [text];
@@ -1933,7 +1937,9 @@ describe("production-system and ZDI status copy", () => {
         score: 0.8,
       },
     ];
-    assert.equal(citedFallbackFromChunks("What database does the CRM use?", chunks), null);
+    const crmOnly = citedFallbackFromChunks("What database does the CRM use?", chunks);
+    assert.ok(crmOnly);
+    assert.match(crmOnly.response, /CRM/i);
     const withDb = [
       {
         ...chunks[0],
@@ -1976,12 +1982,12 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(citedFallbackFromChunks("What is Mike's favourite food?", strong), null);
     assert.ok(CITED_FALLBACK_MIN_SCORE > 0.35);
     const weak = [{ ...strong[0], score: 0.4 }];
-    assert.equal(citedFallbackFromChunks("What database does the CRM use?", weak), null);
+    assert.equal(citedFallbackFromChunks("Does Mike know Kubernetes?", weak), null);
   });
 
   it("keeps a Groq refusal when there is no static match and no relevant fallback", async () => {
     const result = await answerQuestion({
-      question: "What database does the CRM use?",
+      question: "Does Mike know Kubernetes?",
       retrieveFn: async () => [
         {
           id: "positioning",
@@ -2923,14 +2929,13 @@ describe("round 42 off-scope skills, multi-project pairs, and cite nits", () => 
     },
   ];
 
-  it("refuses Kubernetes, Rust, Go, Azure, Snowflake, Terraform, and Java", async () => {
+  it("refuses Kubernetes, Rust, Go, Azure, Snowflake, and Java when they are not in the retrieved chunks", async () => {
     const questions = [
       "Does Mike know Kubernetes?",
       "Does Mike know Rust?",
       "Does Mike know Go?",
       "Has Mike used Azure?",
       "Does Mike know Snowflake?",
-      "Does Mike know Terraform?",
       "Does Mike know Java?",
     ];
     for (const question of questions) {
@@ -3033,6 +3038,128 @@ describe("round 42 off-scope skills, multi-project pairs, and cite nits", () => 
     assert.equal(moveTrailingCitesBeforeStop("Event correlation. [1][2]"), "Event correlation [1][2].");
   });
 });
+
+describe("round 43 in-scope tech, live pairs, and FastAPI listing", () => {
+  const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
+    .filter((c) => c.sourceUrl.startsWith("http"))
+    .map((c) => ({ ...c, score: 0.9 }));
+
+  const answered: Array<{ question: string; expect: RegExp }> = [
+    { question: "Has Mike built RAG systems?", expect: /\bRAG\b/i },
+    { question: "Has Mike built RAG?", expect: /\bRAG\b/i },
+    { question: "What RAG work has Mike done?", expect: /\bRAG\b/i },
+    { question: "Has Mike built agents?", expect: /\bagents?\b/i },
+    { question: "Has Mike used Presidio?", expect: /Presidio/i },
+    { question: "Does Mike know Terraform?", expect: /Terraform/i },
+    { question: "Does Mike know OPA?", expect: /\bOPA\b/ },
+    { question: "Has Mike used Ollama?", expect: /Ollama/i },
+    { question: "Does Mike know OpenTelemetry?", expect: /OpenTelemetry/i },
+    { question: "Does Mike know MITRE ATT&CK?", expect: /MITRE ATT&CK/i },
+    { question: "Has Mike used n8n?", expect: /n8n/i },
+    { question: "Does Mike know LangChain?", expect: /LangChain/i },
+    { question: "Does Mike know SQL?", expect: /PostgreSQL|SQLite|SQLAlchemy|\bSQL\b/i },
+    { question: "What courses has Mike completed?", expect: /no named certifications/i },
+    { question: "What training has Mike done?", expect: /no named certifications/i },
+    { question: "What has Mike built with Next.js?", expect: /Next\.js/ },
+    { question: "What has Mike built with Docker?", expect: /Docker/ },
+  ];
+
+  const refused = [
+    "Does Mike know Kubernetes?",
+    "Does Mike know Rust?",
+    "Does Mike know Go?",
+    "Has Mike used Azure?",
+    "Does Mike know GCP?",
+    "Does Mike know Snowflake?",
+    "Does Mike know Java?",
+  ];
+
+  async function ask(
+    question: string,
+    mode: "none" | "refuse",
+  ) {
+    return answerQuestion({
+      question,
+      retrieveFn: async () => kbChunks,
+      ...(mode === "refuse"
+        ? {
+            generateGemini: async () => "I don't have information about that.",
+            generateGroq: async () => EMAIL_FALLBACK,
+          }
+        : {}),
+    });
+  }
+
+  for (const mode of ["none", "refuse"] as const) {
+    it(`answers in-scope tech with ${mode === "none" ? "no models" : "forced refusals"}`, async () => {
+      for (const { question, expect } of answered) {
+        const result = await ask(question, mode);
+        assert.equal(isRefusal(result.response), false, `${mode} ${question}`);
+        assert.notEqual(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.match(result.response, expect, `${mode} ${question} => ${result.response}`);
+        assert.ok(result.sources.length > 0, `${mode} ${question}`);
+      }
+    });
+
+    it(`keeps B12 refusals with ${mode === "none" ? "no models" : "forced refusals"}`, async () => {
+      for (const question of refused) {
+        const result = await ask(question, mode);
+        assert.equal(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.equal(result.sources.length, 0, `${mode} ${question}`);
+      }
+    });
+  }
+
+  it("replaces a model claim that ZDI is live in production", async () => {
+    assert.equal(hasProjectFactContradiction("ZDI is live in production."), true);
+    assert.equal(hasProjectFactContradiction("ZDI is approved for production rollout and not yet live."), false);
+    const result = await answerQuestion({
+      question: "What is ZDI?",
+      retrieveFn: async () => kbChunks,
+      generateGemini: async () => "ZDI is live in production [1].",
+    });
+    assert.equal(isRefusal(result.response), false);
+    assert.doesNotMatch(result.response, /\bZDI is live\b/i);
+    assert.match(result.response, /not yet live/i);
+  });
+
+  it("answers CRM-live and ZDI-live together without a leading No", async () => {
+    const question = "Is the CRM live and is ZDI live?";
+    assert.equal(isZdiLiveQuestion(question), false);
+    assert.equal(isCrmAndZdiLiveQuestion(question), true);
+    const result = await answerQuestion({
+      question,
+      retrieveFn: async () => kbChunks,
+      generateGemini: async () => {
+        throw new Error("429");
+      },
+    });
+    assert.doesNotMatch(result.response, /^No\./);
+    assert.match(result.response, /CRM/i);
+    assert.match(result.response, /shipped live production|in production|live production/i);
+    assert.match(result.response, /ZDI/);
+    assert.match(result.response, /not yet live/i);
+    assert.match(result.response, /approved for production rollout/i);
+    assert.match(result.response, /lead-management CRM/i);
+  });
+
+  it("lists each FastAPI project in a readable sentence", async () => {
+    const result = await answerQuestion({
+      question: "What has Mike built with FastAPI?",
+      retrieveFn: async () => kbChunks,
+    });
+    assert.equal(isRefusal(result.response), false);
+    assert.match(result.response, /FastAPI/);
+    assert.match(result.response, /CRM/i);
+    assert.match(result.response, /ZDI/);
+    assert.match(result.response, /Zororo AI OS/);
+    assert.match(result.response, /Sitewarden/);
+    assert.match(result.response, /FastAPI dashboard|content pipeline|multi-agent/i);
+    assert.doesNotMatch(result.response, /^Zororo AI OS is built, early-stage and not yet deployed/);
+    assert.ok((result.response.match(/\[(\d+)\]/g) ?? []).length >= 4);
+  });
+});
+
 
 
 

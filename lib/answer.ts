@@ -2,6 +2,7 @@
 // Never throws to the caller for provider failures.
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
+import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   DEFAULT_K,
   MIN_RELEVANCE_SCORE,
@@ -15,6 +16,7 @@ import { geminiAvailable, groqAvailable } from "./providers";
 import { acquireGenerationSlot, allowInstanceGeneration, releaseGenerationSlot } from "./quota";
 import {
   CANONICAL_AWS_ANSWER,
+  CANONICAL_CRM_ZDI_LIVE_ANSWER,
   CANONICAL_PRODUCTION_ANSWER,
   CANONICAL_TECH_LEAD_CRM_ANSWER,
   CANONICAL_WORK_ANSWER,
@@ -23,6 +25,7 @@ import {
   hasProjectFactContradiction,
   hasRepeatedStatus,
   isAwsQuestion,
+  isCrmAndZdiLiveQuestion,
   isProductionSystemsQuestion,
   isTechLeadCrmQuestion,
   isWorkQuestion,
@@ -450,6 +453,16 @@ function rewriteFallbackSentence(raw: string, title: string): string {
   if (/^It is\b/i.test(sentence)) {
     return sentence.replace(/^It is\b/i, `${project} is`);
   }
+  if (
+    project
+    && !sentence.toLowerCase().includes(project.toLowerCase())
+    && /^(FastAPI|Python|Flask|Next\.js|TypeScript|Docker|PostgreSQL)\b/i.test(sentence)
+  ) {
+    return `${project} uses ${joinTechList(sentence.replace(/[.!?]+$/, "").trim())}.`;
+  }
+  if (project && !sentence.toLowerCase().includes(project.toLowerCase())) {
+    return `${project} — ${sentence.replace(/[.!?]+$/, "").trim()}.`;
+  }
   return sentence;
 }
 
@@ -474,14 +487,14 @@ function fallbackSentenceFromChunk(
     if (cert) return cert;
   }
   const parts = splitIntoSentences(chunk.text).map((part) => part.trim()).filter(Boolean);
-  const contentWords = questionContentWords(question);
+  const contentWords = distinctiveSubjectTerms(question);
   const ranked = [...parts].sort((a, b) => {
     const score = (part: string): number => {
       if (pythonQuestion && /\bpython\b/i.test(part)) return 2;
-      if (contentWords.some((w) => hasWholeWord(part, w))) return 1;
+      if (contentWords.some((w) => passageHasTerm(part, w))) return 2;
       return 0;
     };
-    return score(b) - score(a);
+    return score(b) - score(a) || a.length - b.length;
   });
   for (const part of ranked) {
     const rewritten = rewriteFallbackSentence(part, chunk.title);
@@ -521,6 +534,19 @@ const FALLBACK_STOPWORDS = new Set([
   "some",
   "tell",
   "like",
+  "build",
+  "built",
+  "building",
+  "system",
+  "systems",
+  "project",
+  "projects",
+  "complete",
+  "completed",
+  "done",
+  "training",
+  "course",
+  "courses",
 ]);
 
 const WEAK_SUBJECT_TERMS = new Set([
@@ -537,16 +563,61 @@ const WEAK_SUBJECT_TERMS = new Set([
   "still",
 ]);
 
-const SKILL_STACK_CHUNK_IDS = new Set(["stack", "aws-web-tier"]);
+const MULTIWORD_SUBJECTS = [
+  "mitre att&ck",
+  "att&ck",
+  "next.js",
+  "node.js",
+  "open telemetry",
+];
+
+const RELATED_TERMS: Record<string, string[]> = {
+  sql: ["sql", "postgresql", "postgres", "sqlite", "sqlalchemy"],
+};
+
+const BUILT_WITH_SKIP_IDS = new Set([
+  ...PADDING_CHUNK_IDS,
+  "stack",
+  "certifications",
+  "aws-web-tier",
+]);
 
 function questionContentWords(question: string): string[] {
   return tokenize(question).filter((t) => !FALLBACK_STOPWORDS.has(t));
 }
 
-function questionSubjectTerms(question: string): string[] {
-  const unique = [...new Set(questionContentWords(question))];
-  const strong = unique.filter((t) => !WEAK_SUBJECT_TERMS.has(t));
-  return strong.length > 0 ? strong : unique;
+function stemVariants(word: string): string[] {
+  const w = word.toLowerCase();
+  const out = new Set([w]);
+  if (w.length <= 3) return [...out];
+  if (w.endsWith("ies") && w.length > 4) out.add(`${w.slice(0, -3)}y`);
+  if (w.endsWith("es") && w.length > 4) out.add(w.slice(0, -2));
+  if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && w.length > 3) {
+    out.add(w.slice(0, -1));
+  }
+  if (w.endsWith("ing") && w.length > 5) {
+    const stem = w.slice(0, -3);
+    out.add(stem);
+    out.add(`${stem}e`);
+  }
+  if (w.endsWith("ed") && w.length > 4) {
+    out.add(w.slice(0, -2));
+    out.add(w.slice(0, -1));
+  }
+  return [...out];
+}
+
+function distinctiveSubjectTerms(question: string): string[] {
+  const lower = question.toLowerCase();
+  const phrases = MULTIWORD_SUBJECTS.filter((p) => lower.includes(p));
+  const covered = new Set<string>();
+  for (const phrase of phrases) {
+    for (const token of tokenize(phrase)) covered.add(token);
+  }
+  const singles = questionContentWords(question).filter(
+    (t) => !WEAK_SUBJECT_TERMS.has(t) && !covered.has(t),
+  );
+  return [...new Set([...phrases, ...singles])];
 }
 
 function hasWholeWord(hay: string, word: string): boolean {
@@ -554,18 +625,61 @@ function hasWholeWord(hay: string, word: string): boolean {
   return new RegExp(`\\b${escaped}\\b`, "i").test(hay);
 }
 
-function isSkillProbeQuestion(question: string): boolean {
+function termMatchNeedles(term: string): string[] {
+  const related = RELATED_TERMS[term.toLowerCase()];
+  if (related) return related;
+  if (term.includes(".") || term.includes("&") || term.includes(" ")) return [term];
+  return stemVariants(term);
+}
+
+function passageHasTerm(hay: string, term: string): boolean {
+  return termMatchNeedles(term).some((needle) => {
+    if (needle.includes(".") || needle.includes("&") || needle.includes(" ")) {
+      return hay.toLowerCase().includes(needle.toLowerCase());
+    }
+    return hasWholeWord(hay, needle);
+  });
+}
+
+function passageHasAnyTerm(hay: string, terms: string[]): boolean {
+  return terms.some((term) => passageHasTerm(hay, term));
+}
+
+function isBareCourseTrainingQuestion(question: string): boolean {
+  if (!/\b(?:courses?|training)\b/i.test(question)) return false;
+  return distinctiveSubjectTerms(question).length === 0;
+}
+
+function isBuiltWithTechQuestion(question: string): boolean {
   return (
-    /\bknows?\b/i.test(question)
-    || /\b(?:has|have|had|did)\s+(?:\w+\s+){0,4}used\b/i.test(question)
-    || /\bexperience(?:d)?\s+(?:with|in|using)\b/i.test(question)
+    /\b(?:what has mike built|has mike built|what did mike build)\b/i.test(question)
+    && /\bwith\b/i.test(question)
   );
 }
 
-function passageHasQuestionWords(question: string, passage: string): boolean {
-  const words = questionSubjectTerms(question);
-  if (words.length === 0) return false;
-  return words.every((w) => hasWholeWord(passage, w));
+function knowledgeAsRetrieved(): RetrievedChunk[] {
+  return KNOWLEDGE_CHUNKS
+    .filter((c) => c.sourceUrl.startsWith("http"))
+    .map((c) => ({ ...c, score: 0.75 }));
+}
+
+function mergeChunksById(chunks: RetrievedChunk[]): RetrievedChunk[] {
+  const byId = new Map<string, RetrievedChunk>();
+  for (const chunk of chunks) {
+    const prev = byId.get(chunk.id);
+    if (!prev || chunk.score > prev.score) byId.set(chunk.id, chunk);
+  }
+  return [...byId.values()];
+}
+
+function courseTrainingReply(chunks: RetrievedChunk[]): AnswerResult | null {
+  const hit = matchStaticAnswer("What certifications does Mike hold?");
+  if (!hit) return null;
+  return polishResult(hit.question, {
+    response: hit.answer,
+    sources: sourcesFor(hit),
+    via: "static",
+  }, chunks);
 }
 
 function refusalResult(response = EMAIL_FALLBACK): AnswerResult {
@@ -597,21 +711,34 @@ export function citedFallbackFromChunks(
 ): AnswerResult | null {
   if (isOffTopicQuestion(question)) return null;
   const http = chunks.filter((c) => c.sourceUrl.startsWith("http"));
-  if (http.length === 0) return null;
-  const topScore = Math.max(...http.map((c) => c.score));
-  if (topScore < CITED_FALLBACK_MIN_SCORE) return null;
   const pythonQuestion = /\bpython\b/i.test(question);
-  const skillProbe = isSkillProbeQuestion(question);
-  const pool = skillProbe
-    ? http.filter((c) =>
-        SKILL_STACK_CHUNK_IDS.has(c.id ?? "")
-        || (pythonQuestion && !PADDING_CHUNK_IDS.has(c.id ?? "") && /\bpython\b/i.test(`${c.title}\n${c.text}`)),
-      )
-    : http.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? ""));
-  const matching = pythonQuestion && !skillProbe
-    ? pythonFallbackChunks(http)
-    : pool.filter((c) => passageHasQuestionWords(question, `${c.title}\n${c.text}`));
-  const top = matching.slice(0, 3);
+  const terms = distinctiveSubjectTerms(question);
+  const kb = knowledgeAsRetrieved();
+  const present = terms.filter((term) =>
+    kb.some((c) => passageHasTerm(`${c.title}\n${c.text}`, term)),
+  );
+  if (terms.length === 0 || present.length === 0) return null;
+  const builtWith = isBuiltWithTechQuestion(question);
+  const pool = mergeChunksById([
+    ...http.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
+    ...kb.filter((c) => !PADDING_CHUNK_IDS.has(c.id ?? "")),
+  ]);
+  const retrievedMatching = http.filter((c) => {
+    if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
+    if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
+    return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
+  });
+  const kbMatching = kb.filter((c) => {
+    if (PADDING_CHUNK_IDS.has(c.id ?? "")) return false;
+    if (builtWith && BUILT_WITH_SKIP_IDS.has(c.id ?? "")) return false;
+    return present.some((term) => passageHasTerm(`${c.title}\n${c.text}`, term));
+  });
+  const matching = pythonQuestion
+    ? pythonFallbackChunks(retrievedMatching.length > 0 ? http : pool)
+    : (builtWith ? kbMatching : (retrievedMatching.length > 0 ? retrievedMatching : kbMatching))
+      .slice()
+      .sort((a, b) => b.score - a.score);
+  const top = builtWith && !pythonQuestion ? matching : matching.slice(0, 3);
   if (top.length === 0) return null;
   const seen = new Set<string>();
   const pieces: string[] = [];
@@ -638,6 +765,24 @@ function staticOrSafeReply(
   if (isOffTopicQuestion(question)) return refusalResult();
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
+  }
+  if (isBareCourseTrainingQuestion(question)) {
+    const course = courseTrainingReply(chunks);
+    if (course) return course;
+  }
+  if (isCrmAndZdiLiveQuestion(question)) {
+    return polishResult(question, {
+      response: CANONICAL_CRM_ZDI_LIVE_ANSWER,
+      sources: [
+        ...sourcesFor({
+          question: "What is the CRM?",
+          aliases: [],
+          answer: CANONICAL_CRM_ZDI_LIVE_ANSWER,
+          sourceIds: ["zororo-crm", "zdi-signature-workflow"],
+        }),
+      ],
+      via: "static",
+    }, chunks);
   }
   if (isWorkQuestion(question)) {
     return polishResult(question, {
@@ -800,7 +945,15 @@ function polishResult(
   let out = response;
   let sources = from;
 
-  if (isZdiLiveQuestion(question)) {
+  if (isCrmAndZdiLiveQuestion(question)) {
+    out = CANONICAL_CRM_ZDI_LIVE_ANSWER;
+    sources = sourcesFor({
+      question: "What is the CRM?",
+      aliases: [],
+      answer: CANONICAL_CRM_ZDI_LIVE_ANSWER,
+      sourceIds: ["zororo-crm", "zdi-signature-workflow"],
+    });
+  } else if (isZdiLiveQuestion(question)) {
     ({ text: out, sources } = applySourceList(
       out,
       from,
@@ -849,6 +1002,23 @@ function polishResult(
         {
           response: staticHit.answer,
           sources: sourcesFor(staticHit),
+          via: "static",
+        },
+        chunks,
+        { skipContradictionFallback: true },
+      );
+    }
+    const zdiHit = matchStaticAnswer("What is ZDI?");
+    if (
+      zdiHit
+      && /\bzdi\b/i.test(out)
+      && /\bis live\b|\bin production\b|\blive in production\b/i.test(out)
+    ) {
+      return polishResult(
+        question,
+        {
+          response: zdiHit.answer,
+          sources: sourcesFor(zdiHit),
           via: "static",
         },
         chunks,
@@ -945,6 +1115,24 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     return refusalResult();
   }
 
+  if (isBareCourseTrainingQuestion(question)) {
+    const course = courseTrainingReply(relevant);
+    if (course) return withContactEmail(question, course);
+  }
+
+  if (isCrmAndZdiLiveQuestion(question)) {
+    return withContactEmail(question, polishResult(question, {
+      response: CANONICAL_CRM_ZDI_LIVE_ANSWER,
+      sources: sourcesFor({
+        question: "What is the CRM?",
+        aliases: [],
+        answer: CANONICAL_CRM_ZDI_LIVE_ANSWER,
+        sourceIds: ["zororo-crm", "zdi-signature-workflow"],
+      }),
+      via: "static",
+    }, relevant));
+  }
+
   if (isWorkQuestion(question)) {
     return withContactEmail(question, polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
@@ -970,11 +1158,9 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     }, relevant));
   }
 
-  if (relevant.length > 0) {
-    const retrieved = citedFallbackFromChunks(question, relevant);
-    if (retrieved) {
-      return withContactEmail(question, polishResult(question, retrieved, relevant));
-    }
+  const retrieved = citedFallbackFromChunks(question, relevant);
+  if (retrieved) {
+    return withContactEmail(question, polishResult(question, retrieved, relevant));
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };
