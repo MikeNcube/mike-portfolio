@@ -56,7 +56,8 @@ const PROJECTS: Array<{
   {
     id: "crm",
     name: "The CRM",
-    re: /\b(?:the\s+)?crm\b|\blead-management crm\b/i,
+    // The knowledge base names it the lead-management CRM, so either half names it.
+    re: /\b(?:the\s+)?crm\b|\blead[- ]management\b/i,
     sourceIds: ["zororo-crm"],
     staticQuestion: "What is the CRM?",
     stack: "The CRM stack is FastAPI, PostgreSQL, Redis, Celery, and Docker [1].",

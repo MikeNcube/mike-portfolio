@@ -13,22 +13,10 @@ import { RELATED_TERMS } from "./grounding";
 import { namedProjects } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { STATIC_ANSWERS } from "./static-answers";
+import { stem } from "./stem";
 import { TECH_LEXICON } from "./tech-lexicon";
 
-export function stem(word: string): string {
-  let w = word.toLowerCase();
-  if (w.length <= 3 || /[^a-z]/.test(w)) return w;
-  if (w.endsWith("ies") && w.length > 4) w = `${w.slice(0, -3)}y`;
-  else if (w.endsWith("ied") && w.length > 4) w = `${w.slice(0, -3)}y`;
-  else if (w.endsWith("ing") && w.length > 5) w = w.slice(0, -3);
-  else if (w.endsWith("ed") && w.length > 4) w = w.slice(0, -2);
-  else if (w.endsWith("ly") && w.length > 5) w = w.slice(0, -2);
-  else if (/(?:ss|x|ch|sh|z)es$/.test(w)) w = w.slice(0, -2);
-  else if (w.endsWith("s") && !/(?:ss|us|is)$/.test(w)) w = w.slice(0, -1);
-  if (w.length > 3 && w.endsWith("e")) w = w.slice(0, -1);
-  if (/([b-df-hj-np-tv-z])\1$/.test(w) && !/(?:ll|ss|ff|zz)$/.test(w)) w = w.slice(0, -1);
-  return w;
-}
+export { stem };
 
 export type QuestionToken = { raw: string; norm: string; stem: string };
 
@@ -117,7 +105,7 @@ const GENERIC_WORD_LIST = [
   "free", "board", "welcome", "enquiry", "enquiries", "inquiry", "recruit",
   "recruiting", "recruiter", "recruiters", "conversation", "implement", "ensure",
   "thorough", "high", "low", "bar", "provide", "add", "stance", "avoid", "silent",
-  "failure", "failures", "fail", "fails", "instrument", "bad", "string", "print",
+  "fail", "fails", "instrument", "bad", "string", "print",
   "printed", "belong", "belongs", "offer", "offers", "require", "required",
   "lengthy", "length", "immediate", "tiny", "chase", "chasing", "restrict",
   "restricted", "arrangement", "delivery", "ping", "gone", "finish", "finished",
@@ -303,6 +291,21 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
       "lottery", "gamble", "gambling", "bet", "betting", "net worth", "wealth", "rich"],
   },
   {
+    // Visual look of a system or site. The knowledge base describes behaviour, never appearance.
+    id: "appearance",
+    terms: ["colour", "colours", "color", "colors", "coloured", "colored", "colour scheme",
+      "color scheme", "palette", "logo", "logos", "font", "fonts", "typeface", "typography",
+      "look and feel", "dark mode", "light mode"],
+  },
+  {
+    // People Mike answers to. The knowledge base names no one but Mike.
+    id: "reporting-line",
+    terms: ["boss", "bosses", "mike manager", "his manager", "mike line manager",
+      "his line manager", "mike supervisor", "his supervisor", "mike superior",
+      "his superior", "mike report to", "he report to", "mike answer to", "he answer to",
+      "manage mike", "supervise mike"],
+  },
+  {
     // Probes for implementation internals rather than Mike's work.
     id: "internals",
     terms: ["system prompt", "system prompts", "file path", "file paths", "source path",
@@ -362,13 +365,24 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "set up a call", "arrange a call"],
   },
   {
+    // Working from wherever Mike is. Combined with another place it is still remote
+    // work. Dominant: a roles or availability answer that omits the arrangement
+    // does not answer a remote question.
     id: "remote",
     canonical: "Does Mike work remotely?",
     evidence: /remote-first/i,
     terms: ["remote", "remotely", "remote-first", "wfh", "work from home",
-      "working from home", "hybrid", "onsite", "on-site", "in-office", "office",
-      "in person", "in-person", "distributed", "telecommute", "telework", "desk",
-      "work arrangement", "working arrangement", "from home"],
+      "working from home", "distributed", "telecommute", "telework", "from home"],
+    dominant: true,
+  },
+  {
+    // Arrangements that put Mike in a physical workplace. Combined with another
+    // place they ask about relocation, which the portfolio does not cover.
+    id: "workplace",
+    canonical: "Does Mike work remotely?",
+    evidence: /remote-first/i,
+    terms: ["hybrid", "onsite", "on-site", "in-office", "office", "in person",
+      "in-person", "desk", "work arrangement", "working arrangement"],
   },
   {
     id: "location",
@@ -521,6 +535,36 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     terms: ["test", "tests", "testing", "tested", "quality", "qa", "coverage", "reliable",
       "reliability", "bugs", "bug", "defects", "unit tests", "evals", "eval",
       "verification", "break", "breaks", "robust", "robustness"],
+  },
+  {
+    // How failures are handled. Dominant: an answer about the models or tools
+    // involved does not answer what happens when they fail.
+    id: "failure-handling",
+    canonical: "How does Mike approach engineering?",
+    evidence: /fallible|fallback|retries/i,
+    terms: ["failure", "failures", "fallback", "fallbacks", "fall back", "falls back",
+      "retry", "retries", "retrying", "outage", "outages", "downtime", "error handling",
+      "resilience", "resilient", "fault tolerance", "fault-tolerant", "graceful degradation",
+      "degrade gracefully"],
+    dominant: true,
+  },
+  {
+    // The labelling scheme for repo maturity. Dominant: a link to the repos does
+    // not say how they are labelled.
+    id: "labels",
+    canonical: "How does Mike label his repos?",
+    evidence: /labelled production, prototype, or lab/i,
+    terms: ["labels", "maturity", "maturity label", "maturity labels", "maturity level",
+      "maturity levels", "repo labels", "project labels", "status labels"],
+    dominant: true,
+  },
+  {
+    id: "ci",
+    canonical: "What CI does Mike use?",
+    evidence: /GitHub Actions/,
+    terms: ["ci", "ci/cd", "cicd", "continuous integration", "continuous delivery",
+      "continuous deployment", "build pipeline", "build pipelines", "deployment pipeline",
+      "deployment pipelines"],
   },
   {
     id: "engineering",
@@ -768,7 +812,8 @@ export function analyseQuestion(question: string): QuestionAnalysis {
   tokens.forEach((token, i) => {
     if (used[i]) return;
     if (classify(token) !== "unexplained") return;
-    const pieces = token.norm.split(/[-/]/).filter(Boolean);
+    // Split the raw form so a named piece keeps the visitor's casing ("EKS").
+    const pieces = token.raw.split(/[-/]/).filter(Boolean);
     if (pieces.length > 1) {
       const pieceSlots = pieces.map((piece) => classify(questionTokens(piece)[0] ?? token, true));
       if (!pieceSlots.includes("unexplained")) return;
@@ -796,13 +841,21 @@ export function analyseQuestion(question: string): QuestionAnalysis {
 
 const PLACE_CONCEPTS = new Set(["elsewhere", "location"]);
 
+// Another place plus a work concept asks about working there (relocation), unless
+// the work is fully remote and nothing puts Mike in a physical workplace.
+function asksAboutWorkingThere(concepts: string[]): boolean {
+  const work = concepts.filter((id) => !PLACE_CONCEPTS.has(id));
+  if (work.length === 0) return false;
+  return !(work.includes("remote") && !work.includes("workplace"));
+}
+
 // Reason to refuse before retrieval, or null when the question is in scope.
 // One ordinary unexplained word is tolerated when the question is anchored on a
 // concept, project or listed technology ("Can we engage Mike as a contractor?").
 // Unexplained names never are: they name something the portfolio does not cover.
 export function coverageRefusalReason(analysis: QuestionAnalysis): string | null {
   if (analysis.refuseTopic) return `topic:${analysis.refuseTopic}`;
-  if (analysis.concepts.includes("elsewhere") && analysis.concepts.some((id) => !PLACE_CONCEPTS.has(id))) {
+  if (analysis.concepts.includes("elsewhere") && asksAboutWorkingThere(analysis.concepts)) {
     return "topic:relocation";
   }
   const anchored = analysis.concepts.length > 0

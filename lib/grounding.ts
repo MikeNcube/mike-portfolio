@@ -4,8 +4,11 @@
 // terms fail the candidate.
 
 import { tokenize } from "./bm25";
+import { namedProjects } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { splitIntoSentences } from "./normalise-answer";
+import { stem } from "./stem";
+import { TECH_LEXICON_SET } from "./tech-lexicon";
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
 
@@ -488,6 +491,8 @@ export function evaluateGrounding(question: string, answer: string): GroundingRe
 }
 
 export function prettySubject(term: string): string {
+  // Keep the visitor's own casing ("EKS", "PyTorch") when they gave one.
+  if (/[A-Z]/.test(term)) return term;
   const lower = term.toLowerCase();
   if (lower === "nlp") return "NLP";
   if (lower === "mlops") return "MLOps";
@@ -527,33 +532,122 @@ export function listedTechInQuestion(question: string): string[] {
   ])];
 }
 
-const CLAIM_TOKEN_RE = /\b[A-Z][\w.+-]*|\b\d+(?:\.\d+)?\b/g;
-const CLAIM_SKIP = /^(I|A|An|The|This|That|He|His|Him|Mike|Ncube|Sources|Source|Status|Stack|PROJECT|Email|Current|Accounts|IT)$/;
+// Words that frame a sentence without asserting anything about Mike's work.
+// Everything else in a cited sentence (qualifiers, purposes, tools, statuses,
+// numbers, negations) is a claim and must appear in a block the sentence cites.
+const CLAIM_FRAME_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "nor", "so", "as", "at", "by", "for", "from",
+  "in", "into", "of", "on", "onto", "to", "with", "within", "via", "per", "than",
+  "then", "that", "this", "these", "those", "which", "who", "whom", "whose", "what",
+  "where", "when", "how", "while", "if", "is", "are", "was", "were", "be", "been",
+  "being", "am", "has", "have", "had", "having", "do", "does", "did", "can", "could",
+  "will", "would", "should", "may", "might", "must", "i", "you", "your", "he", "him",
+  "his", "himself", "it", "its", "they", "them", "their", "there", "here", "both",
+  "each", "also", "such", "same", "yes", "mike", "ncube", "use", "uses", "used",
+  "using", "include", "includes", "included", "including", "build", "builds", "built",
+  "work", "works", "worked", "working", "called", "named", "project", "projects",
+  "system", "systems", "list", "lists", "listed", "mention", "mentions", "mentioned",
+  "describe", "describes", "described", "note", "notes", "noted", "state", "states",
+  "stated", "according", "source", "sources", "context", "email", "contact", "reach",
+]);
 
-export function validateModelSentences(
-  text: string,
-  chunkTexts: string[],
-): string {
-  const parts = splitIntoSentences(text).map((p) => p.trim()).filter(Boolean);
-  const kept: string[] = [];
-  for (const sentence of parts) {
+export type CitedChunk = { id?: string; text: string };
+
+type ChunkIndex = { id?: string; projects: string[]; lower: string; words: Set<string>; stems: Set<string> };
+
+function indexChunk(chunk: CitedChunk): ChunkIndex {
+  const lower = chunk.text.toLowerCase();
+  // A block belongs to the project its title (first line) names, as in the prompt's PROJECT labels.
+  const title = chunk.text.split("\n")[0] ?? "";
+  const projects = namedProjects(title).map((p) => p.id);
+  const words = new Set<string>();
+  const stems = new Set<string>();
+  for (const raw of lower.match(/[a-z0-9][a-z0-9.+#&_/-]*/g) ?? []) {
+    const word = raw.replace(/[.\-/]+$/, "");
+    for (const piece of [word, ...word.split(/[-/]/)]) {
+      if (!piece) continue;
+      words.add(piece);
+      stems.add(stem(piece));
+    }
+  }
+  return { id: chunk.id, projects, lower, words, stems };
+}
+
+function belongsTo(chunk: ChunkIndex, project: { id: string; sourceIds: string[] }): boolean {
+  return (chunk.id !== undefined && project.sourceIds.includes(chunk.id)) || chunk.projects.includes(project.id);
+}
+
+function chunkSupports(chunk: ChunkIndex, word: string): boolean {
+  if (/^\d+(?:\.\d+)?$/.test(word)) {
+    const escaped = word.replace(/\./g, "\\.");
+    return new RegExp(`(^|[^0-9.])${escaped}($|[^0-9]|\\.(?![0-9]))`).test(chunk.lower);
+  }
+  // Compounds ("rule-based") must appear whole; their parts do not support them.
+  if (word.includes("-")) {
+    return chunk.lower.includes(word) || chunk.lower.includes(word.replace(/-/g, " "));
+  }
+  if (/[.@+#&_]/.test(word)) return chunk.lower.includes(word);
+  return chunk.words.has(word) || chunk.stems.has(stem(word));
+}
+
+function claimWords(sentence: string): string[] {
+  const raws = sentence.replace(/\[\d+\]/g, " ").match(/[A-Za-z0-9@][A-Za-z0-9@.+#&'’_/-]*/g) ?? [];
+  const out: string[] = [];
+  for (const raw of raws) {
+    let word = raw.toLowerCase().replace(/['’]s$/, "").replace(/[.'’\-/]+$/, "");
+    if (/n['’]t$/.test(word)) word = "not";
+    if (!word) continue;
+    // Slash lists ("caching/deduplication") assert each part; URLs and emails stay whole.
+    const parts = /:\/\/|@/.test(word) ? [word] : word.split("/").filter(Boolean);
+    for (const part of parts) {
+      if (!CLAIM_FRAME_WORDS.has(part)) out.push(part);
+    }
+  }
+  return out;
+}
+
+export type UnsupportedClaim = { sentence: string; words: string[] };
+
+// Every cited sentence must be supported word by word by the blocks it cites.
+// A technology linked to a named project must be stated in that project's own
+// block, so a tool listed elsewhere cannot be credited to it.
+export function findUnsupportedClaims(text: string, chunks: Array<string | CitedChunk>): UnsupportedClaim[] {
+  const indexed = chunks.map((c) => indexChunk(typeof c === "string" ? { text: c } : c));
+  const problems: UnsupportedClaim[] = [];
+  for (const sentence of splitIntoSentences(text).map((p) => p.trim()).filter(Boolean)) {
     const cites = [...sentence.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
     if (cites.length === 0) continue;
-    const cited = cites
-      .map((n) => chunkTexts[n - 1] ?? "")
-      .join("\n");
-    if (!cited.trim()) continue;
-    const tokens = sentence.replace(/\[\d+\]/g, "").match(CLAIM_TOKEN_RE) ?? [];
-    let ok = true;
-    for (const token of tokens) {
-      if (CLAIM_SKIP.test(token)) continue;
-      if (!hasWholeWord(cited, token) && !cited.toLowerCase().includes(token.toLowerCase())) {
-        ok = false;
-        break;
+    const cited = cites.map((n) => indexed[n - 1]).filter((c): c is ChunkIndex => Boolean(c));
+    const projects = namedProjects(sentence);
+    const missing = new Set<string>();
+    if (cited.length === 0) missing.add(`[${cites.join("][")}]`);
+    for (const word of claimWords(sentence)) {
+      if (!cited.some((c) => chunkSupports(c, word))) {
+        missing.add(word);
+        continue;
+      }
+      if (!TECH_LEXICON_SET.has(word)) continue;
+      for (const project of projects) {
+        const own = cited.filter((c) => belongsTo(c, project));
+        if (!own.some((c) => chunkSupports(c, word))) missing.add(`${word}@${project.id}`);
       }
     }
-    if (ok) kept.push(sentence);
+    if (missing.size > 0) problems.push({ sentence, words: [...missing] });
   }
-  return kept.join(" ");
+  return problems;
+}
+
+// Returns the cited sentences, or "" when any cited sentence carries a claim its
+// blocks do not support. Uncited sentences are dropped. An empty result sends the
+// caller to the static or refusal path instead of showing a partly invented answer.
+export function validateModelSentences(
+  text: string,
+  chunks: Array<string | CitedChunk>,
+): string {
+  if (findUnsupportedClaims(text, chunks).length > 0) return "";
+  return splitIntoSentences(text)
+    .map((p) => p.trim())
+    .filter((p) => /\[\d+\]/.test(p))
+    .join(" ");
 }
 

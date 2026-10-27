@@ -477,12 +477,12 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
     assert.doesNotMatch(result.response, /99/);
     assert.doesNotMatch(result.response, /Kubernetes/);
     assert.match(result.response, /not yet live/i);
+    // One invented sentence now rejects the whole model answer (fall back, not trim).
     const stripped = validateModelSentences(
       "ZDI shipped 99 Kubernetes clusters [1]. ZDI is approved for production rollout [1].",
       ["ZDI is approved for production rollout and not yet live."],
     );
-    assert.doesNotMatch(stripped, /99|Kubernetes/);
-    assert.match(stripped, /approved for production rollout/);
+    assert.equal(stripped, "");
   });
 
   it("keeps jailbreaks on the refusal path", () => {

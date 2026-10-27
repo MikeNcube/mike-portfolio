@@ -233,7 +233,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "distributed",
     ],
     answer:
-      "Mike works remote-first from South Africa [1].",
+      "Mike works remote-first from South Africa and is available for full-time or contract [1].",
     sourceIds: ["availability", "positioning"],
   },
   {
@@ -658,6 +658,26 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "The multi-agent content pipeline is a prototype [1]. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. It runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",
     sourceIds: ["ai-social-agent"],
   },
+  {
+    question: "What CI does Mike use?",
+    aliases: [
+      "what ci does mike use",
+      "what ci/cd does mike use",
+    ],
+    answer:
+      "Mike's stack lists GitHub Actions [1]. His infrastructure tooling also lists Docker, pytest and Railway [1], and Sitewarden lists CI with import rules [2].",
+    sourceIds: ["stack", "sitewarden"],
+  },
+  {
+    question: "How does Mike label his repos?",
+    aliases: [
+      "how does mike label his repos",
+      "what are mike's repo labels",
+    ],
+    answer:
+      "Mike's engineering defaults say labels are honest: each repo is labelled production, prototype, or lab [1].",
+    sourceIds: ["engineering-approach"],
+  },
 ];
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
@@ -689,7 +709,7 @@ const PROJECT_STATIC_MENTIONS: Array<{ mention: RegExp; question: string }> = [
   { mention: /\bcube(?:\s+agent)?\b/i, question: "What is Cube?" },
   { mention: /\bsitewarden\b/i, question: "What is Sitewarden?" },
   {
-    mention: /\b(?:the\s+)?crm\b|\blead-management crm\b/i,
+    mention: /\b(?:the\s+)?crm\b|\blead[- ]management\b/i,
     question: "What is the CRM?",
   },
   { mention: /\bdigi app form\b/i, question: "What is Digi App Form?" },

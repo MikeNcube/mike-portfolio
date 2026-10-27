@@ -87,15 +87,17 @@ describe("r52 grounding gate", () => {
 });
 
 describe("r52 model-output validator", () => {
-  it("strips a sentence that invents a number or tool", () => {
+  it("rejects the whole answer when one sentence invents a number or tool", () => {
     const chunk = "ZDI is approved for production rollout and not yet live. FastAPI, PostgreSQL and Next.js.";
     const kept = validateModelSentences(
       "Mike shipped 99 production systems [1]. He uses Kubernetes [1]. ZDI is approved for production rollout [1].",
       [chunk],
     );
-    assert.match(kept, /approved for production rollout/i);
-    assert.doesNotMatch(kept, /99/);
-    assert.doesNotMatch(kept, /Kubernetes/);
+    assert.equal(kept, "");
+    assert.match(
+      validateModelSentences("ZDI is approved for production rollout [1].", [chunk]),
+      /approved for production rollout/i,
+    );
   });
 
   it("drops sentences that do not cite a chunk", () => {

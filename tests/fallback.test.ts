@@ -92,7 +92,13 @@ describe("assistant fallback chain", () => {
   it("falls back to Groq when Gemini fails", async () => {
     const result = await answerQuestion({
       question: "What is Cube?",
-      retrieveFn,
+      retrieveFn: async () => [{
+        id: "cube-agent",
+        title: "Cube — coding agent (prototype)",
+        sourceUrl: "https://github.com/MikeNcube",
+        text: "Cube is a coding agent prototype, not deployed.",
+        score: 0.9,
+      }],
       generateGemini: async () => {
         throw new Error("429 rate limited");
       },
@@ -545,7 +551,7 @@ describe("cited sources", () => {
       question: "What is the CRM?",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
-        "The lead-management CRM is in production [1]. (Sources: [1], [2])",
+        "The CRM is FastAPI [1]. (Sources: [1], [2])",
     });
 
     assert.equal(result.via, "gemini");
@@ -565,8 +571,9 @@ describe("cited sources", () => {
     assert.match(prompt, /umbrella 'production systems' framing/);
     assert.match(prompt, /several production and early-stage systems/);
     assert.match(prompt, /lab, prototype, or not production must never be described as production/);
-    assert.match(prompt, /title or term the sources don't contain/);
+    assert.match(prompt, /Never answer a neighbouring question/);
     assert.match(prompt, /never invent a title or team size/);
+    assert.match(prompt, /Answers with unstated words are discarded/);
     assert.match(prompt, /this shows he can/);
     assert.match(prompt, /works remote-first/);
     assert.doesNotMatch(prompt, /works remotely-first/);
@@ -582,7 +589,7 @@ describe("cited sources", () => {
     const result = await answerQuestion({
       question: "What is Cube?",
       retrieveFn: async () => SIX_CHUNKS,
-      generateGemini: async () => "Cube is a coding agent prototype [3].",
+      generateGemini: async () => "Cube is a coding agent [3].",
     });
 
     assert.equal(result.via, "gemini");
@@ -595,7 +602,7 @@ describe("cited sources", () => {
     const result = await answerQuestion({
       question: "What is Cube?",
       retrieveFn: async () => SIX_CHUNKS,
-      generateGemini: async () => "Cube is a coding agent prototype \u30103\u3011.",
+      generateGemini: async () => "Cube is a coding agent \u30103\u3011.",
     });
     assert.equal(result.via, "gemini");
     assert.deepEqual(result.sources.map((s) => s.title), ["Cube"]);
@@ -656,7 +663,7 @@ describe("cited sources", () => {
     const result = await answerQuestion({
       question: "What is the CRM?",
       retrieveFn: async () => SIX_CHUNKS,
-      generateGemini: async () => "The CRM is FastAPI [1] and a mystery [99].",
+      generateGemini: async () => "The CRM is FastAPI [1][99].",
     });
     assert.equal(result.via, "gemini");
     assert.doesNotMatch(result.response, /\[99\]/);
@@ -1571,7 +1578,7 @@ describe("production-system and ZDI status copy", () => {
     assert.match(CANONICAL_TECH_LEAD_CRM_ANSWER, /\[\d+\]/);
   });
 
-  it("rewrites an overclaiming AWS answer into the canonical CV copy", async () => {
+  it("rejects an overclaiming AWS answer and serves the canonical CV copy", async () => {
     const result = await answerQuestion({
       question: "What AWS experience does Mike have?",
       retrieveFn: async () => [
@@ -1586,7 +1593,9 @@ describe("production-system and ZDI status copy", () => {
       generateGemini: async () =>
         "Mike works extensively with AWS in production-grade stacks [1].",
     });
-    assert.equal(result.via, "gemini");
+    // "extensively" and "production-grade" are not in the cited block, so the
+    // validator rejects the model answer before polishing could rewrite it.
+    assert.equal(result.via, "static");
     assert.equal(result.response, CANONICAL_AWS_ANSWER);
     assert.doesNotMatch(result.response, /extensive/i);
     assert.doesNotMatch(result.response, /production-grade/i);
@@ -1778,21 +1787,21 @@ describe("production-system and ZDI status copy", () => {
           id: "zororo-claims",
           title: "Claims operations platform (Zororo-Phumulani)",
           sourceUrl: "https://github.com/MikeNcube",
-          text: "Approved, production-ready standby.",
+          text: "The claims operations platform is an approved, production-ready standby (failover), not the live system.",
           score: 0.95,
         },
         {
           id: "zdi-signature-workflow",
           title: "ZDI — Signature & Approval Workflow (Zororo Document Intelligence)",
           sourceUrl: "https://github.com/MikeNcube",
-          text: "Approved for production rollout, rolling out soon, not yet live.",
+          text: "ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live.",
           score: 0.9,
         },
         {
           id: "zororo-crm",
           title: "Lead-management CRM (production, Zororo-Phumulani)",
           sourceUrl: "https://github.com/MikeNcube",
-          text: "Shipped CRM, over 40 people.",
+          text: "Shipped CRM used by over 40 people across around 10 roles.",
           score: 0.85,
         },
         {
@@ -2978,7 +2987,8 @@ describe("round 42 off-scope skills, multi-project pairs, and cite nits", () => 
         },
         generateGroq: async () => "I don't have information about that.",
       });
-      assert.equal(result.response, EMAIL_FALLBACK, question);
+      // A declined technology may be named ("Kubernetes isn't listed…"), but it is still a refusal.
+      assert.equal(isRefusal(result.response), true, `${question} => ${result.response}`);
       assert.equal(result.via, "email", question);
       assert.equal(result.sources.length, 0, question);
       assert.doesNotMatch(result.response, /curated knowledge base/, question);
@@ -3133,7 +3143,7 @@ describe("round 43 in-scope tech, live pairs, and FastAPI listing", () => {
     it(`keeps B12 refusals with ${mode === "none" ? "no models" : "forced refusals"}`, async () => {
       for (const question of refused) {
         const result = await ask(question, mode);
-        assert.equal(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.equal(isRefusal(result.response), true, `${mode} ${question} => ${result.response}`);
         assert.equal(result.sources.length, 0, `${mode} ${question}`);
       }
     });
@@ -3262,12 +3272,12 @@ describe("round 44 fallback quality, phrases, and partial coverage", () => {
       "Does Mike know natural language processing?",
       "Does Mike know NLP?",
       "Does Mike know data science?",
-      "Does Mike know CI/CD?",
       "Does Mike know MLOps?",
     ];
     for (const question of phrases) {
       const result = await ask(question);
-      assert.equal(result.response, EMAIL_FALLBACK, question);
+      assert.equal(isRefusal(result.response), true, `${question} => ${result.response}`);
+      assert.equal(result.sources.length, 0, question);
       assert.doesNotMatch(result.response, /case state machine/i, question);
       assert.doesNotMatch(result.response, /claims operations/i, question);
     }
@@ -3460,7 +3470,8 @@ describe("round 45 allow-listed notes, jailbreak, and conservative guards", () =
     assert.doesNotMatch(actions.response, /consequential actions/i);
 
     const ml = await ask("Does Mike know machine learning pipeline?");
-    assert.equal(ml.response, EMAIL_FALLBACK);
+    assert.equal(isRefusal(ml.response), true, ml.response);
+    assert.equal(ml.sources.length, 0);
     assert.doesNotMatch(ml.response, /content pipeline|multi-agent/i);
   });
 
