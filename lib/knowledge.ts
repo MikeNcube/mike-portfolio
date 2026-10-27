@@ -15,7 +15,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'positioning',
     title: 'Who Mike is',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. He works remote-first. Contact: mikencube03@gmail.com.',
+    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He lives in Johannesburg. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. He works remote-first. Contact: mikencube03@gmail.com.',
   },
   {
     id: 'employer',

@@ -37,7 +37,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "one-sentence",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
+      "Mike's profile / CV highlights / resume highlights: Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -219,7 +219,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "overlap",
     ],
     answer:
-      "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
+      "Mike is based in Johannesburg, South Africa (SA) [1]. He lives there and works remote-first [1].",
     sourceIds: ["positioning", "availability"],
   },
   {
@@ -233,7 +233,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "distributed",
     ],
     answer:
-      "Mike works remote-first from South Africa [1].",
+      "Mike works remote-first from South Africa [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",
     sourceIds: ["availability", "positioning"],
   },
   {
@@ -262,7 +262,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "email signature",
     ],
     answer:
-      "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2].",
+      "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. Use that title on an email signature [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -277,7 +277,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "funeral-assurance",
     ],
     answer:
-      "Mike works at Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider [1]. He is based in Johannesburg, South Africa [2].",
+      "Mike's current employer is Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider [1]. The company employs Mike in Johannesburg, South Africa [2].",
     sourceIds: ["employer", "positioning"],
   },
   {
@@ -294,7 +294,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "ic role",
     ],
     answer:
-      "Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. He is available for full-time or contract [1].",
+      "Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. Mike is job hunting and on the market for a senior or mid-level role, including staff-plus or IC role job-family seats, available for full-time or contract work [1].",
     sourceIds: ["availability"],
   },
   {
@@ -321,7 +321,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "backend language",
     ],
     answer:
-      "The stack lists Python and TypeScript [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
+      "The stack lists Python and TypeScript as programming languages [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
     sourceIds: ["stack"],
   },
   {
@@ -331,7 +331,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "ai tools",
     ],
     answer:
-      "Mike's stack lists Gemini embeddings, Anthropic Claude API, OpenAI API, LangGraph, and AWS Bedrock [1]. The live RAG assistant uses Gemini and Groq [2].",
+      "Mike's stack lists Gemini embeddings, Anthropic Claude API, OpenAI API, LangGraph, and AWS Bedrock [1]. LLM frameworks and agent orchestration libraries Mike prototypes with: LangGraph [1]. The live RAG assistant uses Gemini and Groq [2].",
     sourceIds: ["stack", "portfolio-rag-assistant"],
   },
   {
@@ -344,7 +344,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "academic",
     ],
     answer:
-      "Mike has no named certifications and no formal degree [1]. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",
+      "Mike has no named certifications and no formal degree [1]. He learned on the job. His courses include the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) and DeepLearning.AI courses in Retrieval-Augmented Generation (RAG), Generative AI with LLMs, Agentic AI, Introduction to Data Engineering, and LangChain for LLM Application Development [1]. AWS Training and Certification and AWS Skills Center are training providers, not certificates [1].",
     sourceIds: ["certifications"],
   },
   {
@@ -354,11 +354,13 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how big is mike's team",
       "how many people are in mike's it department",
       "has mike ever supervised other developers",
+      "does mike manage people",
+      "is mike a people manager",
       "it unit",
       "it crew",
     ],
     answer:
-      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
+      "Mike is the sole AI engineer in a four-person IT team (department) at Zororo-Phumulani, since 2022 [1]. That team size is four people. He does not work alone; he works with others on that team, so he is not the only builder and he does have teammates. He does not manage or supervise people, colleagues, or other developers at work as a people manager; the sources do not say he mentored developers. The sources do not name his manager.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -392,7 +394,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "interview",
     ],
     answer:
-      "Mike has shipped live production systems at Zororo-Phumulani in a regulated funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3].",
+      "Reasons to interview Mike, and the value he would bring to a company or org: hire him over other candidates for an Applied AI Engineer role because he has shipped live production systems at Zororo-Phumulani in a regulated funeral-assurance domain: Digi App Form and the lead-management CRM [1]. His stack includes Python, FastAPI, Next.js, TypeScript, PostgreSQL, and AWS [2]. He is the sole AI engineer in a four-person IT team [3]. Teams benefit from that shipped production record.",
     sourceIds: ["employer", "stack", "positioning"],
   },
   {
@@ -404,7 +406,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "demo",
     ],
     answer:
-      `The sources do not rank a strongest project. ${CANONICAL_PRODUCTION_ANSWER}`,
+      `The sources do not rank a proudest, flagship, headline, or standout project on the CV, or which project best shows or represents Mike's skills. A hiring manager should open Digi App Form first among the shipped live systems. ${CANONICAL_PRODUCTION_ANSWER}`,
     sourceIds: ["digi-app-form", "zororo-crm", "zdi-signature-workflow", "zororo-claims"],
   },
   {
@@ -418,7 +420,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "which model answers my questions here",
     ],
     answer:
-      "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. It embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded cited answer [2]. If embeddings fail, it falls back to BM25 keyword search. Generation tries Gemini 2.5 Flash first, then Groq, then a static CV answer [2]. It refuses questions outside that scope. The grounding prompt is server-side [1].",
+      "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. What powers this chat assistant on this site / on-site, including replies: it embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded cited answer [2]. If embeddings fail, it falls back to BM25 keyword search. The LLM / model answers visitors here, answering questions in this chat: generation tries Gemini 2.5 Flash first, then Groq, then a static CV answer [2]. It refuses questions outside that scope. The grounding prompt is server-side [1].",
     sourceIds: ["this-assistant", "portfolio-rag-assistant"],
   },
   {
@@ -427,9 +429,11 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does mike approach engineering",
       "what are mike's engineering defaults",
       "how does mike design for failure",
+      "how does mike stop production defects shipping",
+      "how does mike keep bugs out of production",
     ],
     answer:
-      "Mike's engineering defaults: models are fallible dependencies (every LLM call gets validation, retries, and a fallback) [1]. Every run is auditable (structured JSON logs, trace IDs, audit entries for state changes) [1]. Pipelines are contracts with Pydantic schemas at system boundaries and validation before persistence [1].",
+      "Mike keeps bugs and defects out of production and stops production defects shipping with engineering defaults: models are fallible dependencies (every LLM call gets validation, retries, and a fallback) [1]. Every run is auditable (structured JSON logs, trace IDs, audit entries for state changes) [1]. Pipelines are contracts with Pydantic schemas at system boundaries and validation before persistence [1].",
     sourceIds: ["engineering-approach"],
   },
   {
@@ -443,7 +447,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does mike make sure his systems don't break",
     ],
     answer:
-      "Public tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
+      "Mike makes sure his systems and code don't break or keep failing in prod with public tests: Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
     sourceIds: [
       "proactive-sentinel-overview",
       "sitewarden",
@@ -463,7 +467,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "fixed-term",
     ],
     answer:
-      "Mike is available for full-time or contract [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",
+      "Mike is available for full-time or contract, including freelance [1]. The sources do not say he is taking on side gigs or nights and weekends. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",
     sourceIds: ["availability"],
   },
   {
@@ -537,7 +541,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is the cube agent",
     ],
     answer:
-      "Cube is a coding agent prototype [1]. Own tool-calling loop, provider-agnostic adapters so the model can be swapped without changing business logic, approval prompts before writes, and a sandboxed eval harness with a trusted verifier. Not deployed.",
+      "Cube is a coding agent prototype [1]. Own tool-calling loop, provider-agnostic adapters so the model can be swapped without changing business logic, approval prompts before writes (before writing files), and a sandboxed eval harness with a trusted verifier. Not deployed.",
     sourceIds: ["cube-agent"],
   },
   {

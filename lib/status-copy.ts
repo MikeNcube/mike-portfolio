@@ -11,7 +11,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r52";
+export const ANSWER_CACHE_VERSION = "r53";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -19,7 +19,7 @@ export const CANONICAL_PRODUCTION_ANSWER =
   "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
 
 export const CANONICAL_WORK_ANSWER =
-  "At Zororo-Phumulani Mike shipped Digi App Form [1] and the lead-management CRM [2]. ZDI is approved for production rollout but not yet live [3]. The claims operations platform is an approved, production-ready standby, not the live system [4]. Zororo AI OS is early-stage and not yet deployed [5].";
+  "At Zororo-Phumulani Mike's work shipped Digi App Form [1] and the lead-management CRM [2]. ZDI is approved for production rollout but not yet live [3]. The claims operations platform is an approved, production-ready standby, not the live system [4]. Zororo AI OS is early-stage and not yet deployed [5].";
 
 export const ZDI_STATUS_SENTENCE =
   "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live.";
@@ -37,7 +37,7 @@ export const CANONICAL_CRM_ZDI_LIVE_ANSWER =
   "The lead-management CRM is a shipped live production system at Zororo-Phumulani [1]. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [2].";
 
 export const CANONICAL_AWS_ANSWER =
-  "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
+  "Mike's AWS experience lists S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
 
 export const CANONICAL_TECH_LEAD_CRM_ANSWER =
   "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";

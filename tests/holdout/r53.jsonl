@@ -1,0 +1,40 @@
+{"question":"How much cash does Mike take home in a year?","kind":"refuse"}
+{"question":"Which national side raised the cup at the most recent FIFA finals?","kind":"refuse"}
+{"question":"Where do members of the South African parliament actually sit?","kind":"refuse"}
+{"question":"Who is the line manager Mike reports to at Zororo-Phumulani?","kind":"refuse"}
+{"question":"What does Mike charge per hour as a contractor?","kind":"refuse"}
+{"question":"Did Argentina lift the last FIFA world trophy?","kind":"refuse"}
+{"question":"Which city contains the Union Buildings?","kind":"refuse"}
+{"question":"What is Mike's annual compensation in rand?","kind":"refuse"}
+{"question":"Is Mike married with kids?","kind":"refuse"}
+{"question":"Which football club does Mike support?","kind":"refuse"}
+{"question":"How much Bitcoin is in Mike's wallet?","kind":"refuse"}
+{"question":"Can Mike start a new role this coming Monday?","kind":"refuse"}
+{"question":"If Mike resigns tomorrow, how long is his notice?","kind":"refuse"}
+{"question":"Who captains the Springboks right now?","kind":"refuse"}
+{"question":"What standup timezone should we put on Mike's calendar?","kind":"refuse"}
+{"question":"Does Mike keep a flat in Cape Town?","kind":"refuse"}
+{"question":"Will Mike consider only work-from-home roles?","kind":"safe","mustMatch":"remote","mustNotMatch":"shift-based|manager sends a requester"}
+{"question":"What is the case for choosing Mike rather than another Applied AI engineer?","kind":"safe","mustMatch":"Digi App Form|shipped|Zororo-Phumulani","mustNotMatch":"manager sends a requester"}
+{"question":"How many years has Mike spent with Python?","kind":"safe","mustMatch":"Python|six-plus years","mustNotMatch":"Johannesburg is|FIFA|parliament"}
+{"question":"Which South African city does Mike call home?","kind":"answer","mustMatch":"Johannesburg","mustNotMatch":"shift-based|Pretoria"}
+{"question":"What job title does Mike hold at Zororo-Phumulani?","kind":"answer","mustMatch":"Applied AI Engineer","mustNotMatch":"tech lead"}
+{"question":"Has ZDI gone live for real users yet?","kind":"safe","mustMatch":"not yet live","mustNotMatch":"Flask web application"}
+{"question":"Which database does the lead-management CRM persist to?","kind":"safe","mustMatch":"PostgreSQL","mustNotMatch":"SQLite"}
+{"question":"Is Proactive Sentinel actively serving traffic today?","kind":"safe","mustMatch":"paused","mustNotMatch":"not yet live"}
+{"question":"Is Redis one of the stores on Mike's stack?","kind":"answer","mustMatch":"Redis","mustNotMatch":"Kafka is listed"}
+{"question":"Which Python web app did Mike ship for policy intake?","kind":"safe","mustMatch":"Digi|Flask","mustNotMatch":"LangGraph"}
+{"question":"How large is the IT group Mike sits in?","kind":"safe","mustMatch":"four-person","mustNotMatch":"over 40 people as tech lead"}
+{"question":"Would Mike take a contract rather than a permanent seat?","kind":"answer","mustMatch":"contract","mustNotMatch":"routing contract"}
+{"question":"What embedding model is used by the portfolio chat?","kind":"answer","mustMatch":"Gemini embedding-001","mustNotMatch":"Bedrock"}
+{"question":"Did Mike put a CRM into live use?","kind":"safe","mustMatch":"CRM","mustNotMatch":"not yet live"}
+{"question":"Which AWS products are named on Mike's CV?","kind":"safe","mustMatch":"S3|EC2|IAM","mustNotMatch":"production-grade"}
+{"question":"Has Mike shipped anything with FastAPI?","kind":"answer","mustMatch":"FastAPI","mustNotMatch":"Flask web application in Python"}
+{"question":"Has Mike run production workloads on Kubernetes?","kind":"safe","unknownTerms":["Kubernetes"],"mustNotMatch":"AWS experience lists"}
+{"question":"Is Amazon EKS part of Mike's listed cloud work?","kind":"safe","unknownTerms":["EKS"],"mustNotMatch":"manager sends a requester"}
+{"question":"Does Mike maintain any Rust services?","kind":"safe","unknownTerms":["Rust"],"mustNotMatch":"FastAPI"}
+{"question":"Has Mike deployed production systems on GCP?","kind":"safe","unknownTerms":["GCP"],"mustNotMatch":"S3, EC2"}
+{"question":"Any day-to-day Ansible experience on the CV?","kind":"safe","unknownTerms":["Ansible"],"mustNotMatch":"Terraform"}
+{"question":"Does Mike use Cassandra as a datastore?","kind":"safe","unknownTerms":["Cassandra"],"mustNotMatch":"PostgreSQL as its database"}
+{"question":"Is Kotlin one of Mike's programming languages?","kind":"safe","unknownTerms":["Kotlin"],"mustNotMatch":"Python and TypeScript as programming languages"}
+{"question":"Has Mike built Snowflake pipelines?","kind":"safe","unknownTerms":["Snowflake"],"mustNotMatch":"pgvector"}

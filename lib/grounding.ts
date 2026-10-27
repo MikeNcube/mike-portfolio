@@ -9,58 +9,63 @@ import { splitIntoSentences } from "./normalise-answer";
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
 
+// True function / question-framing words. Meaning-bearing nouns (manager, remote,
+// experience, rate, notice, hire, paid, people) must remain content terms.
 const MODIFIERS = new Set([
   "favourite", "favorite", "favourites", "favorites",
-  "main", "best", "current", "strongest", "proudest", "flagship", "headline",
-  "open", "still", "really", "please", "also", "quick", "brief", "summary",
-  "tell", "give", "describe", "introduce", "explain", "share", "show",
-  "looking", "want", "wants", "hoping", "seeking", "after", "next", "big", "part",
-  "compare", "compared", "versus", "vs",
+  "please", "also", "really", "quite", "briefly", "specifically", "exactly",
+  "actually", "official", "currently", "still", "today", "nowadays", "lately",
+  "presently", "already",
+  "tell", "give", "describe", "introduce", "explain", "share", "show", "name",
+  "walk",
+  "looking", "want", "wants", "hoping", "seeking", "next",
   "know", "knows", "knew", "used", "using", "use", "uses",
-  "built", "building", "done", "hold", "holds", "held",
-  "work", "works", "working", "worked", "experience", "experienced",
-  "take", "taking", "consider", "considering", "keep", "keeps",
-  "approach", "approaches", "handle", "handles", "handling",
-  "people", "person", "someone", "anyone", "anything", "something",
-  "available", "availability", "hire", "hiring", "hireable",
-  "good", "fit", "different", "standout", "new", "our",
-  "senior", "junior", "mid", "staff",
-  "value", "bring", "benefit",
-  "start",
-  "manager",
-  "month", "live", "currently",
-  "any", "one", "first", "usage", "go", "shipped", "cv",
-  "represents", "here", "visitors",
-  "working model",
-  "tool", "tools",
-  "detail", "details", "more", "specifically", "specific", "exactly", "briefly",
-  "particular", "certain", "actual", "typical", "usual",
-  "rate", "notice", "relocate", "relocation", "timezone", "zone",
-  "ai", "llm", "tech", "most", "much", "many", "does", "mike",
-  "part", "region", "area", "province", "place",
-  "kind", "type", "sort", "reason", "reasons",
-  "overview", "summary", "nutshell", "headline",
-  "before", "writing", "files", "file", "writes",
+  "built", "build", "builds", "building", "made", "created", "developed",
+  "need", "needs", "needed", "done", "doing",
+  "any", "some", "something", "someone", "anyone", "anything",
+  "certain", "particular", "typical", "usual", "specific",
+  "more", "most", "much", "many", "main", "best", "quick", "brief",
+  "compare", "compared", "versus", "vs",
+  "open", "go", "his", "our", "new", "good",
   "where", "when", "why", "whose", "whom",
-  "keep", "reliable", "reliability", "quality",
-  "running", "paused", "serving",
-  "remote", "remotely",
-  "strong", "impressive", "proudest",
-  "reasons",
-  "written",
-  "located", "locate",
-  "days", "today", "nowadays", "moment", "presently", "lately", "present",
-  "reside", "resides", "residing",
-  "living", "lives",
-  "official", "actually", "listed", "prefer", "include", "primary",
-  "option", "accept", "mentioned", "formally", "advertise",
-  "recruiter", "expect", "fluent", "coding", "develop", "program",
-  "tooling", "integrated", "thorough", "published", "evidence", "industry",
-  "craft", "engagements", "reports", "direct",
-  "his", "paragraph", "introduction", "provide",
-  "powers", "implemented", "ensure", "practices", "talking",
-  "focused", "attend", "formally",
-  "engineer", "engineers",
+  "summary", "overview", "nutshell", "detail", "details",
+  "listed", "mentioned", "include", "prefer",
+  "list", "lists",
+  "up",
+  "printed", "print",
+  "one", "first", "kind", "type", "sort",
+  "only", "even",
+  "recruiter", "recruiters", "recruiting",
+  "part", "running", "run", "runs",
+  "hold", "holds", "held",
+  "handle", "handles", "handling", "handled",
+  "instruction", "instructions", "setup",
+  "hi", "hey", "hello", "thanks", "thank",
+  "big", "small", "tiny", "large", "giant",
+  "written", "writes", "write", "writing",
+  "out",
+  "call", "calls", "called",
+  "home",
+  "recently", "recent",
+  "within",
+  "whereabouts",
+  "bring", "brings", "bringing",
+  "sure", "stay", "stays", "remain", "remains", "remaining",
+  "prevent", "prevents", "keep", "keeps", "stop", "stops", "nothing",
+  "don",
+  "three", "two",
+  "land", "landing", "suits", "suit",
+  "moment", "ever",
+  "taking", "takes", "take",
+  "stand", "stands", "outstanding",
+  "like", "likes", "liked",
+  "now", "right",
+  "extra",
+  "targeting", "target", "targets",
+  "here",
+  "without",
+  "behind",
+  "shows", "show", "showing",
 ]);
 
 export const RELATED_TERMS: Record<string, string[]> = {
@@ -72,230 +77,136 @@ export const RELATED_TERMS: Record<string, string[]> = {
   "vector database": ["vector database", "pgvector", "postgresql", "postgres"],
   "vector databases": ["vector databases", "pgvector", "postgresql", "postgres"],
   golang: ["golang", "go"],
+  kubernetes: ["kubernetes", "k8s"],
+  k8s: ["k8s", "kubernetes"],
   security: ["security", "compliance", "popia", "secure"],
   compliance: ["compliance", "popia"],
-  hybrid: ["hybrid", "remote", "remote-first"],
+  hybrid: ["hybrid", "remote", "remote-first", "remotely"],
+  remote: ["remote", "remote-first", "remotely"],
+  remotely: ["remotely", "remote", "remote-first"],
+  "remote-first": ["remote-first", "remote", "remotely"],
+  "on-site": ["on-site", "office-first"],
+  "office-first": ["office-first", "on-site"],
   jwt: ["jwt"],
   react: ["react"],
   redis: ["redis"],
   flask: ["flask"],
   kafka: ["kafka"],
-  programming: ["programming", "python", "typescript", "language", "languages"],
-  language: ["language", "languages", "python", "typescript", "programming", "fastapi"],
-  languages: ["languages", "language", "python", "typescript", "programming", "fastapi"],
+  programming: ["programming", "language", "languages"],
+  language: ["language", "languages", "programming"],
+  languages: ["languages", "language", "programming"],
   orchestration: ["orchestration", "langgraph", "langchain"],
-  libraries: ["libraries", "library", "langgraph", "langchain"],
-  library: ["library", "libraries", "langgraph", "langchain"],
-  agents: ["agents", "agent", "langgraph"],
-  writing: ["writing", "writes", "write", "files"],
-  files: ["files", "file", "writes", "write"],
-  chatbot: ["chatbot", "assistant", "gemini", "groq", "rag"],
-  "chat assistant": ["chat assistant", "assistant", "chatbot", "gemini"],
-  "this assistant": ["this assistant", "assistant", "chatbot", "gemini"],
+  libraries: ["libraries", "library"],
+  library: ["library", "libraries"],
+  chatbot: ["chatbot", "assistant"],
+  "chat assistant": ["chat assistant", "assistant", "chatbot"],
+  "this assistant": ["this assistant", "assistant", "chatbot"],
   reliable: ["reliable", "reliability", "tests", "testing", "validation"],
   quality: ["quality", "tests", "testing"],
-  frameworks: ["frameworks", "framework", "fastapi", "flask", "langgraph", "langchain"],
-  framework: ["framework", "frameworks", "fastapi", "flask", "langgraph", "langchain"],
+  testing: ["testing", "tests", "test", "tested"],
+  tests: ["tests", "testing", "test", "tested"],
+  tested: ["tested", "test", "tests", "testing"],
+  test: ["test", "tests", "testing", "tested"],
+  frameworks: ["frameworks", "framework"],
+  framework: ["framework", "frameworks"],
   "web framework": ["web framework", "fastapi", "flask", "next.js"],
-  city: ["johannesburg", "south africa"],
-  metro: ["johannesburg", "south africa"],
-  urban: ["johannesburg", "south africa"],
-  stationed: ["johannesburg", "south africa"],
-  geography: ["johannesburg", "south africa"],
-  overlap: ["johannesburg", "south africa"],
-  header: ["johannesburg", "title", "applied"],
-  operate: ["johannesburg", "south africa"],
-  operates: ["johannesburg", "south africa"],
-  country: ["johannesburg", "south africa"],
-  based: ["johannesburg", "south africa"],
-  heading: ["heading", "title", "applied", "architect"],
-  styled: ["styled", "title", "applied", "architect"],
-  designated: ["designated", "title", "applied", "architect"],
-  "org chart": ["org chart", "title", "applied", "architect"],
-  "linkedin headline": ["linkedin headline", "title", "applied", "architect"],
-  "email signature": ["email signature", "title", "applied", "architect"],
-  clocked: ["clocked", "zororo", "phumulani", "employer"],
-  payroll: ["payroll", "zororo", "phumulani", "employer"],
-  shop: ["shop", "zororo", "phumulani", "employer"],
-  attached: ["attached", "zororo", "phumulani", "employer"],
-  business: ["zororo", "phumulani", "employer", "funeral"],
-  desk: ["desk", "remote-first", "remote"],
-  distributed: ["distributed", "remote-first", "remote"],
-  "office-first": ["office-first", "remote-first"],
-  "working model": ["remote-first"],
-  "on-site": ["on-site", "remote-first", "remote"],
-  permanent: ["permanent", "full-time", "contract"],
-  "employment mode": ["employment mode", "full-time", "contract"],
-  apis: ["apis", "python", "fastapi", "flask"],
-  backends: ["backends", "fastapi", "flask", "python"],
-  unit: ["unit", "four-person", "team"],
-  small: ["small", "four-person", "team"],
-  opening: ["opening", "generative", "applied", "target"],
-  credential: ["credential", "degree", "formal", "certifications"],
-  academic: ["academic", "degree", "formal"],
-  certificate: ["certificate", "certifications", "named"],
-  blurb: ["blurb", "applied", "architect", "johannesburg"],
-  elevator: ["elevator", "applied", "architect"],
-  positioning: ["positioning", "applied", "architect"],
-  mailbox: ["mailbox", "email", "gmail"],
-  recruiters: ["recruiters", "email", "gmail"],
-  reaching: ["reaching", "email", "gmail"],
-  demo: ["demo", "digi", "form", "shipped"],
-  "in production": ["in production", "production", "live", "not yet live", "rolling", "shipped", "digi", "crm"],
-  title: ["applied", "architect"],
-  role: ["applied", "architect", "generative", "engineer"],
-  roles: ["applied", "architect", "generative", "engineer"],
-  job: ["applied", "architect", "degree", "formal"],
-  jobs: ["applied", "generative"],
-  position: ["applied", "architect"],
-  positions: ["applied", "generative"],
-  company: ["company", "zororo", "phumulani", "employer"],
-  org: ["org", "zororo", "phumulani"],
-  organisation: ["organisation", "zororo", "phumulani"],
-  organization: ["organization", "zororo", "phumulani"],
-  employer: ["employer", "zororo", "phumulani"],
-  employs: ["employs", "zororo", "phumulani"],
-  employed: ["employed", "zororo", "phumulani"],
-  firm: ["firm", "zororo", "phumulani"],
-  years: ["years", "six-plus", "six"],
-  year: ["year", "six-plus", "six"],
-  team: ["team", "four-person"],
-  department: ["department", "four-person", "team"],
+  country: ["country", "based"],
+  area: ["area", "based", "city"],
+  region: ["region", "based"],
+  province: ["province", "based"],
+  location: ["location", "based"],
+  located: ["located", "based"],
+  city: ["city", "based", "lives", "living"],
+  based: ["based", "lives", "living"],
+  living: ["living", "lives", "based"],
+  lives: ["lives", "living", "based"],
+  live: ["live", "lives", "living"],
+  reside: ["reside", "resides", "lives", "living", "based"],
+  resides: ["resides", "reside", "lives", "living", "based"],
+  sa: ["sa", "south africa"],
+  "south africa": ["south africa", "sa", "south african"],
+  "south african": ["south african", "south africa"],
+  title: ["title", "role", "roles", "job", "position"],
+  role: ["role", "roles", "title", "job", "position"],
+  roles: ["roles", "role", "title", "job", "position"],
+  job: ["job", "title", "role", "roles", "position"],
+  position: ["position", "title", "role", "roles", "job"],
+  employer: ["employer", "company", "firm", "organisation", "organization"],
+  company: ["company", "employer", "firm"],
+  organisation: ["organisation", "organization", "company", "employer", "org"],
+  organization: ["organization", "organisation", "company", "employer", "org"],
+  org: ["org", "organisation", "organization", "company", "employer"],
+  firm: ["firm", "company", "employer"],
+  employ: ["employ", "employs", "employed", "employer"],
+  employs: ["employs", "employ", "employed", "employer"],
+  employed: ["employed", "employ", "employs", "employer"],
   contract: ["contract", "full-time"],
-  tool: ["tool", "python", "fastapi"],
-  tools: ["tools", "python", "fastapi"],
-  skill: ["skill", "python", "fastapi"],
-  skills: ["skills", "python", "fastapi", "typescript"],
-  resume: ["applied", "architect"],
-  cv: ["applied", "architect"],
-  highlight: ["applied", "architect"],
-  highlights: ["applied", "architect"],
-  profile: ["profile", "applied", "architect", "johannesburg"],
-  bio: ["bio", "applied", "architect"],
-  candidate: ["candidate", "applied", "architect"],
-  candidates: ["candidates", "applied", "architect"],
-  chat: ["chat", "assistant", "gemini"],
-  assistant: ["assistant", "gemini", "groq", "rag"],
-  agent: ["agent", "langgraph"],
-  systems: ["systems", "digi", "crm", "shipped"],
-  production: ["production", "live", "shipped", "not yet live", "rolling"],
-  deployed: ["deployed", "not yet live", "rolling"],
-  deploy: ["deploy", "not yet live", "rolling"],
-  deployment: ["deployment", "paused", "railway"],
-  hosted: ["hosted", "not yet live"],
-  hosting: ["hosting", "not yet live"],
-  education: ["education", "degree", "formal", "certifications"],
-  degree: ["degree", "formal", "certifications"],
+  "full-time": ["full-time", "contract"],
+  contractor: ["contractor", "contract"],
+  freelance: ["freelance", "contract"],
+  "side gigs": ["side gigs", "contract", "freelance"],
+  moonlight: ["moonlight", "contract", "freelance"],
+  hunting: ["hunting", "job hunting", "hire"],
+  seat: ["seat", "role", "position", "job"],
+  "job family": ["job family", "role", "roles", "job"],
+  hire: ["hire", "hiring", "interview"],
+  hiring: ["hiring", "hire", "interview"],
+  interview: ["interview", "hire", "hiring"],
+  manager: ["manager"],
+  manage: ["manage", "managed", "manages", "supervise", "supervised"],
+  supervise: ["supervise", "supervised", "manage", "managed"],
+  supervised: ["supervised", "supervise", "manage", "managed"],
+  "tech lead": ["tech lead", "team lead"],
+  "people manager": ["people manager"],
+  skills: ["skills", "skill", "stack"],
+  skill: ["skill", "skills", "stack"],
+  experience: ["experience", "experienced"],
+  "in production": ["in production", "production", "live", "shipped"],
+  production: ["production", "live", "shipped"],
+  prod: ["prod", "production"],
+  shipping: ["shipping", "shipped", "production"],
+  defects: ["defects", "bugs"],
+  deployed: ["deployed", "deploy", "deployment", "hosted", "shipped"],
+  deploy: ["deploy", "deployed", "deployment", "hosted", "shipped"],
+  deployment: ["deployment", "deployed", "deploy", "hosted"],
+  hosted: ["hosted", "deployed", "deploy"],
+  people: ["people", "person"],
+  person: ["person", "people"],
+  developer: ["developer", "developers"],
+  developers: ["developers", "developer"],
+  work: ["work", "works", "working"],
+  works: ["works", "work", "working"],
+  projects: ["projects", "project"],
+  project: ["project", "projects"],
+  systems: ["systems", "system", "shipped"],
+  system: ["system", "systems"],
+  education: ["education", "degree", "formal"],
+  degree: ["degree", "formal", "education"],
   studied: ["studied", "degree", "formal"],
   study: ["study", "degree", "formal"],
-  software: ["software", "six-plus", "python"],
-  engineer: ["engineer", "applied", "architect"],
-  engineering: ["engineering", "applied", "python"],
-  background: ["background", "applied", "architect"],
-  leadership: ["leadership", "four-person", "tech lead"],
-  coverage: ["coverage", "tests", "testing"],
-  code: ["code", "python", "tests"],
-  professional: ["professional", "title", "applied", "architect"],
-  professionally: ["professionally", "johannesburg", "based"],
-  hang: ["hang", "johannesburg", "based"],
-  hat: ["hat", "johannesburg", "based"],
-  tenure: ["tenure", "six-plus", "years"],
-  career: ["career", "six-plus", "years"],
-  backend: ["backend", "python", "fastapi"],
-  frontend: ["frontend", "typescript", "react"],
-  stack: ["stack", "python", "fastapi", "typescript"],
-  group: ["group", "four-person", "team"],
-  engineers: ["engineers", "four-person", "team"],
-  genai: ["genai", "generative", "applied"],
-  targeting: ["targeting", "generative", "applied"],
-  hired: ["hired", "generative", "applied"],
-  target: ["target", "generative", "applied"],
-  function: ["function", "generative", "applied"],
-  contractor: ["contractor", "contract", "full-time"],
-  shipped: ["shipped", "digi", "crm"],
-  project: ["project", "digi", "crm"],
-  projects: ["projects", "digi", "crm"],
-  intake: ["intake", "digi", "form"],
-  bachelor: ["bachelor", "degree", "formal"],
-  panel: ["panel", "applied", "architect"],
-  sourcer: ["sourcer", "applied", "architect"],
-  cert: ["cert", "certifications", "named"],
-  certifications: ["certifications", "named", "degree"],
-  portfolio: ["portfolio", "gemini", "assistant"],
-  embeds: ["embeds", "gemini", "embedding"],
-  knowledge: ["knowledge", "gemini", "rag"],
-  wired: ["wired", "gemini", "assistant"],
-  "model answers": ["gemini", "embedding", "assistant"],
-  graph: ["graph", "langgraph"],
-  graphs: ["graphs", "langgraph"],
-  orchestrate: ["orchestrate", "langgraph"],
-  prototypes: ["prototypes", "langgraph", "sitewarden"],
-  steps: ["steps", "langgraph"],
-  "agent-graph": ["agent-graph", "langgraph"],
-  "serving traffic": ["serving traffic", "paused"],
-  "run state": ["run state", "paused"],
-  reporting: ["reporting", "four-person", "team"],
-  giant: ["giant", "four-person", "team"],
-  proof: ["proof", "digi", "form"],
-  artefact: ["artefact", "digi", "form"],
-  delivered: ["delivered", "digi", "form"],
-  form: ["form", "digi"],
-  ship: ["ship", "digi", "crm"],
-  application: ["application", "digi", "form"],
-  linkedin: ["linkedin", "linkedin.com"],
-  breath: ["breath", "applied", "architect"],
-  system: ["system", "digi", "crm", "shipped"],
-  bugs: ["tests", "testing", "validation"],
-  defects: ["validation", "retries", "fallback", "auditable"],
-  moonlight: ["contract", "full-time"],
-  contracts: ["contract", "full-time"],
-  supervised: ["four-person", "team"],
-  developers: ["four-person", "team"],
-  interview: ["digi"],
-  gigs: ["contract", "full-time"],
-  "side gigs": ["contract", "full-time"],
-  stand: ["digi", "applied", "architect"],
-  proud: ["digi", "form", "shipped"],
-  build: ["digi", "form", "shipped"],
-  builds: ["digi", "form", "shipped"],
-  learn: ["degree", "formal"],
-  "job hunting": ["generative", "target", "applied"],
-  hunting: ["generative", "target", "applied"],
-  market: ["generative", "target", "available"],
-  "staff-plus": ["generative", "available", "contract"],
-  ic: ["generative", "available", "target"],
-  "reporting line": ["reporting line", "four-person", "team"],
-  freelance: ["freelance", "contract"],
-  consulting: ["consulting", "consult", "contract"],
-  consult: ["consult", "consulting", "contract"],
+  learn: ["learn", "learned", "studied", "degree", "education"],
+  learned: ["learned", "learn", "studied", "degree", "education"],
   university: ["university", "degree", "education"],
   college: ["college", "degree", "education"],
-  school: ["school", "degree", "education", "courses"],
-  qualification: ["qualification", "degree", "certifications"],
-  qualifications: ["qualifications", "degree", "certifications"],
-  "computer science": ["computer science", "degree", "education"],
+  certifications: ["certifications", "degree"],
+  "self-taught": ["self-taught", "degree", "education"],
+  years: ["years", "year"],
+  year: ["year", "years"],
+  reason: ["reason", "reasons"],
+  reasons: ["reasons", "reason"],
+  backend: ["backend"],
+  frontend: ["frontend"],
+  stack: ["stack"],
+  persistence: ["persistence", "database", "postgresql", "postgres"],
+  stores: ["stores", "database", "postgresql", "postgres"],
+  "e-signature": ["e-signature", "e-signatures", "signature"],
+  "e-signatures": ["e-signatures", "e-signature", "signature"],
+  "approval workflows": ["approval workflow", "approval workflows"],
   "state machine": ["state machine"],
-  manage: ["four-person", "team"],
-  "people manager": ["four-person", "team"],
-  alone: ["four-person", "team"],
-  others: ["four-person", "team"],
-  teammates: ["four-person", "team"],
-  builder: ["four-person", "team"],
-  "e-signature": ["e-signature", "e-signatures", "signature", "zdi"],
-  "e-signatures": ["e-signatures", "e-signature", "signature", "zdi"],
-  "approval workflows": ["approval workflow", "approval workflows", "zdi"],
-  "self-taught": ["self-taught", "degree", "education", "courses"],
-  taught: ["taught", "degree", "education", "courses"],
-  checked: ["tests", "testing", "evals", "coverage"],
-  "write-time": ["writes", "write", "approval", "prompts"],
-  stores: ["postgresql", "postgres", "database"],
-  persistence: ["postgresql", "postgres", "database"],
-  layer: ["postgresql", "postgres", "database"],
-  services: ["docker", "fastapi", "flask"],
 };
 
 export const KNOWN_TECH_TERMS = [
-  "kubernetes", "rust", "golang", "java", "azure", "gcp", "google cloud",
+  "kubernetes", "k8s", "eks", "rust", "golang", "java", "azure", "gcp", "google cloud",
   "snowflake", "kafka", "lambda", "graphql", "linux", "spark", "mongodb",
   "mysql", "dynamodb", "oracle", "cassandra", "elasticsearch", "helm",
   "ansible", "jenkins", "kotlin", "swift", "ruby", "php", "scala",
@@ -307,15 +218,17 @@ const MULTIWORD_SUBJECTS = [
   "machine learning", "deep learning", "data engineering", "prompt engineering",
   "computer vision", "natural language processing", "nlp", "data science",
   "ci/cd", "mlops", "github actions", "grounding prompt", "approval workflow",
-  "cape town", "south africa", "world cup", "computer science",
+  "cape town", "south africa", "south african", "world cup", "computer science",
   "proactive sentinel", "chat assistant", "this assistant",
   "state machine", "e-signature", "e-signatures", "approval workflow",
   "approval workflows", "self-taught", "web framework", "linkedin headline",
   "email signature", "org chart", "employment mode", "office-first",
+  "hiring manager",
   "on-site", "serving traffic", "run state", "in production",
   "reporting line", "remote-first", "people manager", "state machine",
   "side gigs", "staff-plus", "job hunting", "model answers",
-  "working model", "tech lead", "write-time",
+  "working model", "tech lead", "write-time", "mid-level",
+  "job family", "ic role",
 ];
 
 function stemVariants(word: string): string[] {
@@ -333,8 +246,10 @@ function stemVariants(word: string): string[] {
     out.add(`${stem}es`);
   }
   if (w.endsWith("ed") && w.length > 4) {
-    out.add(w.slice(0, -2));
+    const stem = w.slice(0, -2);
+    out.add(stem);
     out.add(w.slice(0, -1));
+    out.add(`${stem}s`);
   }
   if (w.endsWith("es") && w.length > 4) out.add(w.slice(0, -2));
   if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && w.length > 3) {
@@ -345,6 +260,11 @@ function stemVariants(word: string): string[] {
 
 export function hasWholeWord(hay: string, word: string): boolean {
   const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (word.length <= 5) {
+    // Short tokens must not match inside hyphenated compounds
+    // ("role" in "role-based", "based" in "shift-based").
+    return new RegExp(`(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])`, "i").test(hay);
+  }
   return new RegExp(`\\b${escaped}\\b`, "i").test(hay);
 }
 
@@ -381,7 +301,7 @@ const LISTED_TECH_TOKENS = new Set([
   "n8n", "opentelemetry", "agent", "agents",
 ]);
 
-function looksLikeTech(term: string): boolean {
+export function looksLikeTech(term: string): boolean {
   const lower = term.toLowerCase();
   // Bare "go" is the English verb in recruiter copy; golang is the tech token.
   if (lower === "go") return false;
@@ -419,6 +339,17 @@ const QUESTION_STARTERS = new Set([
   "Open", "Walk", "Name", "Explain", "Introduce", "Share", "Show",
   "Any", "One", "Who's",
 ]);
+
+function visitorIntroNames(question: string): Set<string> {
+  const out = new Set<string>();
+  const re = /\b(?:i(?:'m| am)|my name is)\s+([A-Z][a-z]+)/gi;
+  let match: RegExpExecArray | null = re.exec(question);
+  while (match) {
+    out.add(match[1].toLowerCase());
+    match = re.exec(question);
+  }
+  return out;
+}
 
 function capitalisedProperNouns(question: string): Set<string> {
   const out = new Set<string>();
@@ -483,10 +414,19 @@ function relatedToAsked(term: string, asked: string[]): boolean {
   return false;
 }
 
-// True when a canned question does not introduce extra distinctive lemmas the visitor did not ask.
+function isStrongCannedLemma(term: string): boolean {
+  const lower = term.toLowerCase();
+  if (looksLikeTech(lower)) return true;
+  if (/\b(?:lead|manager|approver|architecture|github|linkedin)\b/.test(lower)) return true;
+  return false;
+}
+
+// True when a canned question does not introduce extra strong lemmas the visitor did not ask.
+// Asked terms are still required in the canned ANSWER by evaluateGrounding.
 export function cannedFitsQuestion(question: string, cannedQuestion: string): boolean {
-  const asked = distinctiveContentTerms(question).map((t) => t.toLowerCase());
-  for (const term of distinctiveContentTerms(cannedQuestion)) {
+  const asked = contentTerms(question).map((t) => t.toLowerCase());
+  for (const term of contentTerms(cannedQuestion)) {
+    if (!isStrongCannedLemma(term)) continue;
     if (!relatedToAsked(term, asked)) return false;
   }
   return true;
@@ -495,6 +435,7 @@ export function cannedFitsQuestion(question: string, cannedQuestion: string): bo
 export function evaluateGrounding(question: string, answer: string): GroundingResult {
   const terms = contentTerms(question);
   const proper = capitalisedProperNouns(question);
+  const visitorNames = visitorIntroNames(question);
   const knownTerms: string[] = [];
   const unknownTech: string[] = [];
   const unmatchedNonTech: string[] = [];
@@ -511,12 +452,29 @@ export function evaluateGrounding(question: string, answer: string): GroundingRe
       unknownTech.push(term);
       continue;
     }
-    if (isDistinctiveUnmatched(term, proper)) unmatchedNonTech.push(term);
+    // Introduced visitor names ("Hi, I'm Dan") are not asked-for content.
+    // Off-domain proper nouns (Bitcoin, FIFA) still fail the candidate.
+    if (visitorNames.has(term.toLowerCase())) {
+      continue;
+    }
+    unmatchedNonTech.push(term);
   }
   const genericOnly = unmatchedNonTech.length === 0 && unknownTech.length === 0;
+  const GENERIC_CARRIERS = new Set([
+    "experience", "experienced", "years", "year", "work", "works", "working",
+    "skills", "skill", "stack", "background", "career",
+    "production", "systems", "system", "deployed", "deploy", "deployment",
+    "pipelines", "pipeline", "programming", "language", "languages",
+    "stores", "store", "products", "product",
+  ]);
+  const distinctiveKnown = knownTerms.some((t) => !GENERIC_CARRIERS.has(t.toLowerCase()));
+  const ok = unmatchedNonTech.length === 0 && (
+    unknownTech.length === 0
+      ? (knownTerms.length > 0 || genericOnly)
+      : distinctiveKnown
+  );
   return {
-    ok: unmatchedNonTech.length === 0
-      && (knownTerms.length > 0 || (genericOnly && unknownTech.length === 0)),
+    ok,
     knownTerms,
     unknownTech,
     unmatchedNonTech,
@@ -566,9 +524,58 @@ export function listedTechInQuestion(question: string): string[] {
 const CLAIM_TOKEN_RE = /\b[A-Z][\w.+-]*|\b\d+(?:\.\d+)?\b/g;
 const CLAIM_SKIP = /^(I|A|An|The|This|That|He|His|Him|Mike|Ncube|Sources|Source|Status|Stack|PROJECT|Email|Current|Accounts|IT)$/;
 
+const NUMBER_WORDS = [
+  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+  "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty", "sixty",
+  "seventy", "eighty", "ninety", "hundred", "thousand",
+];
+
+const ROLE_CLAIM_RE =
+  /\b(?:tech[ -]?lead|team[ -]?lead|engineering lead|led|leading|manages|managed|manager)\b/gi;
+
+const TEAM_SIZE_RE =
+  /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty)\s+(?:people|person|engineers?|members?|staff)\b/gi;
+
+function sentenceHasUncitedClaim(sentence: string, cited: string): boolean {
+  const hay = sentence.replace(/\[\d+\]/g, "");
+  const tokens = hay.match(CLAIM_TOKEN_RE) ?? [];
+  for (const token of tokens) {
+    if (CLAIM_SKIP.test(token)) continue;
+    if (!hasWholeWord(cited, token) && !cited.toLowerCase().includes(token.toLowerCase())) {
+      return true;
+    }
+  }
+  const lower = hay.toLowerCase();
+  for (const word of NUMBER_WORDS) {
+    if (!hasWholeWord(lower, word)) continue;
+    if (!hasWholeWord(cited, word) && !cited.toLowerCase().includes(word)) return true;
+  }
+  for (const term of [...KNOWN_TECH_TERMS, ...LISTED_TECH_TOKENS]) {
+    if (term === "go" || term === "agent" || term === "agents") continue;
+    if (!hasWholeWord(lower, term) && !lower.includes(term)) continue;
+    if (!hasWholeWord(cited, term) && !cited.toLowerCase().includes(term)) return true;
+  }
+  const roles = hay.match(ROLE_CLAIM_RE) ?? [];
+  for (const role of roles) {
+    if (!hasWholeWord(cited, role) && !cited.toLowerCase().includes(role.toLowerCase())) {
+      return true;
+    }
+  }
+  const sizes = hay.match(TEAM_SIZE_RE) ?? [];
+  for (const size of sizes) {
+    if (!cited.toLowerCase().includes(size.toLowerCase())) {
+      const digits = size.match(/\d+/);
+      if (!digits || !hasWholeWord(cited, digits[0])) return true;
+    }
+  }
+  return false;
+}
+
 export function validateModelSentences(
   text: string,
   chunkTexts: string[],
+  question?: string,
 ): string {
   const parts = splitIntoSentences(text).map((p) => p.trim()).filter(Boolean);
   const kept: string[] = [];
@@ -579,17 +586,12 @@ export function validateModelSentences(
       .map((n) => chunkTexts[n - 1] ?? "")
       .join("\n");
     if (!cited.trim()) continue;
-    const tokens = sentence.replace(/\[\d+\]/g, "").match(CLAIM_TOKEN_RE) ?? [];
-    let ok = true;
-    for (const token of tokens) {
-      if (CLAIM_SKIP.test(token)) continue;
-      if (!hasWholeWord(cited, token) && !cited.toLowerCase().includes(token.toLowerCase())) {
-        ok = false;
-        break;
-      }
-    }
-    if (ok) kept.push(sentence);
+    if (sentenceHasUncitedClaim(sentence, cited)) continue;
+    kept.push(sentence);
   }
-  return kept.join(" ");
+  const joined = kept.join(" ");
+  if (!joined) return "";
+  if (question && !evaluateGrounding(question, joined).ok) return "";
+  return joined;
 }
 

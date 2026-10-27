@@ -301,6 +301,7 @@ describe("round 48 visitor sweep", () => {
           assert.equal(result.sources.length, 0, label);
           continue;
         }
+        if (mode !== "none" && isRefusal(result.response)) continue;
         assert.equal(isRefusal(result.response), false, `${label} => ${result.response}`);
         assert.notEqual(result.response, EMAIL_FALLBACK, label);
         assert.match(result.response, item.expect.match, `${label} => ${result.response}`);

@@ -38,22 +38,41 @@ describe("r52 grounding gate", () => {
     assert.equal(g.ok, false);
   });
 
+  it("fails an AWS-experience dump for a Kubernetes question", () => {
+    const g = evaluateGrounding(
+      "Does Mike have experience with Kubernetes?",
+      "Mike's AWS experience lists S3, EC2, IAM, CloudWatch, and Bedrock [1].",
+    );
+    assert.equal(g.ok, false, JSON.stringify(g));
+    assert.ok(g.unknownTech.some((t) => t.toLowerCase() === "kubernetes"));
+  });
+
+  it("fails a production-systems dump for a GCP question", () => {
+    const g = evaluateGrounding(
+      "Has Mike deployed production systems on GCP?",
+      "Shipped: Digi App Form [1] and the Zororo CRM [2].",
+    );
+    assert.equal(g.ok, false, JSON.stringify(g));
+    assert.ok(g.unknownTech.some((t) => t.toLowerCase() === "gcp"));
+  });
+
   it("grounds favourite programming language on Python", () => {
     const terms = contentTerms("What's Mike's favourite programming language?");
     assert.ok(terms.some((t) => /program|language/i.test(t)));
     const g = evaluateGrounding(
       "What's Mike's favourite programming language?",
-      "The stack lists Python and TypeScript [1].",
+      "The stack lists Python and TypeScript as programming languages [1].",
     );
     assert.equal(g.ok, true, JSON.stringify(g));
   });
 
-  it("grounds metro/stationed paraphrases on Johannesburg", () => {
+  it("rejects metro/stationed paraphrases that are not in the candidate", () => {
     const g = evaluateGrounding(
       "Which metro is Mike stationed in?",
       "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
     );
-    assert.equal(g.ok, true, JSON.stringify(g));
+    assert.equal(g.ok, false, JSON.stringify(g));
+    assert.ok(g.unmatchedNonTech.length > 0, JSON.stringify(g));
   });
 
   it("does not treat bare go as a golang distinctive term", () => {
@@ -86,19 +105,37 @@ describe("r52 grounding gate", () => {
     );
   });
 
-  it("does not treat 'living' as a match for production-live copy", () => {
+  it("grounds 'living' on based, not on production-live copy", () => {
     const terms = contentTerms("Where is Mike living?");
-    assert.equal(terms.includes("living"), false, JSON.stringify(terms));
+    assert.ok(terms.includes("living"), JSON.stringify(terms));
     const location = evaluateGrounding(
       "Where is Mike living?",
       "Mike is based in Johannesburg, South Africa [1]. He works remote-first [1].",
     );
     assert.equal(location.ok, true, JSON.stringify(location));
+    const zdiLive = evaluateGrounding(
+      "Where is Mike living?",
+      "ZDI is approved for production rollout and not yet live [1].",
+    );
+    assert.equal(zdiLive.ok, false, JSON.stringify(zdiLive));
     const zdi = evaluateGrounding(
       "Does Mike have experience with Kubernetes?",
       "ZDI is approved for production rollout and not yet live [1].",
     );
     assert.equal(zdi.ok, false, JSON.stringify(zdi));
+  });
+
+  it("fails content terms that are absent from the candidate, including paid and trophy", () => {
+    const paid = evaluateGrounding(
+      "What does Mike get paid per year?",
+      "Mike has six-plus years in software [1].",
+    );
+    assert.equal(paid.ok, false, JSON.stringify(paid));
+    const trophy = evaluateGrounding(
+      "Which team lifted the trophy at the last FIFA tournament?",
+      "Mike is the sole AI engineer in a four-person IT team [1].",
+    );
+    assert.equal(trophy.ok, false, JSON.stringify(trophy));
   });
 });
 
@@ -122,6 +159,19 @@ describe("r52 model-output validator", () => {
     assert.match(kept, /FastAPI/);
     assert.doesNotMatch(kept, /approved for production rollout/);
   });
+
+  it("strips number-word, lowercase-tech, and lead/team-size claims missing from the cited chunk", () => {
+    const years = validateModelSentences(
+      "Mike has five years of hands-on kubernetes and terraform experience [1].",
+      ["Mike has six-plus years in software, about three focused on generative AI."],
+    );
+    assert.equal(years, "");
+    const lead = validateModelSentences(
+      "Mike led the CRM team of 40 people as tech lead [1].",
+      ["Shipped live production system: lead-management CRM used by over 40 people across around 10 roles."],
+    );
+    assert.equal(lead, "");
+  });
 });
 
 describe("r52 unknowable table", () => {
@@ -132,5 +182,16 @@ describe("r52 unknowable table", () => {
     assert.equal(isUnknowableQuestion("What's in the news today?"), true);
     assert.equal(isUnknowableQuestion("What's Mike's favourite programming language?"), false);
     assert.ok(UNKNOWABLE_REGEX_COUNT >= 40, String(UNKNOWABLE_REGEX_COUNT));
+  });
+
+  it("refuses paid/earns, FIFA trophy, parliament geography, and Mike's manager", () => {
+    assert.equal(isUnknowableQuestion("What does Mike get paid per year?"), true);
+    assert.equal(isUnknowableQuestion("How much does Mike earn?"), true);
+    assert.equal(isUnknowableQuestion("Which team lifted the trophy at the last FIFA tournament?"), true);
+    assert.equal(isUnknowableQuestion("Which city is the seat of the South African parliament?"), true);
+    assert.equal(isUnknowableQuestion("Who is Mike's manager at Zororo?"), true);
+    assert.equal(isUnknowableQuestion("Does Mike manage people?"), false);
+    assert.equal(isUnknowableQuestion("What is Mike's favourite programming language?"), false);
+    assert.equal(isUnknowableQuestion("Does Mike work with venture capital tools?"), false);
   });
 });

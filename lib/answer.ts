@@ -13,9 +13,8 @@ import { matchProjectScopedAnswer, namedProjects } from "./intent";
 import { canonicalQuestionForPhrase } from "./intent-exemplars";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
-  contentTerms,
   cannedFitsQuestion,
-  distinctiveContentTerms,
+  contentTerms,
   evaluateGrounding,
   expandQuery,
   kbHasTerm,
@@ -89,13 +88,15 @@ const CONTACT_QUESTION_RE =
   /\b(available|availability|hiring|hire|contact(?:ing|s)?|email|reach|get in touch|contract|full[ -]?time)\b/i;
 
 export function isContactQuestion(question: string): boolean {
-  if (/\bwhy\b.{0,40}\bhire\b/i.test(question)) return false;
+  if (/\bwhy\b.{0,60}\bhir(?:e|ing|ed)\b/i.test(question)) return false;
   if (/\b(?:good fit|should we hire|what makes mike different|strong candidate)\b/i.test(question)) {
     return false;
   }
   if (/\b(?:start (?:date|next|this)|can mike start|when can (?:mike|he) start)\b/i.test(question)) {
     return false;
   }
+  if (/\bemail signature\b/i.test(question)) return false;
+  if (/\bhiring manager\b/i.test(question)) return false;
   return CONTACT_QUESTION_RE.test(question);
 }
 
@@ -956,8 +957,7 @@ function injectionDefenceReply(chunks: RetrievedChunk[]): AnswerResult {
 }
 
 function gatedStatic(question: string, answer: StaticAnswer): AnswerResult | null {
-  // Jaccard/canned hits without a distinctive asked term are ranking hijacks.
-  if (distinctiveContentTerms(question).length === 0) return null;
+  if (contentTerms(question).length === 0) return null;
   if (!cannedFitsQuestion(question, answer.question)) return null;
   const grounded = evaluateGrounding(question, answer.answer);
   if (!grounded.ok) return null;
@@ -988,8 +988,7 @@ function composeFromProvidedChunks(
   question: string,
   chunks: RetrievedChunk[],
 ): AnswerResult | null {
-  // Empty distinctive terms are identity-only; do not pick a random KB chunk.
-  if (distinctiveContentTerms(question).length === 0) return null;
+  if (contentTerms(question).length === 0) return null;
   const http = chunks.filter((c) => c.sourceUrl.startsWith("http") && !c.cannedAnswer);
   const ranked = [...http].sort((a, b) => b.score - a.score);
   for (const chunk of ranked) {
@@ -1071,10 +1070,22 @@ function composeGroundedAnswer(
   }
   const fromRetrieved = composeFromProvidedChunks(question, retrieved);
   if (fromRetrieved) return fromRetrieved;
-  if (distinctiveContentTerms(question).some((term) => kbHasTerm(term))) {
+  if (contentTerms(question).some((term) => kbHasTerm(term))) {
     return composeFromProvidedChunks(question, retrieveKeyword(expandQuery(question), DEFAULT_K));
   }
   return null;
+}
+
+function identityOrRefusal(question: string): AnswerResult {
+  const identity = exactStaticHit(question);
+  if (identity) {
+    return withUnknownTermNote(question, {
+      response: identity.answer,
+      sources: sourcesFor(identity),
+      via: "static",
+    });
+  }
+  return refusalResult();
 }
 
 function staticOrSafeReply(
@@ -1086,13 +1097,16 @@ function staticOrSafeReply(
   if (isInjectionDefenceQuestion(question)) {
     return injectionDefenceReply(chunks);
   }
+  if (modelText && isRefusal(modelText)) {
+    return identityOrRefusal(question);
+  }
   const grounded = composeGroundedAnswer(question, chunks);
   if (grounded) return polishResult(question, grounded, chunks);
   if (isBareCourseTrainingQuestion(question)) {
     const course = courseTrainingReply(chunks);
     if (course) return course;
   }
-  if (isCrmAndZdiLiveQuestion(question)) {
+  if (isCrmAndZdiLiveQuestion(question) && evaluateGrounding(question, CANONICAL_CRM_ZDI_LIVE_ANSWER).ok) {
     return polishResult(question, {
       response: CANONICAL_CRM_ZDI_LIVE_ANSWER,
       sources: [
@@ -1106,7 +1120,7 @@ function staticOrSafeReply(
       via: "static",
     }, chunks);
   }
-  if (isWorkQuestion(question)) {
+  if (isWorkQuestion(question) && evaluateGrounding(question, CANONICAL_WORK_ANSWER).ok) {
     return polishResult(question, {
       response: CANONICAL_WORK_ANSWER,
       sources: workSystemSources([]),
@@ -1119,15 +1133,12 @@ function staticOrSafeReply(
       return polishResult(question, experience, chunks);
     }
   }
-  if (isAwsQuestion(question)) {
+  if (isAwsQuestion(question) && evaluateGrounding(question, CANONICAL_AWS_ANSWER).ok) {
     return withUnknownTermNote(question, polishResult(question, {
       response: CANONICAL_AWS_ANSWER,
       sources: awsSources([]),
       via: "static",
     }, chunks));
-  }
-  if (modelText && isRefusal(modelText)) {
-    return refusalResult();
   }
   if (isContactQuestion(question)) {
     return polishResult(question, contactStaticReply(), chunks);
@@ -1511,11 +1522,12 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
           const geminiText = await tryGenerate(input.generateGemini, prompt, "gemini");
           if (geminiText) {
             if (isRefusal(geminiText)) {
-              return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
+              return withContactEmail(question, identityOrRefusal(question));
             }
             const validated = validateModelSentences(
               stripSourceFooter(normaliseModelText(geminiText)),
               forPrompt.map((c) => `${c.title}\n${c.text}`),
+              question,
             );
             if (!validated.trim()) {
               return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
@@ -1529,9 +1541,13 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
+            if (isRefusal(groqText)) {
+              return withContactEmail(question, identityOrRefusal(question));
+            }
             const validated = validateModelSentences(
               stripSourceFooter(normaliseModelText(groqText)),
               forPrompt.map((c) => `${c.title}\n${c.text}`),
+              question,
             );
             const grounded = validated.trim() ? groundGroqAnswer(validated, forPrompt) : null;
             if (grounded) {

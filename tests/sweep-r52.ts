@@ -5,7 +5,7 @@ import {
   answerQuestion,
   EMAIL_FALLBACK,
 } from "../lib/answer";
-import { distinctiveContentTerms, passageHasTerm, validateModelSentences } from "../lib/grounding";
+import { contentTerms, passageHasTerm, validateModelSentences } from "../lib/grounding";
 import { isIndexedPhrase } from "../lib/intent-exemplars";
 import { KNOWLEDGE_CHUNKS } from "../lib/knowledge";
 import { isJailbreakPrompt, isRefusal } from "../lib/refusal";
@@ -399,7 +399,7 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
         }
       }
       if (!isRefusal(result.response)) {
-        const terms = distinctiveContentTerms(question);
+        const terms = contentTerms(question);
         const hay = result.response;
         for (const term of terms) {
           const listed = /isn't listed in mike's portfolio|aren't listed in mike's portfolio|not listed in mike's portfolio/.test(hay.toLowerCase());

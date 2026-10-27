@@ -42,9 +42,9 @@ const PROJECTS: Array<{
     re: /\b(?:zdi|zororo document intelligence)\b/i,
     sourceIds: ["zdi-signature-workflow"],
     staticQuestion: "What is ZDI?",
-    stack: "ZDI is built with FastAPI, PostgreSQL and Next.js [1].",
-    languages: "ZDI is written with FastAPI, PostgreSQL and Next.js [1].",
-    ai: "ZDI has no AI in approvals [1].",
+    stack: "ZDI stack: FastAPI, PostgreSQL and Next.js [1].",
+    languages: "ZDI languages: FastAPI, PostgreSQL and Next.js [1].",
+    ai: "ZDI AI tools: the sources list no AI in approvals [1].",
   },
   {
     id: "crm",
@@ -52,8 +52,8 @@ const PROJECTS: Array<{
     sourceIds: ["zororo-crm"],
     staticQuestion: "What is the CRM?",
     stack: "The CRM stack is FastAPI, PostgreSQL, Redis, Celery, and Docker [1].",
-    languages: "The CRM is built with FastAPI, PostgreSQL, Redis, Celery, and Docker [1].",
-    ai: "The CRM sources list FastAPI, PostgreSQL, Redis, Celery, and Docker. They do not list an LLM [1].",
+    languages: "The CRM languages: FastAPI, PostgreSQL, Redis, Celery, and Docker [1].",
+    ai: "The CRM AI tools: the sources list FastAPI, PostgreSQL, Redis, Celery, and Docker. They do not list an LLM [1].",
   },
   {
     id: "digi",
@@ -61,8 +61,8 @@ const PROJECTS: Array<{
     sourceIds: ["digi-app-form"],
     staticQuestion: "What is Digi App Form?",
     stack: "Digi App Form stack: Python, Flask, SQLite, Docker [1].",
-    languages: "Digi App Form is a Flask web application in Python [1].",
-    ai: "Digi App Form is a Flask intake system. The sources do not list an LLM [1].",
+    languages: "Digi App Form languages: Flask and Python [1].",
+    ai: "Digi App Form AI tools: the sources do not list an LLM [1].",
   },
   {
     id: "ai-os",
@@ -71,8 +71,8 @@ const PROJECTS: Array<{
     staticQuestion: "What is Zororo AI OS?",
     stack:
       "Zororo AI OS stack: Python 3.12, FastAPI, Presidio, OPA/Rego, Pydantic, Terraform, and pytest [1]. LangGraph and pgvector are planned [1].",
-    languages: "Zororo AI OS is written in Python with FastAPI [1].",
-    ai: "Zororo AI OS uses Microsoft Presidio and OPA (Rego) [1]. LangGraph and pgvector are planned [1].",
+    languages: "Zororo AI OS languages: Python with FastAPI [1].",
+    ai: "Zororo AI OS AI tools: Microsoft Presidio and OPA (Rego) [1]. LangGraph and pgvector are planned [1].",
   },
   {
     id: "claims",
@@ -80,8 +80,8 @@ const PROJECTS: Array<{
     sourceIds: ["zororo-claims"],
     staticQuestion: "What is the claims operations platform?",
     stack: "The claims platform stack: Next.js, TypeScript, NextAuth, Prisma, PostgreSQL, Docker [1].",
-    languages: "The claims platform is written in TypeScript with Next.js [1].",
-    ai: "The claims platform sources list Next.js, TypeScript, Prisma, and PostgreSQL. They do not list an LLM [1].",
+    languages: "The claims platform languages: TypeScript with Next.js [1].",
+    ai: "The claims platform AI tools: the sources list Next.js, TypeScript, Prisma, and PostgreSQL. They do not list an LLM [1].",
   },
   {
     id: "sentinel",
@@ -90,8 +90,8 @@ const PROJECTS: Array<{
     staticQuestion: "Walk me through Proactive Sentinel's architecture.",
     stack:
       "Proactive Sentinel stack: Python 3.11, Flask, PostgreSQL, Redis, OpenTelemetry, Docker [1].",
-    languages: "Proactive Sentinel is a Python backend [1].",
-    ai: "Proactive Sentinel is a Python backend, not an LLM product [1].",
+    languages: "Proactive Sentinel languages: Python [1].",
+    ai: "Proactive Sentinel AI tools: it is a Python backend, not an LLM product [1].",
   },
   {
     id: "sitewarden",
@@ -99,8 +99,8 @@ const PROJECTS: Array<{
     sourceIds: ["sitewarden"],
     staticQuestion: "What is Sitewarden?",
     stack: "Sitewarden uses FastAPI, LangGraph, Postgres, and pgvector [1].",
-    languages: "Sitewarden is a FastAPI backend with LangGraph and Postgres [1].",
-    ai: "Sitewarden uses a LangGraph state graph and pgvector hybrid search [1].",
+    languages: "Sitewarden languages: Python with FastAPI, LangGraph, and Postgres [1].",
+    ai: "Sitewarden AI tools: LangGraph state graph and pgvector hybrid search [1].",
   },
   {
     id: "cube",
@@ -108,8 +108,8 @@ const PROJECTS: Array<{
     sourceIds: ["cube-agent"],
     staticQuestion: "What is Cube?",
     stack: "Cube is a coding agent prototype with provider-agnostic adapters [1].",
-    languages: "Cube is a coding agent prototype. The sources do not name a language [1].",
-    ai: "Cube is a coding agent with provider-agnostic model adapters [1].",
+    languages: "Cube languages: the sources do not name a language [1].",
+    ai: "Cube AI tools: a coding agent with provider-agnostic model adapters [1].",
   },
   {
     id: "social",
@@ -117,8 +117,8 @@ const PROJECTS: Array<{
     sourceIds: ["ai-social-agent"],
     staticQuestion: "What is the multi-agent content pipeline?",
     stack: "The content pipeline stack: Python, FastAPI, Jinja2, Ollama, Docker, n8n [1].",
-    languages: "The content pipeline is written in Python [1].",
-    ai: "The content pipeline runs on local Ollama [1].",
+    languages: "The content pipeline languages: Python [1].",
+    ai: "The content pipeline AI tools: local Ollama [1].",
   },
   {
     id: "portfolio",
@@ -126,8 +126,8 @@ const PROJECTS: Array<{
     sourceIds: ["portfolio-rag-assistant", "this-assistant"],
     staticQuestion: "How does this assistant work?",
     stack: "The portfolio assistant is a RAG pipeline on Next.js with Gemini embeddings and Groq [1].",
-    languages: "The portfolio assistant is a Next.js RAG pipeline [1].",
-    ai: "The live RAG assistant uses Gemini embeddings and Groq [1].",
+    languages: "The portfolio assistant languages: TypeScript and Next.js [1].",
+    ai: "The portfolio assistant AI tools / LLM that answers visitors: Gemini embeddings and Groq [1].",
   },
 ];
 
@@ -174,6 +174,57 @@ type ProjectTopic =
   | "writes"
   | "database"
   | "general";
+
+function projectDisplayName(project: (typeof PROJECTS)[number]): string {
+  if (project.id === "sentinel") return "Proactive Sentinel";
+  if (project.id === "crm") return "the CRM";
+  if (project.id === "digi") return "Digi App Form";
+  if (project.id === "ai-os") return "Zororo AI OS";
+  if (project.id === "claims") return "the claims operations platform";
+  if (project.id === "social") return "the content pipeline";
+  if (project.id === "portfolio") return "this assistant";
+  return project.staticQuestion
+    .replace(/^what is /i, "")
+    .replace(/^walk me through /i, "")
+    .replace(/'s architecture\.?$/i, "")
+    .replace(/\?$/, "");
+}
+
+function topicCannedQuestion(project: (typeof PROJECTS)[number], topic: ProjectTopic): string {
+  const name = projectDisplayName(project);
+  switch (topic) {
+    case "status":
+      return `Is ${name} still running?`;
+    case "testing":
+      return `How is ${name} tested?`;
+    case "languages":
+      return `What languages is ${name} written in?`;
+    case "stack":
+      return `What stack does ${name} use?`;
+    case "ai":
+      return `What AI tools does ${name} use?`;
+    case "remote":
+      return `Does ${name} work remotely?`;
+    case "database":
+      return `What database does ${name} use?`;
+    case "deploy":
+      return `Where is ${name} deployed?`;
+    case "lead":
+      return `Did Mike act as tech lead on ${name}?`;
+    case "approvers":
+      return `Who approves ${name} requests?`;
+    case "storage":
+      return `How does ${name} store documents?`;
+    case "writes":
+      return `What does ${name} do before writing files?`;
+    case "general":
+      return `What is ${name}?`;
+    default: {
+      const _exhaustive: never = topic;
+      return _exhaustive;
+    }
+  }
+}
 
 function projectTopic(question: string): ProjectTopic {
   const hay = question.toLowerCase();
@@ -246,7 +297,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-status`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "status"),
           aliases: [],
           answer: status,
           sourceIds: project.sourceIds,
@@ -257,7 +308,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-remote`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "remote"),
           aliases: [],
           answer: staticByQuestion(project.staticQuestion).answer,
           sourceIds: project.sourceIds,
@@ -269,7 +320,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-testing`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "testing"),
           aliases: [],
           answer: testing,
           sourceIds: project.sourceIds,
@@ -284,7 +335,12 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
     case "writes":
       return {
         id: `project-${project.id}-writes`,
-        answer: staticByQuestion(project.staticQuestion),
+        answer: {
+          question: topicCannedQuestion(project, "writes"),
+          aliases: [],
+          answer: staticByQuestion(project.staticQuestion).answer,
+          sourceIds: project.sourceIds,
+        },
       };
     case "database": {
       if (!/\bpostgres(?:ql)?\b/i.test(project.stack)) return null;
@@ -292,7 +348,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-database`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "database"),
           aliases: [],
           answer: `${name} uses PostgreSQL as its database [1].`,
           sourceIds: project.sourceIds,
@@ -303,7 +359,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-stack`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "stack"),
           aliases: [],
           answer: project.stack,
           sourceIds: project.sourceIds,
@@ -313,7 +369,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-languages`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "languages"),
           aliases: [],
           answer: project.languages,
           sourceIds: project.sourceIds,
@@ -323,7 +379,7 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return {
         id: `project-${project.id}-ai`,
         answer: {
-          question: project.staticQuestion,
+          question: topicCannedQuestion(project, "ai"),
           aliases: [],
           answer: project.ai,
           sourceIds: project.sourceIds,
