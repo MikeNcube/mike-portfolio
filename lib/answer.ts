@@ -9,7 +9,13 @@ import {
   STATIC_ANSWERS,
   type StaticAnswer,
 } from "./static-answers";
-import { matchProjectScopedAnswer, namedProjects } from "./intent";
+import { matchProjectScopedAnswer, matchTechScopedAnswer, namedProjects } from "./intent";
+import {
+  analyseQuestion,
+  conceptOverride,
+  coverageRefusalReason,
+  type QuestionAnalysis,
+} from "./concepts";
 import { canonicalQuestionForPhrase } from "./intent-exemplars";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
@@ -1031,6 +1037,16 @@ function composeGroundedAnswer(
   question: string,
   retrieved: RetrievedChunk[],
 ): AnswerResult | null {
+  // A single named project plus a recognised aspect (status, stack, database) is
+  // answered from that project's own chunk, so it needs no further gate.
+  const scoped = matchProjectScopedAnswer(question) ?? matchTechScopedAnswer(question);
+  if (scoped) {
+    return withUnknownTermNote(question, {
+      response: scoped.answer.answer,
+      sources: sourcesFor(scoped.answer),
+      via: "static",
+    });
+  }
   const identity = exactStaticHit(question);
   if (identity) {
     return withUnknownTermNote(question, {
@@ -1042,12 +1058,6 @@ function composeGroundedAnswer(
   const multi = matchMultiProjectAnswer(question);
   if (multi && staticHitFitsNamedProjects(question, multi)) {
     const gated = gatedStatic(question, multi);
-    if (gated) return gated;
-  }
-  // Named-project topics are a rank boost, not a Mike-wide classify-first return.
-  const project = matchProjectScopedAnswer(question);
-  if (project) {
-    const gated = gatedStatic(question, project.answer);
     if (gated) return gated;
   }
   for (const chunk of retrieved) {
@@ -1459,7 +1469,79 @@ export type AnswerInput = {
   generateGroq?: GenerateFn;
 };
 
+function conceptCanonicalResult(canonical: string): AnswerResult | null {
+  const hit = STATIC_ANSWERS.find((item) => item.question === canonical);
+  if (!hit) {
+    console.error(`[concepts] missing canonical static answer: ${canonical}`);
+    return null;
+  }
+  return { response: hit.answer, sources: sourcesFor(hit), via: "static" };
+}
+
+// The stack sentence (or first KB sentence) that names a technology Mike lists.
+function knownTechResult(tech: string): AnswerResult | null {
+  const escaped = tech.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i");
+  const ordered = [
+    ...KNOWLEDGE_CHUNKS.filter((c) => c.id === "stack"),
+    ...KNOWLEDGE_CHUNKS.filter((c) => c.id !== "stack"),
+  ];
+  for (const chunk of ordered) {
+    const sentence = splitIntoSentences(chunk.text).find((s) => re.test(s));
+    if (!sentence) continue;
+    const body = sentence.trim().replace(/[.!?]+$/, "");
+    return {
+      response: `Yes, ${tech} appears in ${chunk.id === "stack" ? "Mike's stack" : chunk.title}: ${body} [1].`,
+      sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
+      via: "static",
+    };
+  }
+  return null;
+}
+
+// When the retrieval chain refuses a question the coverage gate accepted, fall
+// back to what the question is anchored on rather than refusing.
+function anchoredFallback(question: string, analysis: QuestionAnalysis): AnswerResult | null {
+  const projects = namedProjects(question);
+  if (projects.length === 1) return conceptCanonicalResult(projects[0].staticQuestion);
+  if (projects.length === 0 && analysis.knownTech.length > 0) return knownTechResult(analysis.knownTech[0]);
+  return null;
+}
+
+// Replace wrong-topic profile answers with the asked concept, then name any
+// technology the question asked about that the portfolio does not list.
+function reconcileWithConcepts(
+  question: string,
+  analysis: QuestionAnalysis,
+  result: AnswerResult,
+): AnswerResult {
+  const refused = isRefusal(result.response);
+  const concept = conceptOverride(analysis, result.response, refused);
+  const fallback = !concept && refused ? anchoredFallback(question, analysis) : null;
+  const reconciled = concept
+    ? conceptCanonicalResult(concept.canonical) ?? result
+    : fallback ?? result;
+  if (isRefusal(reconciled.response) || analysis.unknownTech.length === 0) return reconciled;
+  if (/(?:isn'?t|aren't|not) listed in Mike's portfolio/i.test(reconciled.response)) return reconciled;
+  return {
+    ...reconciled,
+    response: `${reconciled.response.replace(/\s+$/, "")} ${unknownTechNote(analysis.unknownTech)}`,
+  };
+}
+
 export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> {
+  const question = input.question.trim();
+  if (isJailbreakPrompt(question) || isInjectionDefenceQuestion(question)) {
+    return answerRetrieveFirst(input);
+  }
+  if (isUnknowableQuestion(question)) return refusalResult();
+  // Coverage gate runs before retrieval so off-portfolio questions never reach a model.
+  const analysis = analyseQuestion(question);
+  if (coverageRefusalReason(analysis)) return refusalResult();
+  return reconcileWithConcepts(question, analysis, await answerRetrieveFirst(input));
+}
+
+async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
   const question = input.question.trim();
   if (isJailbreakPrompt(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };

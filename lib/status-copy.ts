@@ -39,7 +39,7 @@ export const CANONICAL_AWS_ANSWER =
   "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
 
 export const CANONICAL_TECH_LEAD_CRM_ANSWER =
-  "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team.";
+  "The sources do not use the title tech lead. Mike shipped the lead-management CRM at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. His title is Applied AI Engineer and Systems Architect, and he is the sole AI engineer in a four-person IT team [2].";
 
 const PRODUCTION_QUESTION_RE =
   /\b(production systems?|what has mike shipped|what did mike ship|shipped at zororo|in production|ship(?:ped)? live)\b/i;
@@ -113,8 +113,14 @@ const BACK_TO_BACK_STATUS_RES: RegExp[] = [
 ];
 
 // True when the visitor asked which production systems Mike shipped.
+const SINGLE_PROJECT_RE =
+  /\b(?:zdi|crm|digi(?: app form)?|sentinel|sitewarden|cube|zororo ai os|claims (?:operations )?platform|content pipeline|fastapi|flask|postgres(?:ql)?|sqlite|redis|celery|docker|python|typescript|react|next\.js|jwt|langgraph|pgvector)\b/i;
+
 export function isProductionSystemsQuestion(question: string): boolean {
-  return PRODUCTION_QUESTION_RE.test(question);
+  if (!PRODUCTION_QUESTION_RE.test(question)) return false;
+  // "Is ZDI in production?" asks about one project, not for the shipped list.
+  const asksForList = /\bproduction systems?\b|\bwhat (?:has|did) mike ship/i.test(question);
+  return asksForList || !SINGLE_PROJECT_RE.test(question);
 }
 
 function stripWorkScopeWords(text: string): string {

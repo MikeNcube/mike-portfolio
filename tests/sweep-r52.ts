@@ -369,7 +369,9 @@ describe("r52 retrieve-first holdout, properties, and probes", () => {
       }
       if (!isRefusal(result.response) && result.sources.length > 0) {
         const blob = citedBlob(result.sources);
-        const tokens = result.response.replace(/\[\d+\]/g, "").match(/\b[A-Z][\w.+#-]*|\b\d+(?:\.\d+)?\b/g) ?? [];
+        // The token class includes "." for names like Next.js, so drop sentence-final periods.
+        const tokens = (result.response.replace(/\[\d+\]/g, "").match(/\b[A-Z][\w.+#-]*|\b\d+(?:\.\d+)?\b/g) ?? [])
+          .map((token) => token.replace(/[.-]+$/, ""));
         for (const token of tokens) {
           if (CLAIM_SKIP.has(token)) continue;
           if (/^\d+$/.test(token) && token.length === 1) continue;

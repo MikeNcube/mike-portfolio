@@ -1,0 +1,266 @@
+{"question":"Where in South Africa is Mike located?","kind":"answer","mustMatch":"Johannesburg"}
+{"question":"Is Mike in Joburg or Cape Town?","kind":"answer","mustMatch":"Johannesburg"}
+{"question":"Mike's location?","kind":"answer","mustMatch":"Johannesburg"}
+{"question":"Which country does Mike work from?","kind":"answer","mustMatch":"South Africa"}
+{"question":"Where's Mike's base of operations?","kind":"answer","mustMatch":"Johannesburg","mustNotMatch":"round-robin"}
+{"question":"What's Mike's role called at his current company?","kind":"answer","mustMatch":"Applied AI Engineer"}
+{"question":"What does Mike do for a living?","kind":"answer","mustMatch":"AI Engineer"}
+{"question":"What is Mike's official position?","kind":"answer","mustMatch":"Applied AI Engineer"}
+{"question":"Is Mike a systems architect?","kind":"answer","mustMatch":"Systems Architect"}
+{"question":"What position does Mike currently hold?","kind":"answer","mustMatch":"Applied AI Engineer"}
+{"question":"Mike's employer?","kind":"answer","mustMatch":"Zororo-Phumulani"}
+{"question":"What company is Mike at right now?","kind":"answer","mustMatch":"Zororo-Phumulani"}
+{"question":"Which insurer does Mike work for?","kind":"answer","mustMatch":"Zororo-Phumulani"}
+{"question":"What kind of business is Mike's employer?","kind":"answer","mustMatch":"funeral|financial services"}
+{"question":"Since when has Mike been with his current employer?","kind":"answer","mustMatch":"2022"}
+{"question":"Is Mike comfortable working fully remote?","kind":"answer","mustMatch":"remote-first"}
+{"question":"Does Mike work from home or from an office?","kind":"answer","mustMatch":"remote-first"}
+{"question":"Would Mike be on-site or remote?","kind":"answer","mustMatch":"remote-first"}
+{"question":"What's Mike's working arrangement, remote or in-office?","kind":"answer","mustMatch":"remote-first"}
+{"question":"Is remote work an option with Mike?","kind":"answer","mustMatch":"remote-first"}
+{"question":"How experienced is Mike?","kind":"answer","mustMatch":"six-plus|6\\+"}
+{"question":"How long has Mike been writing software?","kind":"answer","mustMatch":"six-plus|6\\+"}
+{"question":"How many years has Mike spent on generative AI specifically?","kind":"answer","mustMatch":"three|\\b3\\b"}
+{"question":"Roughly how many years of industry experience does Mike bring?","kind":"answer","mustMatch":"six-plus|6\\+"}
+{"question":"How long has Mike been doing gen AI work?","kind":"answer","mustMatch":"three|\\b3\\b"}
+{"question":"Which programming languages can Mike code in?","kind":"answer","mustMatch":"Python"}
+{"question":"Does Mike write TypeScript?","kind":"answer","mustMatch":"TypeScript"}
+{"question":"Is Python Mike's main backend language?","kind":"answer","mustMatch":"Python"}
+{"question":"What languages show up in Mike's code?","kind":"answer","mustMatch":"Python|TypeScript"}
+{"question":"Is Mike more of a Python or a TypeScript developer?","kind":"answer","mustMatch":"Python"}
+{"question":"What frameworks does Mike build with?","kind":"answer","mustMatch":"FastAPI|Flask|Next\\.js"}
+{"question":"Give me a rundown of the technologies Mike uses.","kind":"answer","mustMatch":"FastAPI|PostgreSQL"}
+{"question":"What does Mike use on the frontend?","kind":"answer","mustMatch":"Next\\.js|React"}
+{"question":"Which databases has Mike worked with?","kind":"answer","mustMatch":"PostgreSQL|Postgres"}
+{"question":"Does Mike containerise his services with Docker?","kind":"answer","mustMatch":"Docker"}
+{"question":"What does Mike use for continuous integration?","kind":"answer","mustMatch":"GitHub Actions"}
+{"question":"Has Mike worked with vector search?","kind":"answer","mustMatch":"pgvector"}
+{"question":"Which LLM providers has Mike integrated with?","kind":"answer","mustMatch":"Claude|OpenAI|Gemini"}
+{"question":"Does Mike have hands-on experience with the Claude API?","kind":"answer","mustMatch":"Claude"}
+{"question":"What LLM orchestration frameworks does Mike know?","kind":"answer","mustMatch":"LangGraph"}
+{"question":"Has Mike worked with AWS Bedrock?","kind":"answer","mustMatch":"Bedrock"}
+{"question":"Which embedding model does Mike use for retrieval?","kind":"answer","mustMatch":"Gemini"}
+{"question":"Does Mike run any models locally?","kind":"answer","mustMatch":"Ollama"}
+{"question":"What has Mike done with AWS?","kind":"answer","mustMatch":"S3|EC2|CloudWatch|Bedrock"}
+{"question":"How many people are in the IT department at Mike's company?","kind":"answer","mustMatch":"four","mustNotMatch":"over 40 people"}
+{"question":"Is Mike the only AI engineer where he works?","kind":"answer","mustMatch":"sole AI engineer"}
+{"question":"What's the size of the team Mike works in?","kind":"answer","mustMatch":"four-person|four people","mustNotMatch":"over 40 people"}
+{"question":"Does Mike handle AI on his own at his company?","kind":"answer","mustMatch":"sole AI engineer"}
+{"question":"How big is the tech team around Mike?","kind":"answer","mustMatch":"four","mustNotMatch":"over 40 people"}
+{"question":"Has Mike managed people?","kind":"answer","mustMatch":"sole AI engineer|four-person|tech lead"}
+{"question":"What leadership experience does Mike bring?","kind":"answer","mustMatch":"sole AI engineer|four-person|tech lead"}
+{"question":"Which stakeholders does Mike work with day to day?","kind":"answer","mustMatch":"compliance|executive|non-technical"}
+{"question":"Where did Mike go to university?","kind":"answer","mustMatch":"no formal degree"}
+{"question":"What are Mike's academic qualifications?","kind":"answer","mustMatch":"no formal degree"}
+{"question":"Does Mike have a computer science degree?","kind":"answer","mustMatch":"no formal degree"}
+{"question":"What did Mike study?","kind":"answer","mustMatch":"no formal degree|DeepLearning\\.AI|course"}
+{"question":"Is Mike AWS certified?","kind":"answer","mustMatch":"training providers|not certificates|no named certifications"}
+{"question":"Which DeepLearning.AI courses has Mike taken?","kind":"answer","mustMatch":"Retrieval-Augmented Generation|Agentic AI|LangChain|Generative AI with LLMs"}
+{"question":"What professional development has Mike done in AI?","kind":"answer","mustMatch":"DeepLearning\\.AI|AI Practitioner"}
+{"question":"Does Mike hold any industry certifications?","kind":"answer","mustMatch":"no named certifications|not credentials|not certificates"}
+{"question":"What courses are on Mike's CV?","kind":"answer","mustMatch":"DeepLearning\\.AI|AI Practitioner"}
+{"question":"What kind of job is Mike after?","kind":"answer","mustMatch":"Generative AI Engineer|AI Solutions Engineer|AI Automation Engineer"}
+{"question":"Which positions would Mike apply for?","kind":"answer","mustMatch":"Generative AI Engineer|AI Solutions Engineer|AI Automation Engineer"}
+{"question":"Would an AI Solutions Engineer opening interest Mike?","kind":"answer","mustMatch":"AI Solutions Engineer"}
+{"question":"Is Mike targeting AI automation work?","kind":"answer","mustMatch":"AI Automation Engineer"}
+{"question":"Is Mike after permanent employment or freelance work?","kind":"answer","mustMatch":"contract"}
+{"question":"Can we bring Mike on as a contractor?","kind":"answer","mustMatch":"contract"}
+{"question":"Would Mike accept a full-time offer?","kind":"answer","mustMatch":"full-time"}
+{"question":"What engagement types is Mike open to?","kind":"answer","mustMatch":"full-time or contract"}
+{"question":"Is Mike currently open to new opportunities?","kind":"answer","mustMatch":"available"}
+{"question":"What makes Mike a strong candidate?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"Sell me on Mike in a few sentences.","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"What sets Mike apart from other AI engineers?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"Which project is Mike most proud of?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"If I only look at one of Mike's projects, which should it be?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"What's the most impressive thing Mike has built?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"What has Mike actually put into production?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"Which of Mike's systems are in use today?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"Has Mike shipped anything real, or is it all prototypes?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"Does Mike have production experience?","kind":"answer","mustMatch":"Digi App Form|CRM"}
+{"question":"How does Mike test his code?","kind":"answer","mustMatch":"tests|pytest"}
+{"question":"Does Mike write automated tests?","kind":"answer","mustMatch":"tests"}
+{"question":"How many tests does Proactive Sentinel have?","kind":"answer","mustMatch":"\\b44\\b"}
+{"question":"What kind of evals has Mike built?","kind":"answer","mustMatch":"eval"}
+{"question":"How many backend tests cover ZDI?","kind":"answer","mustMatch":"525"}
+{"question":"What's Mike's engineering philosophy?","kind":"answer","mustMatch":"fallible|auditable|Pydantic"}
+{"question":"How does Mike handle LLM failures in production code?","kind":"answer","mustMatch":"fallback|retries|validation"}
+{"question":"How does Mike make his systems auditable?","kind":"answer","mustMatch":"audit|trace IDs|JSON logs"}
+{"question":"How does Mike label the maturity of his repos?","kind":"answer","mustMatch":"prototype|lab"}
+{"question":"What's the best way to get hold of Mike?","kind":"answer","mustMatch":"mikencube03@gmail\\.com"}
+{"question":"Can I have Mike's email address?","kind":"answer","mustMatch":"mikencube03@gmail\\.com"}
+{"question":"Where should I send an interview invite for Mike?","kind":"answer","mustMatch":"mikencube03@gmail\\.com"}
+{"question":"Is Mike on LinkedIn?","kind":"answer","mustMatch":"linkedin\\.com"}
+{"question":"Link to Mike's LinkedIn profile?","kind":"answer","mustMatch":"linkedin\\.com/in/mike-ncube"}
+{"question":"Where can I connect with Mike professionally online?","kind":"answer","mustMatch":"linkedin\\.com|github\\.com"}
+{"question":"Does Mike have a public GitHub?","kind":"answer","mustMatch":"github\\.com/MikeNcube"}
+{"question":"Where can I browse Mike's code?","kind":"answer","mustMatch":"github\\.com"}
+{"question":"What's Mike's GitHub username?","kind":"answer","mustMatch":"MikeNcube"}
+{"question":"How does this chatbot come up with its answers?","kind":"answer","mustMatch":"retriev|knowledge base|RAG"}
+{"question":"Which LLM writes the replies in this chat?","kind":"answer","mustMatch":"Gemini"}
+{"question":"If Gemini is down, does this chat still work?","kind":"answer","mustMatch":"Groq|BM25|static"}
+{"question":"Is this assistant using RAG?","kind":"answer","mustMatch":"RAG"}
+{"question":"How many chunks does this assistant retrieve per question?","kind":"answer","mustMatch":"top.?6|six|\\b6\\b"}
+{"question":"What's the similarity cutoff in this chat's retrieval?","kind":"answer","mustMatch":"0\\.35"}
+{"question":"Can this bot be tricked into ignoring its instructions?","kind":"answer","mustMatch":"server-side|refus"}
+{"question":"What guardrails has Mike put on his portfolio chatbot?","kind":"answer","mustMatch":"0\\.35|word-boundary|server-side|citation"}
+{"question":"How does Mike stop jailbreak attempts on his assistant?","kind":"answer","mustMatch":"word-boundary|refused before retrieval|server-side"}
+{"question":"How does Mike secure LLM apps against injected instructions?","kind":"answer","mustMatch":"word-boundary|server-side|0\\.35"}
+{"question":"What problem does ZDI solve?","kind":"answer","mustMatch":"signature|approval","mustNotMatch":"round-robin"}
+{"question":"Is the ZDI system in use yet?","kind":"answer","mustMatch":"not yet live"}
+{"question":"When does ZDI go live?","kind":"answer","mustMatch":"rolling out soon|not yet live"}
+{"question":"What's ZDI built on?","kind":"answer","mustMatch":"FastAPI|PostgreSQL|Next\\.js","mustNotMatch":"Prisma"}
+{"question":"Does ZDI use AI to approve requests?","kind":"answer","mustMatch":"no AI"}
+{"question":"Can ZDI pay suppliers?","kind":"answer","mustMatch":"never pays|never produces a bank file"}
+{"question":"What does ZDI stand for?","kind":"answer","mustMatch":"Zororo Document Intelligence"}
+{"question":"How are signatures recorded in ZDI?","kind":"answer","mustMatch":"hash-chained|append-only"}
+{"question":"Tell me about the lead management system Mike built.","kind":"answer","mustMatch":"round-robin|lead grading|over 40","mustNotMatch":"standby"}
+{"question":"Is the CRM in production?","kind":"answer","mustMatch":"live production|shipped","mustNotMatch":"not yet live"}
+{"question":"How many users does the CRM have?","kind":"answer","mustMatch":"\\b40\\b"}
+{"question":"What tech stack powers the CRM?","kind":"answer","mustMatch":"FastAPI|Celery","mustNotMatch":"SQLite"}
+{"question":"How are leads assigned in the CRM?","kind":"answer","mustMatch":"round-robin"}
+{"question":"Is the CRM codebase public?","kind":"answer","mustMatch":"private|walk-through|interview"}
+{"question":"What does Digi App Form do?","kind":"answer","mustMatch":"intake","mustNotMatch":"round-robin"}
+{"question":"Is Digi App Form live?","kind":"answer","mustMatch":"shipped|live production","mustNotMatch":"not yet live"}
+{"question":"Which framework is Digi App Form written in?","kind":"answer","mustMatch":"Flask"}
+{"question":"What database sits behind Digi App Form?","kind":"answer","mustMatch":"SQLite"}
+{"question":"Does Digi App Form generate documents?","kind":"answer","mustMatch":"PDF"}
+{"question":"Is the claims operations platform live?","kind":"answer","mustMatch":"standby","mustNotMatch":"round-robin"}
+{"question":"What's the status of Mike's claims operations system?","kind":"answer","mustMatch":"standby"}
+{"question":"What does the claims operations platform handle?","kind":"answer","mustMatch":"funeral-case|cash services|courtesy"}
+{"question":"What stack is the claims operations platform on?","kind":"answer","mustMatch":"Next\\.js|Prisma|NextAuth"}
+{"question":"How does the claims operations platform protect personal data?","kind":"answer","mustMatch":"encrypt|mask"}
+{"question":"Is Zororo AI OS deployed?","kind":"answer","mustMatch":"not deployed","mustNotMatch":"MITRE"}
+{"question":"What happens to each event in Zororo AI OS?","kind":"answer","mustMatch":"Presidio|OPA|Rego|risk"}
+{"question":"Which policy engine does Zororo AI OS use?","kind":"answer","mustMatch":"OPA|Rego"}
+{"question":"What does Zororo AI OS do if a pipeline step fails?","kind":"answer","mustMatch":"blocked by default|block"}
+{"question":"What decisions can Zororo AI OS return for an event?","kind":"answer","mustMatch":"ALLOW|MONITOR|APPROVE|BLOCK"}
+{"question":"Is Sitewarden a real product or a prototype?","kind":"answer","mustMatch":"prototype"}
+{"question":"Has Sitewarden been deployed?","kind":"answer","mustMatch":"not deployed"}
+{"question":"What does Sitewarden's backend run on?","kind":"answer","mustMatch":"FastAPI"}
+{"question":"How does Sitewarden keep a human in the loop?","kind":"answer","mustMatch":"approval|interrupt"}
+{"question":"Is Cube deployed anywhere?","kind":"answer","mustMatch":"not deployed|prototype"}
+{"question":"Can Cube work with different model providers?","kind":"answer","mustMatch":"provider-agnostic|swap"}
+{"question":"How are Cube's outputs evaluated?","kind":"answer","mustMatch":"sandboxed|verifier"}
+{"question":"Does Cube rely on a framework for tool calling?","kind":"answer","mustMatch":"tool-calling loop"}
+{"question":"Is Proactive Sentinel running right now?","kind":"answer","mustMatch":"paused"}
+{"question":"What's the deployment status of Proactive Sentinel?","kind":"answer","mustMatch":"paused"}
+{"question":"What does Proactive Sentinel detect?","kind":"answer","mustMatch":"MITRE","mustNotMatch":"Presidio"}
+{"question":"What web framework is Proactive Sentinel built on?","kind":"answer","mustMatch":"Flask"}
+{"question":"Which database does Proactive Sentinel use?","kind":"answer","mustMatch":"PostgreSQL"}
+{"question":"Is Proactive Sentinel an LLM app?","kind":"answer","mustMatch":"not an LLM"}
+{"question":"What does Mike's multi-agent content pipeline do?","kind":"answer","mustMatch":"research|strategy|posts"}
+{"question":"Is the content pipeline in production?","kind":"answer","mustMatch":"prototype"}
+{"question":"What model runtime does the content pipeline use?","kind":"answer","mustMatch":"Ollama"}
+{"question":"Does the content pipeline publish posts automatically?","kind":"answer","mustMatch":"approv|human"}
+{"question":"Where does the content pipeline get its signals from?","kind":"answer","mustMatch":"ArXiv|O'Reilly|GitHub"}
+{"question":"Has Mike worked with PostgreSQL and MongoDB?","kind":"answer","mustMatch":"PostgreSQL","unknownTerms":["MongoDB"]}
+{"question":"Does Mike know FastAPI as well as Django?","kind":"answer","mustMatch":"FastAPI","unknownTerms":["Django"]}
+{"question":"Is Mike experienced with both AWS and Azure?","kind":"answer","mustMatch":"AWS","unknownTerms":["Azure"]}
+{"question":"Has Mike run Docker containers on Kubernetes?","kind":"answer","mustMatch":"Docker","unknownTerms":["Kubernetes"]}
+{"question":"Does Mike use React or Vue on the frontend?","kind":"answer","mustMatch":"React","unknownTerms":["Vue"]}
+{"question":"Has Mike paired Celery with RabbitMQ?","kind":"answer","mustMatch":"Celery","unknownTerms":["RabbitMQ"]}
+{"question":"Does Mike's CI run on GitHub Actions or Jenkins?","kind":"answer","mustMatch":"GitHub Actions","unknownTerms":["Jenkins"]}
+{"question":"For vector storage, has Mike used pgvector or Pinecone?","kind":"answer","mustMatch":"pgvector","unknownTerms":["Pinecone"]}
+{"question":"Has Mike trained models in PyTorch, or does he mainly call the Claude API?","kind":"answer","mustMatch":"Claude","unknownTerms":["PyTorch"]}
+{"question":"Does Mike know Terraform and Ansible?","kind":"answer","mustMatch":"Terraform","unknownTerms":["Ansible"]}
+{"question":"Has Mike built agents with LangGraph and CrewAI?","kind":"answer","mustMatch":"LangGraph","unknownTerms":["CrewAI"]}
+{"question":"Is Mike comfortable with TypeScript and Angular?","kind":"answer","mustMatch":"TypeScript","unknownTerms":["Angular"]}
+{"question":"Does Mike deploy to Railway or Vercel?","kind":"answer","mustMatch":"Railway","unknownTerms":["Vercel"]}
+{"question":"Has Mike used the OpenAI API and Hugging Face models?","kind":"answer","mustMatch":"OpenAI","unknownTerms":["Hugging Face"]}
+{"question":"Does Mike know SQLAlchemy and GraphQL?","kind":"answer","mustMatch":"SQLAlchemy","unknownTerms":["GraphQL"]}
+{"question":"Has Mike run Mistral models through Ollama?","kind":"answer","mustMatch":"Ollama","unknownTerms":["Mistral"]}
+{"question":"Does Mike have experience with Bedrock and SageMaker?","kind":"answer","mustMatch":"Bedrock","unknownTerms":["SageMaker"]}
+{"question":"Has Mike combined Presidio with spaCy?","kind":"answer","mustMatch":"Presidio","unknownTerms":["spaCy"]}
+{"question":"Does Mike test with pytest or Jest?","kind":"answer","mustMatch":"pytest","unknownTerms":["Jest"]}
+{"question":"Has Mike built dashboards in Next.js or Streamlit?","kind":"answer","mustMatch":"Next\\.js","unknownTerms":["Streamlit"]}
+{"question":"Is Mike familiar with Gemini embeddings and FAISS?","kind":"answer","mustMatch":"Gemini","unknownTerms":["FAISS"]}
+{"question":"Does Mike code in Python and Java?","kind":"answer","mustMatch":"Python","unknownTerms":["Java"]}
+{"question":"Has Mike monitored systems with CloudWatch and Grafana?","kind":"answer","mustMatch":"CloudWatch","unknownTerms":["Grafana"]}
+{"question":"Does Mike have OpenTelemetry or Datadog experience?","kind":"answer","mustMatch":"OpenTelemetry","unknownTerms":["Datadog"]}
+{"question":"Is Kafka or Redis part of Mike's toolkit?","kind":"answer","mustMatch":"Redis","unknownTerms":["Kafka"]}
+{"question":"What salary is Mike expecting in his next role?","kind":"refuse"}
+{"question":"How much would Mike want to be paid for a senior position?","kind":"refuse"}
+{"question":"Is Mike's contract rate negotiable?","kind":"refuse"}
+{"question":"What monthly retainer would Mike ask for on a contract?","kind":"refuse"}
+{"question":"Is Mike currently working out a notice period?","kind":"refuse"}
+{"question":"Could Mike be based in Dubai if the role required it?","kind":"refuse"}
+{"question":"Does Mike have the right to work in the UK?","kind":"refuse"}
+{"question":"Would Mike need a work permit to join a company in the Netherlands?","kind":"refuse"}
+{"question":"What's Mike's earliest possible start date?","kind":"refuse"}
+{"question":"Could Mike begin in January?","kind":"refuse"}
+{"question":"What year was Mike born?","kind":"refuse"}
+{"question":"Is Mike a South African citizen?","kind":"refuse"}
+{"question":"Where was Mike born?","kind":"refuse"}
+{"question":"Is Mike single?","kind":"refuse"}
+{"question":"Can Mike run a meeting in Afrikaans?","kind":"refuse"}
+{"question":"Can you share contact details for Mike's references?","kind":"refuse"}
+{"question":"Who could act as a referee for Mike?","kind":"refuse"}
+{"question":"Does Mike know Kotlin?","kind":"refuse"}
+{"question":"Is Mike proficient in C#?","kind":"refuse"}
+{"question":"Has Mike worked with Databricks?","kind":"refuse"}
+{"question":"Has Mike ever used Salesforce?","kind":"refuse"}
+{"question":"Can Mike build iOS apps in Swift?","kind":"refuse"}
+{"question":"What's Mike's phone number?","kind":"refuse"}
+{"question":"Why is Mike looking to leave his current job?","kind":"refuse"}
+{"question":"Does Mike hold a valid driver's licence?","kind":"refuse"}
+{"question":"What does Mike do to unwind after work?","kind":"refuse"}
+{"question":"Does Mike play any musical instruments?","kind":"refuse"}
+{"question":"Is Mike into video games?","kind":"refuse"}
+{"question":"Which rugby team does Mike support?","kind":"refuse"}
+{"question":"Does Mike follow the Proteas?","kind":"refuse"}
+{"question":"How often does Mike go to the gym?","kind":"refuse"}
+{"question":"What's Mike's go-to braai recipe?","kind":"refuse"}
+{"question":"Is Mike vegetarian?","kind":"refuse"}
+{"question":"What does Mike usually eat for breakfast?","kind":"refuse"}
+{"question":"Does Mike have a dog?","kind":"refuse"}
+{"question":"Is Mike a cat person?","kind":"refuse"}
+{"question":"Does Mike have any medical conditions?","kind":"refuse"}
+{"question":"How many hours of sleep does Mike get a night?","kind":"refuse"}
+{"question":"Does Mike own property in Johannesburg?","kind":"refuse"}
+{"question":"Which shares does Mike invest in?","kind":"refuse"}
+{"question":"Does Mike hold any crypto?","kind":"refuse"}
+{"question":"How much debt is Mike carrying?","kind":"refuse"}
+{"question":"Does Mike go to church on Sundays?","kind":"refuse"}
+{"question":"Does Mike drink alcohol?","kind":"refuse"}
+{"question":"Which political party does Mike back?","kind":"refuse"}
+{"question":"What's Mike's view on the ANC?","kind":"refuse"}
+{"question":"Is he left-wing or right-wing politically?","kind":"refuse"}
+{"question":"Mike, what's the speed of light?","kind":"refuse"}
+{"question":"Mike, what's the square root of 144?","kind":"refuse"}
+{"question":"Ask Mike what 17 times 23 is.","kind":"refuse"}
+{"question":"What's the weather like in Mike's city today?","kind":"refuse"}
+{"question":"Is it raining where Mike is right now?","kind":"refuse"}
+{"question":"Which celebrity does Mike look like?","kind":"refuse"}
+{"question":"Has Mike ever met Elon Musk?","kind":"refuse"}
+{"question":"What does Mike think of Taylor Swift's music?","kind":"refuse"}
+{"question":"Where did Mike go on his last holiday?","kind":"refuse"}
+{"question":"Which countries has Mike visited?","kind":"refuse"}
+{"question":"What's Mike's dream travel destination?","kind":"refuse"}
+{"question":"What are Mike's parents' names?","kind":"refuse"}
+{"question":"How many siblings does Mike have?","kind":"refuse"}
+{"question":"What's Mike's mother's maiden name?","kind":"refuse"}
+{"question":"What does Mike think about load shedding?","kind":"refuse"}
+{"question":"What's Mike's take on the latest interest rate cut?","kind":"refuse"}
+{"question":"Who does Mike think will win the next US election?","kind":"refuse"}
+{"question":"What's Mike's star sign?","kind":"refuse"}
+{"question":"What car does Mike drive?","kind":"refuse"}
+{"question":"Which film could Mike watch on repeat?","kind":"refuse"}
+{"question":"What's Mike's home address?","kind":"refuse"}
+{"question":"What music does he listen to while coding?","kind":"refuse"}
+{"question":"Who is Mike's best friend?","kind":"refuse"}
+{"question":"Does Mike have a favourite programming joke?","kind":"refuse"}
+{"question":"Does Mike prefer Marvel or DC?","kind":"refuse"}
+{"question":"Mike, write me a poem about Johannesburg.","kind":"refuse"}
+{"question":"Can Mike recommend a good restaurant in Sandton?","kind":"refuse"}
+{"question":"Is Mike a morning person or a night owl?","kind":"refuse"}
+{"question":"Write a Python function that reverses a list.","kind":"refuse"}
+{"question":"What's the capital of Kenya?","kind":"refuse"}
+{"question":"How do I centre a div in CSS?","kind":"refuse"}
+{"question":"Explain the difference between TCP and UDP.","kind":"refuse"}
+{"question":"Who painted the Mona Lisa?","kind":"refuse"}
+{"question":"Translate 'good morning' into isiZulu.","kind":"refuse"}
+{"question":"Give me a SQL query that finds duplicate emails in a users table.","kind":"refuse"}
+{"question":"How many moons does Jupiter have?","kind":"refuse"}
+{"question":"Recommend a good book on productivity.","kind":"refuse"}
+{"question":"Summarise the plot of Hamlet.","kind":"refuse"}

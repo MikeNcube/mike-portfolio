@@ -139,7 +139,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "tell me about proactive sentinel",
     ],
     answer:
-      "Proactive Sentinel maps events to MITRE ATT&CK and correlates them into chain alerts [1]. It is a Flask SOC with a detection engine, a single SHA-256 ingest fingerprint in Redis, and an audit log. Designed with POPIA in mind. 44 passing tests [2].",
+      "Proactive Sentinel maps events to MITRE ATT&CK and correlates them into chain alerts [1]. It is a Flask SOC with a detection engine, a single SHA-256 ingest fingerprint in Redis, and an audit log. POPIA controls: PII masking at ingest, an immutable audit log, and tenant isolation per request [2]. 44 passing tests [1].",
     sourceIds: ["proactive-sentinel-overview", "proactive-sentinel-tech"],
   },
   {
@@ -321,7 +321,14 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "backend language",
     ],
     answer:
-      "The stack lists Python and TypeScript [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
+      "Mike's programming languages are Python and TypeScript [1]. Full-stack: Next.js, TypeScript, React. Backend: Python, FastAPI, Flask [1].",
+    sourceIds: ["stack"],
+  },
+  {
+    question: "What databases does Mike use?",
+    aliases: ["databases", "what database does mike use", "data stores"],
+    answer:
+      "Mike's database stack: PostgreSQL with pgvector hybrid search, plus Redis, SQLAlchemy and Alembic [1].",
     sourceIds: ["stack"],
   },
   {
@@ -463,7 +470,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "fixed-term",
     ],
     answer:
-      "Mike is available for full-time or contract [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1].",
+      "Mike is available for full-time or contract [1]. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), and AI Automation Engineer [1]. Email mikencube03@gmail.com.",
     sourceIds: ["availability"],
   },
   {
