@@ -382,6 +382,17 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     sourceIds: ["this-assistant", "portfolio-rag-assistant"],
   },
   {
+    question: "How does Mike approach engineering?",
+    aliases: [
+      "how does mike approach engineering",
+      "what are mike's engineering defaults",
+      "how does mike design for failure",
+    ],
+    answer:
+      "Mike's engineering defaults: models are fallible dependencies (every LLM call gets validation, retries, and a fallback) [1]. Every run is auditable (structured JSON logs, trace IDs, audit entries for state changes) [1]. Pipelines are contracts with Pydantic schemas at system boundaries and validation before persistence [1].",
+    sourceIds: ["engineering-approach"],
+  },
+  {
     question: "What testing has Mike done?",
     aliases: [
       "what testing has mike done",

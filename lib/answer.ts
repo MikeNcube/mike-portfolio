@@ -3,6 +3,7 @@
 
 import { matchStaticAnswer, sourcesFor } from "./static-answers";
 import {
+  classifyRecruiterIntent,
   isStartJoinAvailabilityQuestion,
   matchProjectScopedAnswer,
   matchRecruiterIntent,
@@ -72,7 +73,8 @@ const OFF_TOPIC_MATH_RE = /\b\d+\s*[+\-×x*/]\s*\d+\b|\bwhat is\s+\d+\b/i;
 // True when the visitor asked something outside Mike's work (personal, world, math).
 export function isOffTopicQuestion(question: string): boolean {
   const q = question.toLowerCase();
-  return OFF_TOPIC_QUESTION_RE.test(q) || OFF_TOPIC_MATH_RE.test(q);
+  if (OFF_TOPIC_QUESTION_RE.test(q) || OFF_TOPIC_MATH_RE.test(q)) return true;
+  return classifyRecruiterIntent(question)?.id === "off-topic";
 }
 
 const CONTACT_QUESTION_RE =
@@ -846,14 +848,26 @@ function buildKbEntityIndex(): { terms: Set<string>; phrases: string[] } {
 
   const addKeywordToken = (token: string) => {
     if (token.length < 2 || NAME_TOKENS.has(token)) return;
-    if (token === "next" || token === "js") return;
+    if (token === "next" || token === "js" || token === "the") return;
+    if (FALLBACK_STOPWORDS.has(token)) return;
     terms.add(token);
   };
 
   const addTextToken = (token: string) => {
     if (token.length < 2 || NAME_TOKENS.has(token) || FALLBACK_STOPWORDS.has(token)) return;
-    if (token === "next" || token === "js") return;
+    if (token === "next" || token === "js" || token === "the") return;
     if (token.length >= 6 || /\d/.test(token)) terms.add(token);
+  };
+
+  const addStackSkillsTokens = (chunk: (typeof KNOWLEDGE_CHUNKS)[number]) => {
+    const blob = `${chunk.title}\n${chunk.text}`;
+    const proper = blob.match(/\b[A-Z][A-Za-z0-9+#]*(?:\.[A-Za-z0-9]+)?\b/g) ?? [];
+    for (const raw of proper) {
+      for (const token of tokenize(raw)) addKeywordToken(token);
+    }
+    for (const token of tokenize(chunk.text)) {
+      addKeywordToken(token);
+    }
   };
 
   const addPhrase = (raw: string) => {
@@ -875,6 +889,12 @@ function buildKbEntityIndex(): { terms: Set<string>; phrases: string[] } {
     for (const token of tokenize(chunk.title)) {
       if (token === "next" || token === "js") continue;
       addKeywordToken(token);
+    }
+    if (
+      chunk.id === "stack"
+      || /tech stack|skills/i.test(chunk.title)
+    ) {
+      addStackSkillsTokens(chunk);
     }
     const textTokens = tokenize(chunk.text);
     for (const token of textTokens) addTextToken(token);
