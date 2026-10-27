@@ -26,6 +26,7 @@ import {
   hasRepeatedStatus,
   isAwsQuestion,
   isCrmAndZdiLiveQuestion,
+  isExperienceQuestion,
   isProductionSystemsQuestion,
   isTechLeadCrmQuestion,
   isWorkQuestion,
@@ -68,7 +69,7 @@ export function isOffTopicQuestion(question: string): boolean {
 }
 
 const CONTACT_QUESTION_RE =
-  /\b(available|availability|hiring|hire|contact|email|reach|contract|full[ -]?time)\b/i;
+  /\b(available|availability|hiring|hire|contact(?:ing|s)?|email|reach|get in touch|contract|full[ -]?time)\b/i;
 
 export function isContactQuestion(question: string): boolean {
   return CONTACT_QUESTION_RE.test(question);
@@ -980,6 +981,10 @@ function staticOrSafeReply(
       via: "static",
     }, chunks);
   }
+  if (isExperienceQuestion(question)) {
+    const experience = experienceStaticReply();
+    if (experience) return polishResult(question, experience, chunks);
+  }
   if (isAwsQuestion(question)) {
     return withUnknownTermNote(question, polishResult(question, {
       response: CANONICAL_AWS_ANSWER,
@@ -1006,12 +1011,40 @@ function staticOrSafeReply(
   if (retrieved) {
     return polishResult(question, retrieved, chunks);
   }
+  if (isContactQuestion(question)) {
+    return polishResult(question, contactStaticReply(), chunks);
+  }
   return refusalResult();
 }
 
 function withContactEmail(question: string, result: AnswerResult): AnswerResult {
   if (!isContactQuestion(question)) return result;
+  if (isRefusal(result.response)) return polishResult(question, contactStaticReply(), []);
   return { ...result, response: ensureContactEmail(result.response) };
+}
+
+function contactStaticReply(): AnswerResult {
+  const hit = matchStaticAnswer("How can I contact Mike?");
+  if (hit) {
+    return { response: hit.answer, sources: sourcesFor(hit), via: "static" };
+  }
+  return {
+    response:
+      "Email Mike at mikencube03@gmail.com [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+    sources: sourcesFor({
+      question: "How can I contact Mike?",
+      aliases: [],
+      answer: "",
+      sourceIds: ["availability", "positioning"],
+    }),
+    via: "static",
+  };
+}
+
+function experienceStaticReply(): AnswerResult | null {
+  const hit = matchStaticAnswer("Tell me about Mike's experience");
+  if (!hit) return null;
+  return { response: hit.answer, sources: sourcesFor(hit), via: "static" };
 }
 
 function ensureCrmSource(
@@ -1372,6 +1405,13 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     }, relevant));
   }
 
+  if (isExperienceQuestion(question)) {
+    const experience = experienceStaticReply();
+    if (experience) {
+      return withContactEmail(question, polishResult(question, experience, relevant));
+    }
+  }
+
   if (isAwsQuestion(question)) {
     return withContactEmail(question, withUnknownTermNote(question, polishResult(question, {
       response: CANONICAL_AWS_ANSWER,
@@ -1392,6 +1432,10 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   const retrieved = citedFallbackFromChunks(question, relevant);
   if (retrieved) {
     return withContactEmail(question, polishResult(question, retrieved, relevant));
+  }
+
+  if (isContactQuestion(question)) {
+    return withContactEmail(question, polishResult(question, contactStaticReply(), relevant));
   }
 
   return { response: EMAIL_FALLBACK, sources: [], via: "email" };

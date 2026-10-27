@@ -96,6 +96,17 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what projects has mike built for his employer",
       "which systems did mike build for zororo-phumulani funeral assurance",
       "which systems did mike build for zororo-phumulani",
+      "what projects has mike built",
+      "what projects did mike build",
+      "what projects has mike work on",
+      "show me mike's projects",
+      "show me what mike has built",
+      "show me mike's work",
+      "give me an overview of mike's work",
+      "overview of mike's work",
+      "summary of mike's work",
+      "overview of mike's projects",
+      "list mike's projects",
     ],
     answer: CANONICAL_WORK_ANSWER,
     sourceIds: [
@@ -130,6 +141,52 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     ],
     answer:
       "Yes, Mike is available [1]. Email mikencube03@gmail.com.",
+    sourceIds: ["availability"],
+  },
+  {
+    question: "How can I contact Mike?",
+    aliases: [
+      "how can i contact mike",
+      "give me mike's contact details",
+      "contact details",
+      "what are the instructions for contacting mike",
+      "instructions for contacting mike",
+      "get in touch with mike",
+      "how do i reach mike",
+      "reach mike",
+      "mike's email",
+      "email mike",
+    ],
+    answer:
+      "Email Mike at mikencube03@gmail.com [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+    sourceIds: ["availability", "positioning"],
+  },
+  {
+    question: "Tell me about Mike's experience",
+    aliases: [
+      "tell me about mike's experience",
+      "give me a summary of mike's experience",
+      "summary of mike's experience",
+      "overview of mike's experience",
+      "mike's experience",
+      "mike's background",
+      "mike's career",
+      "what is mike's background",
+    ],
+    answer:
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. Title: Applied AI Engineer and Systems Architect, 2022 to present [2]. He has been the sole AI engineer in a four-person IT team since 2022 [1]. Six-plus years in software, about three focused on generative AI [1].",
+    sourceIds: ["positioning", "employer"],
+  },
+  {
+    question: "Show me Mike's GitHub",
+    aliases: [
+      "show me mike's github",
+      "mike's github",
+      "what is mike's github",
+      "github profile",
+    ],
+    answer:
+      "Mike's GitHub profile is https://github.com/MikeNcube [1].",
     sourceIds: ["availability"],
   },
   {
@@ -286,6 +343,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is ai-social-agent",
       "multi-agent content pipeline",
       "explain the content pipeline",
+      "prompt templates",
+      "versioned prompt templates",
+      "what prompt templates does mike use",
     ],
     answer:
       "The multi-agent content pipeline is a prototype [1]. Three agents (research, strategy, content) turn signals from GitHub, ArXiv and O'Reilly into platform-ready posts. It runs on local Ollama at zero API cost. Nothing is scheduled until a human approves it in a FastAPI dashboard. Versioned prompt templates; evals are in progress.",

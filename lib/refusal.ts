@@ -56,7 +56,7 @@ const JAILBREAK_RES: RegExp[] = [
   /\bno (restrictions|rules|filters|guardrails)\b/i,
   /\b(developer|god|jailbreak) mode\b/i,
   /\bdisregard (your |the |all )?(system )?(prompt|instructions|rules)\b/i,
-  /\b(?:reveal|show|print|output|repeat|give|share|display|dump|leak)(?:\s+(?:me|us))?(?:\s+(?:your|the))?(?:\s+(?:hidden|secret|internal|original|initial|system|full|exact)){0,2}\s+prompt(?!\s+(?:injection|engineering))\b/i,
+  /\b(?:reveal|show|print|output|repeat|give|share|display|dump|leak)(?:\s+(?:me|us))?(?:\s+(?:your|the))?(?:\s+(?:hidden|secret|internal|original|initial|system|full|exact)){0,2}\s+prompt(?!\s+(?:injection|engineering|templates))\b/i,
   /\b(?:reveal|show|print|output|repeat|give|share|display|dump|leak)(?:\s+(?:me|us))?(?:\s+(?:your|the))?(?:\s+(?:hidden|secret|internal|original|initial|system|full|exact)){1,2}\s+instructions\b/i,
   /\bwhat (?:is|are) your(?:\s+(?:original|initial|hidden|system|secret|internal|full|exact)){1,2}\s+(?:prompt|instructions)\b/i,
   /\bfrom now on,? you are\b/i,

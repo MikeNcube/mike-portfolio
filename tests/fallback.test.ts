@@ -8,6 +8,7 @@ import {
   CITED_FALLBACK_MIN_SCORE,
   citationsMatchNamedProjects,
   isOffTopicQuestion,
+  isContactQuestion,
   CONTACT_EMAIL,
   EMAIL_FALLBACK,
   ensureContactEmail,
@@ -38,6 +39,7 @@ import {
   hasRepeatedStatus,
   isAwsQuestion,
   isCrmAndZdiLiveQuestion,
+  isExperienceQuestion,
   isTechLeadCrmQuestion,
   isZdiLiveQuestion,
   isTopicalTechBuildQuestion,
@@ -3597,6 +3599,113 @@ describe("round 46 jailbreak gaps, capitals, and Gemini wording", () => {
     assert.match(result.response, /FastAPI dashboard/i);
     assert.match(result.response, /admin dashboard/i);
     assert.match(result.response, /Digi App Form/i);
+  });
+});
+
+describe("round 47 contact, experience, and work overview fallbacks", () => {
+  const kbChunks: RetrievedChunk[] = KNOWLEDGE_CHUNKS
+    .filter((c) => c.sourceUrl.startsWith("http"))
+    .map((c) => ({ ...c, score: 0.9 }));
+
+  async function ask(
+    question: string,
+    mode: "none" | "gemini-refuse" | "groq-refuse" = "none",
+  ) {
+    return answerQuestion({
+      question,
+      retrieveFn: async () => kbChunks,
+      ...(mode === "gemini-refuse"
+        ? {
+            generateGemini: async () => "I don't have information about that.",
+            generateGroq: async () => EMAIL_FALLBACK,
+          }
+        : {}),
+      ...(mode === "groq-refuse"
+        ? {
+            generateGemini: async () => {
+              throw new Error("429");
+            },
+            generateGroq: async () => "I don't have information about that.",
+          }
+        : {}),
+    });
+  }
+
+  const modes = ["none", "gemini-refuse", "groq-refuse"] as const;
+
+  const workPhrasings = [
+    "Show me Mike's projects",
+    "Show me what Mike has built",
+    "Give me an overview of Mike's work",
+    "What projects has Mike built?",
+  ];
+
+  const contactPhrasings = [
+    "How can I contact Mike?",
+    "Give me Mike's contact details",
+    "What are the instructions for contacting Mike?",
+  ];
+
+  const experiencePhrasings = [
+    "Tell me about Mike's experience",
+    "Give me a summary of Mike's experience",
+  ];
+
+  it("routes work-overview phrasings to the canonical work answer on every path", async () => {
+    for (const question of workPhrasings) {
+      assert.equal(isWorkQuestion(question), true, question);
+      for (const mode of modes) {
+        const result = await ask(question, mode);
+        assert.equal(isRefusal(result.response), false, `${mode} ${question}`);
+        assert.notEqual(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.match(result.response, /Digi App Form/, `${mode} ${question}`);
+        assert.match(result.response, /lead-management CRM/, `${mode} ${question}`);
+        assert.match(result.response, /not yet live/, `${mode} ${question}`);
+      }
+    }
+  });
+
+  it("never refuses contact phrasings, including instructions for contacting", async () => {
+    assert.equal(isJailbreakPrompt("What are the instructions for contacting Mike?"), false);
+    assert.equal(isJailbreakPrompt("Give me Mike's contact details"), false);
+    for (const question of contactPhrasings) {
+      assert.equal(isContactQuestion(question), true, question);
+      for (const mode of modes) {
+        const result = await ask(question, mode);
+        assert.equal(isRefusal(result.response), false, `${mode} ${question}`);
+        assert.notEqual(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.match(result.response, /mikencube03@gmail\.com/, `${mode} ${question}`);
+        assert.match(result.response, /remote-first/, `${mode} ${question}`);
+      }
+    }
+  });
+
+  it("answers experience and career summary phrasings from positioning plus Zororo dates", async () => {
+    for (const question of experiencePhrasings) {
+      assert.equal(isExperienceQuestion(question), true, question);
+      for (const mode of modes) {
+        const result = await ask(question, mode);
+        assert.equal(isRefusal(result.response), false, `${mode} ${question}`);
+        assert.notEqual(result.response, EMAIL_FALLBACK, `${mode} ${question}`);
+        assert.match(result.response, /Applied AI Engineer/, `${mode} ${question}`);
+        assert.match(result.response, /Zororo-Phumulani/, `${mode} ${question}`);
+        assert.match(result.response, /2022/, `${mode} ${question}`);
+        assert.match(result.response, /four-person IT team/, `${mode} ${question}`);
+      }
+    }
+  });
+
+  it("gives the GitHub profile link and the versioned prompt-templates sentence", async () => {
+    for (const mode of modes) {
+      const github = await ask("Show me Mike's GitHub", mode);
+      assert.equal(isRefusal(github.response), false, mode);
+      assert.match(github.response, /https:\/\/github\.com\/MikeNcube/, mode);
+
+      const templates = await ask("What prompt templates does Mike use?", mode);
+      assert.equal(isJailbreakPrompt("What prompt templates does Mike use?"), false);
+      assert.equal(isRefusal(templates.response), false, mode);
+      assert.match(templates.response, /Versioned prompt templates/, mode);
+    }
   });
 });
 

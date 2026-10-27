@@ -10,7 +10,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r46";
+export const ANSWER_CACHE_VERSION = "r47";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -45,7 +45,7 @@ const PRODUCTION_QUESTION_RE =
   /\b(production systems|what has mike shipped|what did mike ship|shipped at zororo)\b/i;
 
 const WORK_CORE_RE =
-  /(?:^|[.!?,]\s*)(?:so |hey,? |and )?what (?:does mike work on|has mike built|did mike build)(.*)$/i;
+  /(?:^|[.!?,]\s*)(?:so |hey,? |and )?(?:what (?:does mike work on|has mike built|did mike build)|what projects (?:has|did) mike (?:built|build|work on)|show me (?:mike'?s projects|what mike has built|mike'?s work)|(?:give me (?:an? )?)?(?:overview|summary) of mike'?s (?:work|projects)|list mike'?s projects)(.*)$/i;
 
 const WORK_WH_RE = /\b(?:what|which)\b/i;
 
@@ -158,6 +158,15 @@ export function isWorkQuestion(question: string): boolean {
   const rest = remainderAfterWorkCore(question);
   if (rest !== null && meaningfulWorkRemainder(rest).length === 0) return true;
   return WORK_WH_RE.test(question) && WORK_ACTION_RE.test(question) && WORK_SCOPE_RE.test(question);
+}
+
+const EXPERIENCE_QUESTION_RE =
+  /\b(?:tell me about mike'?s (?:experience|background|career)|(?:give me (?:an? )?)?(?:summary|overview) of mike'?s (?:experience|background|career)|mike'?s (?:experience|background|career))\b/i;
+
+export function isExperienceQuestion(question: string): boolean {
+  if (isAwsQuestion(question)) return false;
+  if (WORK_TECH_OR_PROJECT_RE.test(question)) return false;
+  return EXPERIENCE_QUESTION_RE.test(question);
 }
 
 // True when the text names ZDI or Zororo Document Intelligence.
