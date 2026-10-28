@@ -493,7 +493,9 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "fabricate", "fabricates", "fabricated", "fabrication", "accurate", "accuracy",
       "inaccurate", "inaccuracy", "factual", "factually", "truthful", "grounded", "grounding",
       "ungrounded", "trustworthy", "trust the answers", "misinformation", "false answers",
-      "false information",
+      "false information", "honesty", "error rate", "error rates",
+      // "honest" alone is shadowed by the generic "honestly"; these keep it.
+      "keep ... honest", "keeps ... honest", "output ... honest", "answer ... honest",
       // Checking that a model's or agent's output is right.
       "verify ... output", "check ... output", "validate ... output", "output ... correct",
       "output ... right", "output ... accurate"],
@@ -509,7 +511,9 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "access controls", "authentication", "authorisation", "authorization", "permissions",
       "rbac", "role-based access", "hardening", "harden", "hardened", "vulnerability",
       "vulnerabilities", "attack", "attacks", "attacker", "attackers", "threat", "threats",
-      "security measures", "security controls"],
+      "security measures", "security controls", "unauthorised", "unauthorized",
+      "unauthorised access", "unauthorized access", "breach", "breaches", "intrusion",
+      "intruders"],
     dominant: true,
   },
   {
@@ -521,7 +525,8 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     terms: ["pay", "pays", "paying", "paid", "payment", "payments", "payout", "payouts",
       "pay out", "pays out", "invoice", "invoices", "invoicing", "billing", "supplier",
       "suppliers", "vendor payments", "bank file", "bank files", "disburse", "disburses",
-      "disbursement", "disbursements", "remittance", "settlement", "settlements"],
+      "disbursement", "disbursements", "remittance", "settlement", "settlements", "money",
+      "vendor", "vendors", "funds", "eft"],
     dominant: true,
   },
   {
@@ -808,6 +813,10 @@ export function isCredentialAsk(question: string): boolean {
 const SYSTEM_MONEY_STEMS = stemSet(["pay", "pays", "paid", "paying", "invoice", "invoices",
   "invoicing", "billing", "fee", "fees", "earn", "earned", "earns"]);
 
+// "family" names a system's clients (funeral cover is per family) as readily as Mike's own.
+const FAMILY_STEMS = stemSet(["family", "families"]);
+const MIKES_FAMILY_RE = /\b(?:mike['’]?s|his|he|him)\b[^?.!]{0,20}\bfamil|\bfamil\w*\b[^?.!]{0,20}\b(?:mike|him)\b/i;
+
 // "Apache Kafka", "Microsoft Azure": a vendor name directly before a technology
 // names one product. A vendor the KB lists itself ("AWS Lambda") stays separate,
 // so the listed half is still credited.
@@ -908,6 +917,10 @@ export function analyseQuestion(question: string): QuestionAnalysis {
   // Money words about a named system ("does ZDI pay suppliers") are not Mike's pay,
   // and "earn" or "pass" a certificate is a credential, not income.
   const moneyAboutMike = moneyIsMikes(question) && !isCredentialAsk(question);
+  // "a family's funeral benefit" on the claims platform is a client's family, not Mike's.
+  const familyAboutMike = namedProjects(question).length === 0 || MIKES_FAMILY_RE.test(question);
+  const scopedOut = (stemmed: string) =>
+    (!moneyAboutMike && SYSTEM_MONEY_STEMS.has(stemmed)) || (!familyAboutMike && FAMILY_STEMS.has(stemmed));
 
   // Pieces of a compound ("third-party", "fan-out") only explain the compound;
   // they must not trigger a refusal topic on their own.
@@ -915,7 +928,7 @@ export function analyseQuestion(question: string): QuestionAnalysis {
     if (GENERIC_STEMS.has(token.stem) || GENERIC_STEMS.has(token.norm)) return "generic";
     if (/^\d/.test(token.norm)) return kbKnows(token) ? "kb" : "unexplained";
     const refuseIds = REFUSE_LEXICON.singles.get(token.stem);
-    if (refuseIds && (moneyAboutMike || !SYSTEM_MONEY_STEMS.has(token.stem))) {
+    if (refuseIds && !scopedOut(token.stem)) {
       if (isPiece) return "kb";
       refuse.push(...refuseIds);
       return "refuse";

@@ -335,10 +335,9 @@ function projectTopic(question: string): ProjectTopic {
   // AI as the asked agent or method ("decided by AI"), outside a project's own name.
   if (/\b(?:ai|llms?|machine learning|genai|gpt)\b/i.test(hay.replace(/\bzororo ai os\b/g, ""))) return "ai";
   if (/\b(?:which|what)\s+(?:ai\s+|llm\s+|language\s+|vision\s+)?models?\b/i.test(hay)) return "ai";
-  // What follows the last approval, not who approves.
-  if (/\b(?:after|once|following)\b[^?.!]*\b(?:approv\w*|signs?\s+off|signed\s+off|sign-off)|\bapprov\w*[^?.!]*\b(?:then|next|afterwards?)\b/i.test(hay)) {
-    return "after-approval";
-  }
+  // What follows an approval or a signature, not who approves. A bare "after
+  // signing" may ask about the signature itself, so signing needs a role.
+  if (AFTER_STEP_RE.test(hay) && (/\bapprov/i.test(hay) || SIGNING_ROLE_RE.test(hay))) return "after-approval";
   if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews|signs? off|signed off|sign-off)\b/i.test(hay)) return "approvers";
   // "status of their case" asks about a record inside the system, not the project's status.
   const recordStatus = /\bstatus\s+of\s+(?:their|a|an|his|her|my|your|each|every)\b/i.test(hay);
@@ -361,7 +360,7 @@ function projectTopic(question: string): ProjectTopic {
   if (/\b(?:written in|programming languages?|what languages?|which languages?)\b/i.test(hay)) return "languages";
   if (
     askedTech(question)
-    && (/\b(?:use|uses|using|used|run on|runs on|built (?:with|on)|rely on|relies on|include|includes|role|plays?|purpose|for what)\b/i.test(hay)
+    && (/\b(?:use|uses|using|used|run on|runs on|built (?:with|on)|rely on|relies on|include|includes|role|plays?|purpose|for what|why)\b/i.test(hay)
       || TECH_DOES_RE.test(hay))
   ) {
     return "uses-tech";
@@ -387,12 +386,28 @@ function scoped(
 }
 
 // "What does Redis do in the CRM?": the tool's job in a project.
-const TECH_DOES_RE = /\bwhat\s+(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
+const TECH_DOES_RE = /\bwhat\s+(?:\w+\s+)?(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
+
+const AFTER_STEP_RE =
+  /\b(?:after|once|following)\b[^?.!]*\b(?:approv\w*|signs?|signed|signing|sign-off)\b|\bapprov\w*[^?.!]*\b(?:then|next|afterwards?)\b/i;
+const SIGNING_ROLE_RE = /\b(?:requester|manager|accounts?|everything|everyone|all|final|fully)\b/i;
+
+// Whose step the question is after: the role right after "after"/"once", else
+// the only role it names, else the last step.
+function stepAfter(question: string): "requester" | "manager" | "final" {
+  const named = question.match(/\b(?:after|once|following)\s+(?:the\s+|a\s+|an\s+)?(requester|manager|accounts?)\b/i)?.[1]?.toLowerCase();
+  if (named === "requester" || named === "manager") return named;
+  if (named) return "final";
+  const others = /\baccounts?\b|\bfinal\b|\beverything\b|\ball\b/i.test(question);
+  if (/\bmanager\b/i.test(question) && !others) return "manager";
+  if (/\brequester\b/i.test(question) && !others && !/\bmanager\b/i.test(question)) return "requester";
+  return "final";
+}
 
 // "What is X used for", "How does Y use X", "Why does Y use X", "What does X do"
 // ask a purpose. The sources list tools, not their purposes.
 const PURPOSE_RE =
-  /\b(?:used\s+for|uses?\s+(?:\S+\s+){1,2}for|for\s+what|purpose|role\s+of|what\s+role|why)\b|^\s*how\s+(?:does|do|did|is|are|was|were)\b[^?.!]*\bus(?:e|es|ed|ing)\b|\bwhat\s+(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
+  /\b(?:used\s+for|uses?\s+(?:\S+\s+){1,2}for|for\s+what|purpose|role\s+of|what\s+role|why)\b|^\s*how\s+(?:does|do|did|is|are|was|were)\b[^?.!]*\bus(?:e|es|ed|ing)\b|\bwhat\s+(?:\w+\s+)?(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
 
 // Words that say what a tool does in a sentence ("fingerprint dedup in Redis",
 // "pgvector hybrid keyword and vector search").
@@ -602,7 +617,14 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       if (project.id !== "zdi") return null;
       // The route is manager review, then accounts review, then archived: the next
       // step depends on whose approval the question means.
-      if (/\bmanager\b/i.test(question) && !/\baccounts?\b|\bfinal\b/i.test(question)) {
+      if (stepAfter(question) === "requester") {
+        return scoped(
+          project,
+          "after-approval",
+          "After the requester signs and submits, a ZDI request goes to manager review, then Accounts review, and is then archived [1]. ZDI never pays, never produces a bank file and never marks anything as paid [1].",
+        );
+      }
+      if (stepAfter(question) === "manager") {
         return scoped(
           project,
           "after-approval",
