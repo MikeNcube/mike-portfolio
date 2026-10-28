@@ -14,6 +14,7 @@ import {
   matchProjectScopedAnswer,
   matchTechScopedAnswer,
   namedProjects,
+  PROJECT_CHUNK_IDS,
   withoutProjectNames,
   type NamedProject,
 } from "./intent";
@@ -50,6 +51,7 @@ import {
   findUnsupportedClaims,
   kbHasTerm,
   listedTechInQuestion,
+  isTitleSubject,
   passageHasTerm,
   unknownTechNote,
   validateModelSentences,
@@ -1595,13 +1597,34 @@ function knownTechResult(tech: string, question = ""): AnswerResult | null {
     const body = sentence.trim().replace(/[.!?]+$/, "");
     const where = chunk.id === "stack" ? "Mike's stack" : chunk.title;
     const lead = BEYOND_USE_RE.test(question) ? `${tech} appears in ${where}` : `Yes, ${tech} appears in ${where}`;
-    return {
-      response: `${lead}: ${body} [1].`,
-      sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
-      via: "static",
-    };
+    const sources = [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }];
+    const uses = chunk.id === "stack" ? projectUsesOf(re, sources) : "";
+    return { response: `${lead}: ${body} [1].${uses}`, sources, via: "static" };
   }
   return null;
+}
+
+const MAX_TECH_PROJECTS = 4;
+const PLANNED_RE = /\bplanned\b/i;
+
+// The projects whose own sources name a technology, as " A [2] and B [3] use it."
+// then any that only plan it. Appends each project's source to `sources`, numbered
+// in the order the sentence cites them.
+function projectUsesOf(re: RegExp, sources: AnswerSource[]): string {
+  const hits = KNOWLEDGE_CHUNKS.flatMap((chunk) => {
+    if (!PROJECT_CHUNK_IDS.has(chunk.id)) return [];
+    const sentence = splitIntoSentences(chunk.text).find((s) => re.test(s));
+    return sentence ? [{ chunk, planned: PLANNED_RE.test(sentence) }] : [];
+  }).slice(0, MAX_TECH_PROJECTS);
+  const cite = (group: typeof hits) => group.map(({ chunk }) => {
+    sources.push({ id: chunk.id, title: chunk.title, url: chunk.sourceUrl });
+    return `${chunk.title.split(/ — | \(/)[0]} [${sources.length}]`;
+  });
+  const list = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
+  const used = cite(hits.filter((h) => !h.planned));
+  const planned = cite(hits.filter((h) => h.planned));
+  return (used.length ? ` ${list(used)} ${used.length > 1 ? "use" : "uses"} it.` : "")
+    + (planned.length ? ` ${list(planned)} ${planned.length > 1 ? "plan" : "plans"} it.` : "");
 }
 
 // When the retrieval chain refuses a question the coverage gate accepted, fall
@@ -1730,7 +1753,14 @@ function finishAnswer(question: string, analysis: QuestionAnalysis, result: Answ
   const focused = focusGuard(question, analysis, withCertificationLead(question, analysis, result));
   if (isRefusal(focused.response)) return focused;
   const answered = stripUnaskedYesNo(question, focused.response);
-  return { ...focused, response: withNoFigureLead(question, analysis, answered) };
+  return { ...focused, response: withEmployerSystemsLead(analysis, withNoFigureLead(question, analysis, answered)) };
+}
+
+// The grounding safeguards belong to Mike's defaults and this assistant; the sources
+// list no LLM in Zororo-Phumulani's live systems, so a question about those is told so first.
+function withEmployerSystemsLead(analysis: QuestionAnalysis, response: string): string {
+  if (!analysis.concepts.includes("grounding") || !analysis.concepts.includes("employer")) return response;
+  return `The sources list no LLM in Zororo-Phumulani's live systems, Digi App Form and the lead-management CRM. ${response}`;
 }
 
 // A measure asked for ("hallucination rate", "accuracy score").
@@ -1834,6 +1864,13 @@ function focusGuard(question: string, analysis: QuestionAnalysis, result: Answer
       : projectSentenceByWords(projects[0], question, result.response);
     if (own) return polishResult(question, own, []);
   }
+  // One named technology answered by an overview list ("What's Mike's experience with
+  // LangGraph?" given the AI tools list): its own sentence and projects answer it better.
+  if (projects.length === 0 && analysis.knownTech.length === 1 && analysis.unknownTech.length === 0
+    && isBroadAnswer(result.response) && dominantConcepts(analysis).length === 0) {
+    const own = knownTechResult(analysis.knownTech[0], question);
+    if (own) return polishResult(question, own, []);
+  }
   // `original` is the answer as written; `shown` may be the same facts reordered.
   const fits = (original: string, shown: string) =>
     addressesFocus(leadSentence(shown), question, analysis) && !leavesTopicUncovered(question, analysis, original, shown);
@@ -1885,10 +1922,19 @@ const BROAD_ANSWER_QUESTIONS = new Set([
 // True when an overview answer covers fewer than half of the specific terms this
 // question adds to the question it was written for: "What security protects
 // Mike's production systems?" is not answered by the list of what he shipped.
-function leavesTopicUncovered(question: string, analysis: QuestionAnalysis, original: string, shown: string): boolean {
-  const key = leadKey(original);
+function broadAnswerServed(text: string): StaticAnswer | null {
+  const key = leadKey(text);
   const served = STATIC_ANSWERS.find((s) => leadKey(s.answer) === key);
-  if (!served || !BROAD_ANSWER_QUESTIONS.has(served.question)) return false;
+  return served && BROAD_ANSWER_QUESTIONS.has(served.question) ? served : null;
+}
+
+function isBroadAnswer(text: string): boolean {
+  return broadAnswerServed(text) !== null;
+}
+
+function leavesTopicUncovered(question: string, analysis: QuestionAnalysis, original: string, shown: string): boolean {
+  const served = broadAnswerServed(original);
+  if (!served) return false;
   const { added, covered } = addedTopicCoverage(question, analysis, [served.question, ...served.aliases].join(" "), shown);
   return added > 0 && covered * 2 < added;
 }
@@ -1897,10 +1943,11 @@ function leavesTopicUncovered(question: string, analysis: QuestionAnalysis, orig
 // about ("multi-agent"), when a canned answer did not. Null when no sentence does.
 function askedTermSentence(question: string, analysis: QuestionAnalysis): AnswerResult | null {
   const outsideNames = withoutProjectNames(question);
-  // Names of things only ("multi-agent", "LangGraph"): a plain lowercase word
-  // ("returns", "monitored") is as often an action as a thing.
+  // Names of things only ("multi-agent", "LangGraph", or "recommender", which names
+  // one source in its title): a plain lowercase word ("returns", "monitored") is as
+  // often an action as a thing.
   const terms = [...new Set(analysis.kbTerms.filter((t) =>
-    isDistinctiveKbTerm(t) && outsideNames.includes(t) && /-|[A-Z]/.test(t)))];
+    isDistinctiveKbTerm(t) && outsideNames.includes(t) && (/-|[A-Z]/.test(t) || isTitleSubject(t))))];
   if (terms.length === 0) return null;
   const best = bestChunkSentence(KNOWLEDGE_CHUNKS, (sentence) =>
     terms.every((t) => mentionsTerm(sentence, t)) ? 1 + questionWordHits(sentence, question) : 0);

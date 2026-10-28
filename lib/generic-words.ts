@@ -64,7 +64,7 @@ export const GENERIC_WORD_LIST: readonly string[] = [
   "prevent", "act", "acts", "card", "accept", "accepts", "join", "extra",
   "additional", "large", "larger", "size", "stop", "stops", "prefer", "prefers",
   "preferred", "favour", "favor", "favourite", "favorite", "set", "setup", "option",
-  "options", "engage", "independent", "appear", "appears", "screen", "represent",
+  "options", "engage", "independent", "depend", "depends", "depending", "wise", "appear", "appears", "screen", "represent",
   "represents", "publish", "published", "one", "two", "three", "four", "five", "six",
   "seven", "eight", "nine", "ten", "dozen", "treat", "treats", "paper", "sentence",
   "sentences", "paragraph", "line", "lines", "word", "words", "fully", "full",

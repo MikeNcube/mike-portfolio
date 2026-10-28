@@ -2,6 +2,7 @@
 
 import { GENERIC_WORD_LIST } from "./generic-words";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
+import { namesServedStaff } from "./staff-groups";
 import {
   capitaliseAfterCiteStops,
   insertMissingSentenceSpaces,
@@ -184,6 +185,8 @@ export function isTopicalTechBuildQuestion(question: string): boolean {
 export function isWorkQuestion(question: string): boolean {
   if (isProductionSystemsQuestion(question)) return false;
   if (isAwsQuestion(question)) return false;
+  // "What did Mike build for the claims team?" asks about the systems that serve them.
+  if (namesServedStaff(question)) return false;
   if (isTopicalTechBuildQuestion(question)) return false;
   const rest = remainderAfterWorkCore(question);
   if (rest !== null && meaningfulWorkRemainder(rest).length === 0) return true;

@@ -7,6 +7,7 @@ import {
   CANONICAL_ZDI_LIVE_ANSWER,
 } from "./status-copy";
 import { isPolarQuestion } from "./question-form";
+import { servedStaff, STAFF_WORK, staffPhrase } from "./staff-groups";
 
 export type RecruiterIntent = {
   id: string;
@@ -31,27 +32,10 @@ function staticByQuestion(question: string): StaticAnswer {
   return hit;
 }
 
-// Staff named by the work a system does for them: "built for the claims team"
-// asks about the claims systems, not about a team Mike leads.
-const STAFF_NOUN = String.raw`(?:teams?|departments?|dept|staff|units?|divisions?|desks?|office|sections?|clerks|officers|assessors|users)`;
-const STAFF_LEAD = String.raw`\b(?:for|by|to|serv(?:e|es|ing)|support(?:s|ing)?|help(?:s|ing)?)\s+(?:(?:the|our|its|their|zororo(?:-phumulani)?(?:['’]s)?)\s+)?`;
-
-// "claims team": staff named by their work.
-function staffPhrase(work: string): string {
-  return String.raw`(?:${work})\s+${STAFF_NOUN}\b`;
-}
-
-// The staff group as the ones a system is for ("built for the claims team").
-function servedStaff(work: string, flags = "i"): RegExp {
-  return new RegExp(STAFF_LEAD + staffPhrase(work), flags);
-}
-
 const PROJECTS: Array<{
   id: string;
   name: string;
   re: RegExp;
-  // The staff the system serves, named by their work.
-  staff?: string;
   sourceIds: string[];
   staticQuestion: string;
   stack: string;
@@ -65,7 +49,6 @@ const PROJECTS: Array<{
     id: "zdi",
     name: "ZDI",
     re: /\b(?:zdi|zororo document intelligence)\b/i,
-    staff: "accounts",
     sourceIds: ["zdi-signature-workflow"],
     staticQuestion: "What is ZDI?",
     stack: "ZDI stack: FastAPI, PostgreSQL and Next.js [1].",
@@ -113,7 +96,6 @@ const PROJECTS: Array<{
     name: "The claims platform",
     // "claims system" too: the platform's own source describes it as the standby for one.
     re: /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b|\bclaims system\b/i,
-    staff: "claims?",
     sourceIds: ["zororo-claims"],
     staticQuestion: "What is the claims operations platform?",
     stack: "The claims platform stack: Next.js, TypeScript, NextAuth, Prisma, PostgreSQL, Docker [1].",
@@ -161,7 +143,6 @@ const PROJECTS: Array<{
     name: "The claims extraction pipeline",
     // Any form of the head noun names it: "the claims extractor".
     re: /\bclaims\s+(?:document\s+)?extract(?:ion|ors?|ing)(?:\s+pipeline)?\b/i,
-    staff: "claims?",
     sourceIds: ["claims-pipeline"],
     staticQuestion: "What is the claims extraction pipeline?",
     stack: "The claims extraction pipeline uses Claude vision extraction validated through Pydantic schemas [1].",
@@ -307,43 +288,43 @@ function projectStateAnswer(project: (typeof PROJECTS)[number], question: string
   return lead ? `${lead} ${state.line}` : state.line;
 }
 
+// Knowledge-base chunks that describe one of Mike's projects.
+export const PROJECT_CHUNK_IDS: ReadonlySet<string> = new Set(
+  PROJECTS.flatMap((p) => [...p.sourceIds, ...(p.stackSourceIds ?? [])]),
+);
+
 // The text with every project name blanked out, so its words ("Proactive") are
 // not mistaken for something else the visitor asked about.
+const STAFF_WORKS = [...new Set(Object.values(STAFF_WORK))];
+
 export function withoutProjectNames(text: string): string {
-  return PROJECTS.reduce((out, project) => {
-    const named = out.replace(new RegExp(project.re.source, "gi"), " ");
-    return project.staff ? named.replace(servedStaff(project.staff, "gi"), " ") : named;
-  }, text);
+  const unnamed = PROJECTS.reduce((out, project) => out.replace(new RegExp(project.re.source, "gi"), " "), text);
+  return STAFF_WORKS.reduce((out, work) => out.replace(servedStaff(work, "gi"), " "), unnamed);
 }
 
 // The phrases that name a system by the staff it serves ("for the claims team").
 export function staffGroupMentions(question: string): string[] {
-  const out = new Set<string>();
-  for (const project of PROJECTS) {
-    const hit = project.staff ? servedStaff(project.staff).exec(question) : null;
-    if (hit) out.add(hit[0]);
-  }
-  return [...out];
+  return STAFF_WORKS.flatMap((work) => servedStaff(work).exec(question)?.[0] ?? []);
 }
 
 // A staff group named with nothing saying a system serves it ("How big is the
 // claims team?"): a group the sources do not describe, and not a team Mike leads.
 export function unservedStaffGroups(question: string): string[] {
   const served = staffGroupMentions(question).join(" ").toLowerCase();
-  const out = new Set<string>();
-  for (const project of PROJECTS) {
-    if (!project.staff) continue;
-    for (const hit of question.matchAll(new RegExp(String.raw`\b${staffPhrase(project.staff)}`, "gi"))) {
-      if (!served.includes(hit[0].toLowerCase())) out.add(hit[0]);
-    }
-  }
-  return [...out];
+  return STAFF_WORKS.flatMap((work) => [...question.matchAll(new RegExp(String.raw`\b${staffPhrase(work)}`, "gi"))]
+    .map((hit) => hit[0])
+    .filter((phrase) => !served.includes(phrase.toLowerCase())));
+}
+
+function servesStaffOf(projectId: string, question: string): boolean {
+  const work = STAFF_WORK[projectId];
+  return Boolean(work) && servedStaff(work).test(question);
 }
 
 export function namedProjects(question: string): NamedProject[] {
   const hits: NamedProject[] = [];
   for (const project of PROJECTS) {
-    if (!project.re.test(question) && !(project.staff && servedStaff(project.staff).test(question))) continue;
+    if (!project.re.test(question) && !servesStaffOf(project.id, question)) continue;
     hits.push({
       id: project.id,
       name: project.name,
