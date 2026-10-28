@@ -91,8 +91,11 @@ const AI_SUPPLIER_TERMS = ["ai", "llm", "model", "genai", "gen ai", "language mo
     "supplier", "firms", "partners", "apis", "api"].map((supplier) => `${kind} ${supplier}`));
 const AI_SUPPLIER_LEXICON = buildLexicon([{ id: "ai-tools", terms: AI_SUPPLIER_TERMS }]);
 
-// Ranking words that carry no topic of their own: "his number one skill" is about skills.
-const GENERIC_PHRASES = buildLexicon([{ id: "generic", terms: ["number one", "number 1", "no 1"] }]);
+// Wording that carries no topic of their own: ranking words ("his number one skill"
+// is about skills) and phrasal verbs for appearing ("vendors that turn up in his work").
+const GENERIC_PHRASES = buildLexicon([{ id: "generic", terms: ["number one", "number 1", "no 1",
+  "turn up", "turns up", "turning up", "show up", "shows up", "showing up", "crop up",
+  "crops up", "pop up", "pops up", "come up", "comes up"] }]);
 
 // Topics the knowledge base cannot answer. A hit refuses with the email fallback.
 export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
