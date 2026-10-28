@@ -1575,8 +1575,13 @@ function conceptCanonicalResult(canonical: string): AnswerResult | null {
   return { response: hit.answer, sources: sourcesFor(hit), via: "static" };
 }
 
+// A claim beyond knowing or using a tool: "deployed on", "in production", "certified".
+const BEYOND_USE_RE = /\b(?:deploy\w*|production|prod|live|ship\w*|host\w*|certif\w*|exams?|scale)\b/i;
+
 // The stack sentence (or first KB sentence) that names a technology Mike lists.
-function knownTechResult(tech: string): AnswerResult | null {
+// "Yes" answers only whether he knows or uses it; for a stronger claim ("deployed
+// anything on EC2?") the sentence is given without it.
+function knownTechResult(tech: string, question = ""): AnswerResult | null {
   const escaped = tech.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i");
   const ordered = [
@@ -1587,8 +1592,10 @@ function knownTechResult(tech: string): AnswerResult | null {
     const sentence = splitIntoSentences(chunk.text).find((s) => re.test(s));
     if (!sentence) continue;
     const body = sentence.trim().replace(/[.!?]+$/, "");
+    const where = chunk.id === "stack" ? "Mike's stack" : chunk.title;
+    const lead = BEYOND_USE_RE.test(question) ? `${tech} appears in ${where}` : `Yes, ${tech} appears in ${where}`;
     return {
-      response: `Yes, ${tech} appears in ${chunk.id === "stack" ? "Mike's stack" : chunk.title}: ${body} [1].`,
+      response: `${lead}: ${body} [1].`,
       sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
       via: "static",
     };
@@ -1605,7 +1612,7 @@ function anchoredFallback(question: string, analysis: QuestionAnalysis): AnswerR
   // would read as yes to the aspect.
   const dominant = dominantConcepts(analysis)[0];
   if (dominant) return conceptCanonicalResult(dominant.canonical);
-  if (projects.length === 0 && analysis.knownTech.length > 0) return knownTechResult(analysis.knownTech[0]);
+  if (projects.length === 0 && analysis.knownTech.length > 0) return knownTechResult(analysis.knownTech[0], question);
   return null;
 }
 

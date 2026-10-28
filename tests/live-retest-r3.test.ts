@@ -339,6 +339,43 @@ describe("review and probe findings", () => {
   });
 });
 
+describe("first live run on the new preview", () => {
+  it("reads a client's family on a named system as part of the system, not Mike's family", async () => {
+    const result = await answerQuestion({ question: "Can the claims platform pay out to a family after a funeral?" });
+    assert.equal(isRefusal(result.response), false, result.response);
+    const personal = await answerQuestion({ question: "Tell me about Mike's family." });
+    assert.equal(isRefusal(personal.response), true, personal.response);
+  });
+
+  it("routes unauthorised-access wording to the security answer", async () => {
+    const result = await answerQuestion({ question: "How are intruders kept out of Mike's systems?" });
+    assert.match(lead(result.response), /role-based access|access is enforced|capability check/, result.response);
+  });
+
+  for (const [question, expected] of [
+    ["What happens after the requester signs a ZDI form?", /manager review/],
+    ["Where does a ZDI request go after the manager signs it?", /Accounts review/],
+    ["What does ZDI produce once everything has been signed?", /archival PDF/],
+  ] as const) {
+    it(`names the next ZDI step for the role asked about: ${question}`, async () => {
+      const result = await answerQuestion({ question });
+      assert.match(lead(result.response), expected, result.response);
+    });
+  }
+
+  for (const question of ["Why does the CRM need Celery?", "What job does Celery do in the CRM?"]) {
+    it(`treats why and what-job wording as a purpose question: ${question}`, async () => {
+      const result = await answerQuestion({ question });
+      assert.match(lead(result.response), /list Celery but do not say what it is used for/, result.response);
+    });
+  }
+
+  it("does not say yes to a deployment claim because a tool is listed", async () => {
+    const result = await answerQuestion({ question: "Has Mike deployed workloads on S3?" });
+    assert.doesNotMatch(result.response, /^Yes\b/, result.response);
+  });
+});
+
 describe("validator accepts category nouns and generic verbs", () => {
   const supported: Array<[string, string[]]> = [
     ["Mike's GitHub handle is MikeNcube [1].", ["availability"]],
