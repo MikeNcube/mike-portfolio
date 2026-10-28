@@ -182,7 +182,11 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
   {
     id: "relocation",
     terms: ["relocate", "relocating", "relocation", "move", "moving", "travel",
-      "travelling", "traveling", "emigrate", "emigrating"],
+      "travelling", "traveling", "emigrate", "emigrating",
+      // Where he has been. "Visit" alone also means opening a link, so the place word goes with it.
+      "travelled", "traveled", "trip", "trips", "toured", "holidayed", "countries ... visit",
+      "visit ... countries", "country ... visit", "visit ... country", "places ... visit",
+      "visit ... places", "cities ... visit", "visit ... cities"],
   },
   {
     id: "work-authorisation",
@@ -271,7 +275,10 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     id: "personal-finance",
     terms: ["rent", "mortgage", "house", "apartment", "car", "cars", "invest",
       "investment", "investing", "investor", "savings", "budget", "debt", "loan",
-      "lottery", "gamble", "gambling", "bet", "betting", "net worth", "wealth", "rich"],
+      "lottery", "gamble", "gambling", "bet", "betting", "net worth", "wealth", "rich",
+      // What he owns.
+      "property", "properties", "real estate", "homeowner", "home owner", "landlord",
+      "assets", "possessions"],
   },
   {
     // Visual look of a system or site. The knowledge base describes behaviour, never appearance.
@@ -519,7 +526,9 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "best builds", "best system", "best systems", "best thing", "best piece", "proudest",
       "proud", "flagship", "impressive", "showcase", "favourite project", "favorite project",
       "signature project", "standout project", "greatest", "demo", "achievement",
-      "achievements", "accomplishment", "accomplishments"],
+      "achievements", "accomplishment", "accomplishments",
+      // "Headline" names a job title on its own, but a flagship before a work noun.
+      "headline project", "headline projects", "headline build", "headline system"],
   },
   {
     id: "shipped",
@@ -1167,6 +1176,8 @@ export function coverageRefusalReason(analysis: QuestionAnalysis): string | null
   return null;
 }
 
+const FRAMING_CONCEPTS = new Set(["built"]);
+
 // The profile concept whose canonical answer should replace `response`, or null
 // when the response already serves one of the question's concepts.
 export function conceptOverride(
@@ -1183,7 +1194,10 @@ export function conceptOverride(
   if (concepts.length === 0) return null;
   const dominant = concepts.find((c) => c.dominant);
   if (dominant) return !responseIsRefusal && dominant.evidence.test(response) ? null : dominant;
-  if (!responseIsRefusal && concepts.some((c) => c.evidence.test(response))) return null;
+  // "Projects" or "built" beside another topic only frames it ("LLM vendors in Mike's
+  // projects"), so the list of what he built does not answer that topic.
+  const served = concepts.filter((c, i) => i === 0 || !FRAMING_CONCEPTS.has(c.id));
+  if (!responseIsRefusal && served.some((c) => c.evidence.test(response))) return null;
   // A mixed question ("Has Mike built a SOC?") keeps an answer that covers its specific term.
   const covered = analysis.kbTerms.some((term) => isDistinctiveKbTerm(term) && mentions(response, term));
   if (!responseIsRefusal && covered) return null;
