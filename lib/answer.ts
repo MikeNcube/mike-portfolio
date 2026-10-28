@@ -7,6 +7,7 @@ import {
   normaliseQuestion,
   sourcesFor,
   STATIC_ANSWERS,
+  stitchStaticAnswers,
   type StaticAnswer,
 } from "./static-answers";
 import {
@@ -161,7 +162,7 @@ export function ensureContactEmail(text: string): string {
 export function ensureContactDetails(text: string): string {
   const withEmail = ensureContactEmail(text);
   if (withEmail.includes(CONTACT_PHONE_PRIMARY) && withEmail.includes(CONTACT_PHONE_SECONDARY)) return withEmail;
-  return withClosingSentence(withEmail, `Phone ${CONTACT_PHONES}.`);
+  return withClosingSentence(withEmail, `Phone or WhatsApp ${CONTACT_PHONES}.`);
 }
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
@@ -1223,7 +1224,7 @@ function contactStaticReply(): AnswerResult {
   }
   return {
     response:
-      `Email Mike at ${CONTACT_EMAIL} or call him on ${CONTACT_PHONES} [1]. He works remote-first from South Africa and is available for full-time or contract [1].`,
+      `Email Mike at ${CONTACT_EMAIL} or call or WhatsApp him on ${CONTACT_PHONES} [1]. He works remote-first from South Africa and is available for full-time or contract [1].`,
     sources: sourcesFor({
       question: "How can I contact Mike?",
       aliases: [],
@@ -1608,6 +1609,8 @@ function knownTechResult(tech: string, question = ""): AnswerResult | null {
 function anchoredFallback(question: string, analysis: QuestionAnalysis): AnswerResult | null {
   const projects = namedProjects(question);
   if (projects.length === 1) return conceptCanonicalResult(projects[0].staticQuestion);
+  const overview = namedProjectsOverview(question, projects);
+  if (overview) return overview;
   // "Does Mike's RAG hallucinate?" asks about the aspect: "Yes, RAG is in his stack"
   // would read as yes to the aspect.
   const dominant = dominantConcepts(analysis)[0];
@@ -1840,6 +1843,8 @@ function focusGuard(question: string, analysis: QuestionAnalysis, result: Answer
   const led = leadWithFocus(result.response, question, analysis);
   if (fits(result.response, led)) return withSequencedCitations(result, led);
   if (projects.length === 1) return withSequencedCitations(result, led);
+  const overview = namedProjectsOverview(question, projects);
+  if (overview && fits(overview.response, overview.response)) return overview;
   for (const concept of [...dominantConcepts(analysis), conceptById(analysis.concepts[0] ?? "")]) {
     const canonical = concept ? conceptCanonicalResult(concept.canonical) : null;
     if (!canonical) continue;
@@ -1853,6 +1858,17 @@ function focusGuard(question: string, analysis: QuestionAnalysis, result: Answer
   if (named) return polishResult(question, named, []);
   console.warn(`[focus] static answer dropped; lead does not name: ${focusEntities(question, analysis).join(", ")}`);
   return analysis.unknownTech.length > 0 ? refusalResult(unknownTechRefusal(analysis.unknownTech)) : refusalResult();
+}
+
+// Each named project's own overview, in turn, for a question that names several
+// ("built for the claims team" names both claims systems).
+function namedProjectsOverview(question: string, projects: NamedProject[]): AnswerResult | null {
+  const items = [...new Set(projects.map((p) => p.staticQuestion))]
+    .map((canonical) => STATIC_ANSWERS.find((a) => a.question === canonical))
+    .filter((item): item is StaticAnswer => Boolean(item));
+  if (items.length < 2) return null;
+  const stitched = stitchStaticAnswers(question, items);
+  return { response: stitched.answer, sources: sourcesFor(stitched), via: "static" };
 }
 
 // Overview answers: lists of what Mike shipped, built, uses or knows. Retrieval
