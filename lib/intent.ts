@@ -272,6 +272,9 @@ function projectStateAnswer(project: (typeof PROJECTS)[number], question: string
   } else if (/\bship(?:ped|s)?\b/.test(hay)) {
     lead = state.live ? `Yes, Mike shipped ${name} [1].` : `No, ${name} has not shipped yet [1].`;
   } else if (/\blive\b/.test(hay)) {
+    // When the source line already says "not the live system", "No." lets the line,
+    // with what the project actually is, open the answer.
+    if (!state.live && /\bnot (?:yet |the )?live\b/i.test(state.line)) return `No. ${state.line}`;
     lead = state.live ? `Yes, ${name} is live [1].` : `No, ${name} is not live [1].`;
   } else if (/\bdeploy/.test(hay) && !/\bdeployed\b/.test(state.line)) {
     lead = state.live
@@ -310,6 +313,7 @@ type ProjectTopic =
   | "stack"
   | "languages"
   | "ai"
+  | "after-approval"
   | "approvers"
   | "deploy"
   | "lead"
@@ -331,6 +335,10 @@ function projectTopic(question: string): ProjectTopic {
   // AI as the asked agent or method ("decided by AI"), outside a project's own name.
   if (/\b(?:ai|llms?|machine learning|genai|gpt)\b/i.test(hay.replace(/\bzororo ai os\b/g, ""))) return "ai";
   if (/\b(?:which|what)\s+(?:ai\s+|llm\s+|language\s+|vision\s+)?models?\b/i.test(hay)) return "ai";
+  // What follows the last approval, not who approves.
+  if (/\b(?:after|once|following)\b[^?.!]*\b(?:approv\w*|signs?\s+off|signed\s+off|sign-off)|\bapprov\w*[^?.!]*\b(?:then|next|afterwards?)\b/i.test(hay)) {
+    return "after-approval";
+  }
   if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews|signs? off|signed off|sign-off)\b/i.test(hay)) return "approvers";
   // "status of their case" asks about a record inside the system, not the project's status.
   const recordStatus = /\bstatus\s+of\s+(?:their|a|an|his|her|my|your|each|every)\b/i.test(hay);
@@ -353,7 +361,8 @@ function projectTopic(question: string): ProjectTopic {
   if (/\b(?:written in|programming languages?|what languages?|which languages?)\b/i.test(hay)) return "languages";
   if (
     askedTech(question)
-    && /\b(?:use|uses|using|used|run on|runs on|built (?:with|on)|rely on|relies on|include|includes)\b/i.test(hay)
+    && (/\b(?:use|uses|using|used|run on|runs on|built (?:with|on)|rely on|relies on|include|includes|role|plays?|purpose|for what)\b/i.test(hay)
+      || TECH_DOES_RE.test(hay))
   ) {
     return "uses-tech";
   }
@@ -377,20 +386,124 @@ function scoped(
   };
 }
 
-// "What is X used for" asks a purpose. The sources list tools, not their purposes.
-const PURPOSE_RE = /\b(?:used\s+for|uses?\s+(?:\S+\s+){1,2}for|for\s+what|purpose|role\s+of)\b/i;
+// "What does Redis do in the CRM?": the tool's job in a project.
+const TECH_DOES_RE = /\bwhat\s+(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
+
+// "What is X used for", "How does Y use X", "Why does Y use X", "What does X do"
+// ask a purpose. The sources list tools, not their purposes.
+const PURPOSE_RE =
+  /\b(?:used\s+for|uses?\s+(?:\S+\s+){1,2}for|for\s+what|purpose|role\s+of|what\s+role|why)\b|^\s*how\s+(?:does|do|did|is|are|was|were)\b[^?.!]*\bus(?:e|es|ed|ing)\b|\bwhat\s+(?:does|do|did)\b[^?.!]*\bdo(?:es)?\b/i;
+
+// Words that say what a tool does in a sentence ("fingerprint dedup in Redis",
+// "pgvector hybrid keyword and vector search").
+const TECH_USE_CUE_RE =
+  /\b(?:dedup\w*|fingerprint\w*|cach\w*|queue\w*|search\w*|stor(?:e|es|ed|ing|age)|sessions?|locks?|rate[- ]limit\w*|embedding\w*|vectors?|retriev\w*|index\w*|jobs?|workers?|broker\w*|checkpoints?)\b/gi;
+
+// A bare list ("FastAPI, PostgreSQL, Redis, Celery, Docker") or a labelled one
+// ("Stack: ...") names tools without saying what they do.
+function isToolList(sentence: string): boolean {
+  if (/^[A-Za-z/ -]{2,24}:\s/.test(sentence)) return true;
+  const items = sentence.replace(/[.!?]+$/, "").split(/,\s*|\s+and\s+/);
+  return items.length >= 3 && items.every((item) => item.trim().split(/\s+/).length <= 4);
+}
+
+// The project's own sentence that says what `tech` is used for, written to stand
+// alone. Null when its sources only list the tool.
+function techUseSentence(
+  project: (typeof PROJECTS)[number],
+  tech: string,
+): { text: string; chunkId: string } | null {
+  let best: { text: string; chunkId: string; score: number } | null = null;
+  for (const chunk of KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id))) {
+    // Source text splits at every full stop: its fragments ("pgvector hybrid search.") start lowercase.
+    for (const raw of chunk.text.split(/(?<=[.!?])\s+/)) {
+      const sentence = raw.trim();
+      if (!mentionsTech(sentence, tech) || isToolList(sentence)) continue;
+      const score = techUseScore(sentence, tech);
+      if (score < 2 || (best && score <= best.score)) continue;
+      best = { text: standAloneUse(project, tech, sentence), chunkId: chunk.id, score };
+    }
+  }
+  return best ? { text: best.text, chunkId: best.chunkId } : null;
+}
+
+// Each cue word counts once, twice when it sits beside the tool ("Postgres checkpoints").
+function techUseScore(sentence: string, tech: string): number {
+  const words = sentence.toLowerCase().match(/[a-z0-9][a-z0-9.+#-]*/g) ?? [];
+  const at = words.findIndex((w) => mentionsTech(w, tech));
+  let score = 0;
+  const seen = new Set<string>();
+  words.forEach((word, i) => {
+    TECH_USE_CUE_RE.lastIndex = 0;
+    if (seen.has(word) || !TECH_USE_CUE_RE.test(word)) return;
+    seen.add(word);
+    score += at >= 0 && Math.abs(i - at) <= 2 ? 2 : 1;
+  });
+  return score;
+}
+
+// Every source sentence naming the tool says it is only planned ("LangGraph and pgvector are planned").
+function onlyPlanned(project: (typeof PROJECTS)[number], tech: string): boolean {
+  const sentences = chunkText(project.sourceIds).split(/(?<=[.!?])\s+/).filter((s) => mentionsTech(s, tech));
+  return sentences.length > 0 && sentences.every((s) => /\b(?:planned|planning|roadmap|future|will)\b/i.test(s));
+}
+
+// The first source sentence that names the tool, written to stand alone.
+function techMentionSentence(project: (typeof PROJECTS)[number], tech: string): { text: string; chunkId: string } | null {
+  for (const chunk of KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id ?? ""))) {
+    const sentence = chunk.text.split(/(?<=[.!?])\s+/).find((s) => mentionsTech(s, tech));
+    if (sentence) return { text: standAloneUse(project, tech, sentence.trim()), chunkId: chunk.id ?? "" };
+  }
+  return null;
+}
+
+function standAloneUse(project: (typeof PROJECTS)[number], tech: string, sentence: string): string {
+  const body = sentence.replace(/[.!?]+$/, "");
+  const name = project.name;
+  if (body.toLowerCase().startsWith(tech.toLowerCase())) return `${name} uses ${body}`;
+  // "Ingests events with ...": a sentence whose subject is the project itself.
+  if (/^[A-Z][a-z]+s\b/.test(body) && !project.re.test(body)) {
+    return `${name} ${body.charAt(0).toLowerCase()}${body.slice(1)}`;
+  }
+  // A fragment that does not name its project ("Role-scoped steps, ... Postgres checkpoints").
+  return project.re.test(body) ? body : `${name}: ${body}`;
+}
+
+// The tool as the sources write it ("LangGraph"), not as the visitor typed it.
+function kbSpelling(project: (typeof PROJECTS)[number], tech: string): string {
+  const escaped = tech.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return chunkText(project.sourceIds).match(new RegExp(`(?:^|[^a-z0-9])(${escaped})`, "i"))?.[1] ?? tech;
+}
 
 function usesTechAnswer(project: (typeof PROJECTS)[number], question: string): RecruiterIntent | null {
   const tech = askedTech(question);
   if (!tech) return null;
   const sourceIds = project.stackSourceIds ?? project.sourceIds;
   const bareName = nameMidSentence(project.name).replace(/^the /, "");
+  if (onlyPlanned(project, tech)) {
+    const bare = nameMidSentence(project.name);
+    const lead = isPolarQuestion(question) ? "No. " : "";
+    const name = kbSpelling(project, tech);
+    return scoped(project, "uses-tech", `${lead}${name} is planned for ${bare}, not in use yet [1]. ${project.stack}`, project.sourceIds);
+  }
   if (mentionsTech(chunkText(sourceIds), tech)) {
-    if (isPolarQuestion(question)) return scoped(project, "uses-tech", `Yes. ${project.stack}`, sourceIds);
-    const purpose = PURPOSE_RE.test(question)
-      ? ` The ${bareName} sources list ${tech} but do not say what it is used for.`
-      : "";
-    return scoped(project, "uses-tech", `${project.stack}${purpose}`, sourceIds);
+    if (isPolarQuestion(question)) {
+      if (mentionsTech(project.stack, tech)) return scoped(project, "uses-tech", `Yes. ${project.stack}`, sourceIds);
+      // The stack line does not name it: show the sentence that does.
+      const mention = techMentionSentence(project, tech);
+      if (mention) return scoped(project, "uses-tech", `Yes. ${mention.text} [1].`, [mention.chunkId]);
+    }
+    if (!PURPOSE_RE.test(question)) return scoped(project, "uses-tech", project.stack, sourceIds);
+    // A purpose question gets the project's own sentence on how the tool is used,
+    // or, when the sources only list it, a plain statement of that.
+    const use = techUseSentence(project, tech);
+    if (use) return scoped(project, "uses-tech", `${use.text} [1].`, [use.chunkId]);
+    return scoped(
+      project,
+      "uses-tech",
+      `The ${bareName} sources list ${tech} but do not say what it is used for [1]. ${project.stack}`,
+      sourceIds,
+    );
   }
   if (!mentionsTech(chunkText(["stack"]), tech)) {
     return scoped(project, "uses-tech", `No. ${project.stack}`, sourceIds);
@@ -485,6 +598,22 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
           sourceIds: ["zororo-crm", "employer"],
         },
       };
+    case "after-approval":
+      if (project.id !== "zdi") return null;
+      // The route is manager review, then accounts review, then archived: the next
+      // step depends on whose approval the question means.
+      if (/\bmanager\b/i.test(question) && !/\baccounts?\b|\bfinal\b/i.test(question)) {
+        return scoped(
+          project,
+          "after-approval",
+          "After manager review, a ZDI request moves to Accounts review, and only then is it archived [1]. ZDI never pays, never produces a bank file and never marks anything as paid [1].",
+        );
+      }
+      return scoped(
+        project,
+        "after-approval",
+        "After the final Accounts approval, a worker renders an archival PDF with an evidence appendix and the request is archived [1]. ZDI never pays, never produces a bank file and never marks anything as paid [1].",
+      );
     case "approvers":
       if (project.id !== "zdi") return null;
       return { id: "project-zdi-approvers", answer: staticByQuestion("Who approves ZDI requests?") };

@@ -1,5 +1,6 @@
 // Canonical production-system, AWS, ZDI, and Zororo AI OS status copy, plus a post-check.
 
+import { GENERIC_WORD_LIST } from "./generic-words";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import {
   capitaliseAfterCiteStops,
@@ -10,7 +11,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r54";
+export const ANSWER_CACHE_VERSION = "r55";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
@@ -116,8 +117,30 @@ const BACK_TO_BACK_STATUS_RES: RegExp[] = [
 const SINGLE_PROJECT_RE =
   /\b(?:zdi|crm|digi(?: app form)?|sentinel|sitewarden|cube|zororo ai os|claims (?:operations )?platform|content pipeline|fastapi|flask|postgres(?:ql)?|sqlite|redis|celery|docker|python|typescript|react|next\.js|jwt|langgraph|pgvector)\b/i;
 
+// Words that keep a production question about the shipped list itself: what was
+// shipped, where it runs and who uses it.
+const PRODUCTION_LIST_WORDS = new Set([
+  ...GENERIC_WORD_LIST,
+  "production", "prod", "system", "systems", "project", "projects", "app", "apps",
+  "application", "applications", "product", "products", "software", "tool", "tools",
+  "build", "builds", "built", "ship", "ships", "shipped", "shipping", "live", "run",
+  "runs", "running", "deploy", "deployed", "deployment", "deployments", "serve",
+  "serves", "serving", "users", "customers", "traffic", "zororo", "phumulani",
+  "funeral", "assurance", "company", "employer", "experience", "track", "record",
+]);
+
+// True when a word outside the production phrase names a topic of its own: "stop
+// an LLM hallucinating in production" asks about hallucination, and "in
+// production" only qualifies it.
+function hasOtherTopic(question: string): boolean {
+  const rest = question.replace(new RegExp(PRODUCTION_QUESTION_RE.source, "gi"), " ").toLowerCase();
+  const words = rest.match(/[a-z][a-z'’-]*/g) ?? [];
+  return words.some((word) => !PRODUCTION_LIST_WORDS.has(word.replace(/['’]s$/, "").replace(/['’]/g, "")));
+}
+
 export function isProductionSystemsQuestion(question: string): boolean {
   if (!PRODUCTION_QUESTION_RE.test(question)) return false;
+  if (hasOtherTopic(question)) return false;
   // "Is ZDI in production?" asks about one project, not for the shipped list.
   const asksForList = /\bproduction systems?\b|\bwhat (?:has|did) mike ship/i.test(question);
   return asksForList || !SINGLE_PROJECT_RE.test(question);

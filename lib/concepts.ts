@@ -9,12 +9,14 @@
 // Word lists are thesaurus-style per concept. They must not be copied from
 // test or holdout questions; tests/concepts.test.ts enforces that.
 
+import { moneyIsMikes } from "./compensation";
+import { asksForMikesNumber } from "./contact-intent";
 import { RELATED_TERMS } from "./grounding";
 import { namedProjects } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { STATIC_ANSWERS } from "./static-answers";
 import { stem } from "./stem";
-import { TECH_LEXICON } from "./tech-lexicon";
+import { TECH_LEXICON, TECH_VENDORS } from "./tech-lexicon";
 import { thesaurusWords } from "./thesaurus";
 import { GENERIC_WORD_LIST } from "./generic-words";
 
@@ -78,6 +80,10 @@ function buildLexicon(groups: Array<{ id: string; terms: readonly string[] }>): 
   return lexicon;
 }
 
+const PHONE_NUMBER_TERMS = ["phone number", "phone numbers", "contact number", "contact numbers",
+  "cell number", "cell numbers", "cellphone number", "mobile number", "mobile numbers",
+  "telephone number", "telephone numbers"];
+
 // Topics the knowledge base cannot answer. A hit refuses with the email fallback.
 export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
   {
@@ -85,6 +91,7 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     terms: [
       "salary", "salaries", "pay", "paid", "payslip", "paycheck", "paycheque", "wage",
       "wages", "earn", "earns", "earnings", "income", "compensation", "remuneration",
+      "remunerate", "remunerated",
       "package", "ctc", "bonus", "bonuses", "equity", "stock options", "raise",
       "take home", "take-home", "day rate", "daily rate", "hourly rate", "rate card",
       "mike rate", "his rate", "rate per", "mike charge", "he charge", "charge per",
@@ -144,8 +151,11 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     terms: ["nationality", "ethnicity", "ethnic", "race", "tribe", "gender", "sexuality",
       "orientation", "id number", "identity number", "tax number", "social security",
       "ssn", "password", "pin", "credit score", "credit card", "bank account",
-      "bank details", "home address", "physical address", "street address", "phone",
-      "phone number", "cellphone", "cell", "mobile number", "whatsapp", "telephone"],
+      "bank details", "home address", "physical address", "street address",
+      // Phone numbers and the phone as a device. Mike's own number is a contact
+      // request: analyseQuestion reads it with MIKES_NUMBER_LEXICON before these.
+      ...PHONE_NUMBER_TERMS, "phone", "phones", "cellphone", "cell", "smartphone", "iphone",
+      "android", "whatsapp", "telephone"],
   },
   {
     id: "spoken-language",
@@ -271,7 +281,11 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "leave a message", "leave a note", "drop a line", "drop a message", "send a message",
       "send a note",
       // "book" as a verb schedules time; these phrases are matched before the leisure word.
-      "to book", "book a", "book an", "book one", "book some", "book time", "book in"],
+      "to book", "book a", "book an", "book one", "book some", "book time", "book in",
+      // Calling him. "phone" alone is a personal device, and a number is his only
+      // when the question says so (see MIKES_NUMBER_LEXICON).
+      "phone mike", "phone him", "call mike", "call him", "ring mike", "ring him",
+      "by phone", "on the phone", "over the phone", "phone call", "a call with"],
   },
   {
     // Working from wherever Mike is. Combined with another place it is still remote
@@ -361,7 +375,8 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "certificates", "cert", "certs", "course", "courses", "training", "trained",
       "accreditation", "accredited", "credential", "credentials", "learning",
       "upskilling", "coursera", "professional development", "continuing education",
-      "self-study"],
+      "self-study", "exam", "exams", "examination", "examinations", "qualification",
+      "qualifications", "sat ... exam", "sit ... exam", "passed ... exam", "pass ... exam"],
   },
   {
     id: "contract",
@@ -467,11 +482,55 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     dominant: true,
   },
   {
+    // Whether model answers can be trusted. Dominant: a list of shipped systems or
+    // models does not say how invented answers are prevented.
+    id: "grounding",
+    canonical: "How does Mike keep LLM answers grounded?",
+    evidence: /\bgrounded\b|fallible|\bcit(?:es|ed|ations?)\b|discards chunks/i,
+    terms: ["hallucinate", "hallucinates", "hallucinated", "hallucination",
+      "hallucinations", "confabulate", "confabulation", "make things up", "makes things up",
+      "made up", "made-up", "make up", "makes up", "invent", "invents", "invented", "inventing",
+      "fabricate", "fabricates", "fabricated", "fabrication", "accurate", "accuracy",
+      "inaccurate", "inaccuracy", "factual", "factually", "truthful", "grounded", "grounding",
+      "ungrounded", "trustworthy", "trust the answers", "misinformation", "false answers",
+      "false information",
+      // Checking that a model's or agent's output is right.
+      "verify ... output", "check ... output", "validate ... output", "output ... correct",
+      "output ... right", "output ... accurate"],
+    dominant: true,
+  },
+  {
+    // How systems are secured: access control, encryption, segregation of duties.
+    // Dominant: a list of shipped systems does not say how they are protected.
+    id: "security",
+    canonical: "How does Mike secure his systems?",
+    evidence: /role-based access|access is enforced|capability check|\bJWT\b|tenant isolation|session revocation/i,
+    terms: ["security", "secure", "secured", "securing", "secures", "access control",
+      "access controls", "authentication", "authorisation", "authorization", "permissions",
+      "rbac", "role-based access", "hardening", "harden", "hardened", "vulnerability",
+      "vulnerabilities", "attack", "attacks", "attacker", "attackers", "threat", "threats",
+      "security measures", "security controls"],
+    dominant: true,
+  },
+  {
+    // Money moving through a system Mike built ("does it pay suppliers"). Mike's own
+    // pay is a refusal topic; analyseQuestion keeps the two apart.
+    id: "payments",
+    canonical: "Do Mike's systems make payments?",
+    evidence: /never pays|bank file|marks anything as paid|cash services/i,
+    terms: ["pay", "pays", "paying", "paid", "payment", "payments", "payout", "payouts",
+      "pay out", "pays out", "invoice", "invoices", "invoicing", "billing", "supplier",
+      "suppliers", "vendor payments", "bank file", "bank files", "disburse", "disburses",
+      "disbursement", "disbursements", "remittance", "settlement", "settlements"],
+    dominant: true,
+  },
+  {
     // How failures are handled. Dominant: an answer about the models or tools
     // involved does not answer what happens when they fail.
     id: "failure-handling",
     canonical: "How does Mike approach engineering?",
-    evidence: /fallible|fall(?:s|ing)? ?back|failover|retries|takes over/i,
+    // Not "failover": that names the claims platform's status, not how failures are handled.
+    evidence: /fallible|fall(?:s|ing)? ?back|retries|takes over/i,
     terms: ["failure", "failures", "fallback", "fallbacks", "fall back", "falls back",
       "retry", "retries", "retrying", "outage", "outages", "downtime", "error handling",
       "resilience", "resilient", "fault tolerance", "fault-tolerant", "graceful degradation",
@@ -483,8 +542,7 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "model ... rate ... limit", "rate ... limit ... model", "llm ... rate ... limit",
       "rate ... limit ... llm", "provider ... rate ... limit", "rate ... limit ... provider",
       "throttled", "throttling", "crash", "crashes",
-      "crashed", "errors out", "error out", "hallucinate", "hallucinates", "hallucinated",
-      "hallucination", "hallucinations", "bad output", "bad outputs", "wrong output",
+      "crashed", "errors out", "error out", "bad output", "bad outputs", "wrong output",
       "invalid output", "malformed output", "bad answer", "bad answers", "bad response",
       "bad responses", "wrong answer", "wrong answers", "garbage", "gibberish",
       "if ... fail", "when ... fail", "if ... down", "when ... down"],
@@ -495,7 +553,8 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     // not say how they are labelled.
     id: "labels",
     canonical: "How does Mike label his repos?",
-    evidence: /labelled production, prototype, or lab/i,
+    // The scheme itself, or one repo's label ("is labelled lab").
+    evidence: /labelled production, prototype, or lab|\blabell?ed (?:production|prototype|lab)\b/i,
     terms: ["labels", "labelled", "labeled", "labelling", "labeling", "tag", "tags",
       "tagged", "tagging", "badge", "badges", "maturity", "maturity label",
       "maturity labels", "maturity level", "maturity levels", "repo labels",
@@ -544,7 +603,9 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     terms: ["assistant", "chatbot", "chat bot", "bot", "chat", "this assistant",
       "this chat", "the chat", "answering", "this site", "this website", "portfolio site",
       "the replies", "the answers", "the responses", "your replies", "your answers",
-      "your responses", "these replies", "these answers", "its replies", "its answers"],
+      "your responses", "these replies", "these answers", "its replies", "its answers",
+      // The prompt is a part of the assistant; "grounding" here names it, not a topic.
+      "grounding prompt", "system prompt"],
   },
   {
     // How the assistant finds its sources: embeddings, similarity and the cutoff.
@@ -604,6 +665,9 @@ const CONCEPT_BY_ID = new Map(PROFILE_CONCEPTS.map((c) => [c.id, c]));
 const CONCEPT_ORDER = new Map(PROFILE_CONCEPTS.map((c, i) => [c.id, i]));
 
 const REFUSE_LEXICON = buildLexicon(REFUSE_TOPICS);
+// Read first when the question asks for Mike's own number, so the number is a contact detail.
+const MIKES_NUMBER_LEXICON = buildLexicon([{ id: "contact",
+  terms: [...PHONE_NUMBER_TERMS, "number", "numbers"] }]);
 const CONCEPT_LEXICON = buildLexicon(PROFILE_CONCEPTS);
 const TECH_PHRASES = buildLexicon([{ id: "tech", terms: TECH_LEXICON.filter((t) => t.includes(" ")) }]);
 const TECH_SINGLES = new Set(TECH_LEXICON.filter((t) => !t.includes(" ")));
@@ -733,6 +797,67 @@ function matchPhrases(
   }
 }
 
+// Asking whether Mike holds a credential: certified, an exam, a certificate.
+const CREDENTIAL_ASK_RE = /\bcertif\w*|\bcerts?\b|\bexams?\b|\bcredentials?\b|\baccredit\w*|\bqualifications?\b/i;
+
+export function isCredentialAsk(question: string): boolean {
+  return CREDENTIAL_ASK_RE.test(question);
+}
+
+// Pay words that name money moving through a system as readily as Mike's own pay.
+const SYSTEM_MONEY_STEMS = stemSet(["pay", "pays", "paid", "paying", "invoice", "invoices",
+  "invoicing", "billing", "fee", "fees", "earn", "earned", "earns"]);
+
+// "Apache Kafka", "Microsoft Azure": a vendor name directly before a technology
+// names one product. A vendor the KB lists itself ("AWS Lambda") stays separate,
+// so the listed half is still credited.
+function vendorProductSpans(tokens: QuestionToken[], used: boolean[]): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  for (let i = 0; i + 1 < tokens.length; i++) {
+    if (used[i] || used[i + 1]) continue;
+    const vendor = tokens[i].norm;
+    const product = tokens[i + 1].norm;
+    if (!TECH_VENDORS.has(vendor) || techInKb(vendor) || product === vendor) continue;
+    if (!TECH_SINGLES.has(product)) continue;
+    spans.push([i, i + 2]);
+    i += 1;
+  }
+  return spans;
+}
+
+// Words before "go" that make it the Go language ("code in Go", "knows Go") when
+// nothing verb-like follows, and words after it that do so on their own ("Go developer").
+const GO_LANGUAGE_BEFORE = new Set(["in", "with", "write", "writes", "writing", "wrote", "code",
+  "codes", "coding", "program", "programs", "programming", "know", "knows", "learn", "learned",
+  "learnt", "learning", "use", "uses", "used", "using", "and", "or", "experience", "proficient",
+  "familiar", "fluent", "skilled"]);
+const GO_LANGUAGE_AFTER = new Set(["lang", "language", "programming", "developer", "developers",
+  "engineer", "engineers", "code", "services", "microservices", "backend", "backends"]);
+// "go to", "go about", "go remote": "go" as a verb.
+const GO_VERB_AFTER = new Set(["to", "about", "through", "ahead", "live", "back", "on", "over",
+  "into", "for", "out", "beyond", "up", "down", "remote", "with", "abroad", "elsewhere",
+  "there", "here", "home", "in", "by", "from", "onsite", "hybrid"]);
+// "to go", "can he go", "Mike go": "go" as a verb.
+const GO_VERB_BEFORE = new Set(["to", "i", "we", "you", "he", "she", "they", "mike", "let", "lets",
+  "can", "could", "will", "would", "should", "did", "does", "do", "must", "might", "may", "not"]);
+
+function goLanguageIndex(tokens: QuestionToken[], used: boolean[]): number {
+  const capitalised = tokens.filter((t) => /^[A-Z]/.test(t.raw)).length;
+  const titleCase = capitalised > tokens.length * 0.6;
+  for (let i = 0; i < tokens.length; i++) {
+    if (used[i] || tokens[i].norm !== "go") continue;
+    const prev = tokens[i - 1]?.norm;
+    const next = tokens[i + 1]?.norm;
+    if ((next && GO_VERB_AFTER.has(next)) || (prev && GO_VERB_BEFORE.has(prev))) continue;
+    const named = !titleCase && i > 0 && tokens[i].raw === "Go";
+    const framedBefore = Boolean(prev && GO_LANGUAGE_BEFORE.has(prev))
+      && (!next || next === "and" || next === "or" || GO_LANGUAGE_AFTER.has(next));
+    const framedAfter = Boolean(next && GO_LANGUAGE_AFTER.has(next));
+    if (named || framedBefore || framedAfter) return i;
+  }
+  return -1;
+}
+
 export function analyseQuestion(question: string): QuestionAnalysis {
   const tokens = questionTokens(question);
   const used = tokens.map(() => false);
@@ -751,12 +876,38 @@ export function analyseQuestion(question: string): QuestionAnalysis {
     (techInKb(norm) ? knownTech : unknownTech).push(raw);
   };
 
+  if (asksForMikesNumber(question)) {
+    matchPhrases(tokens, used, MIKES_NUMBER_LEXICON, (ids) => hitConcepts(ids));
+    tokens.forEach((token, i) => {
+      if (!used[i] && MIKES_NUMBER_LEXICON.singles.has(token.stem)) {
+        used[i] = true;
+        hitConcepts(["contact"]);
+      }
+    });
+  }
   matchPhrases(tokens, used, REFUSE_LEXICON, (ids) => refuse.push(...ids));
   matchPhrases(tokens, used, CONCEPT_LEXICON, (ids) => hitConcepts(ids));
   matchPhrases(tokens, used, TECH_PHRASES, (_ids, start, end) => {
     const raw = tokens.slice(start, end).map((t) => t.raw).join(" ");
     hitTech(raw, raw.toLowerCase());
   });
+  for (const [start, end] of vendorProductSpans(tokens, used)) {
+    for (let k = start; k < end; k++) used[k] = true;
+    const product = tokens[end - 1];
+    // A listed product goes by the name the KB uses ("Bedrock"); an unlisted one
+    // keeps the visitor's full name for the "isn't listed" note ("Apache Kafka").
+    const full = tokens.slice(start, end).map((t) => t.raw).join(" ");
+    hitTech(techInKb(product.norm) ? product.raw : full, product.norm);
+  }
+  const go = goLanguageIndex(tokens, used);
+  if (go >= 0) {
+    used[go] = true;
+    // Checked against the KB as "golang": "go" as an ordinary verb appears in the KB text.
+    hitTech("Go", "golang");
+  }
+  // Money words about a named system ("does ZDI pay suppliers") are not Mike's pay,
+  // and "earn" or "pass" a certificate is a credential, not income.
+  const moneyAboutMike = moneyIsMikes(question) && !isCredentialAsk(question);
 
   // Pieces of a compound ("third-party", "fan-out") only explain the compound;
   // they must not trigger a refusal topic on their own.
@@ -764,7 +915,7 @@ export function analyseQuestion(question: string): QuestionAnalysis {
     if (GENERIC_STEMS.has(token.stem) || GENERIC_STEMS.has(token.norm)) return "generic";
     if (/^\d/.test(token.norm)) return kbKnows(token) ? "kb" : "unexplained";
     const refuseIds = REFUSE_LEXICON.singles.get(token.stem);
-    if (refuseIds) {
+    if (refuseIds && (moneyAboutMike || !SYSTEM_MONEY_STEMS.has(token.stem))) {
       if (isPiece) return "kb";
       refuse.push(...refuseIds);
       return "refuse";

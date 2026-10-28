@@ -108,7 +108,7 @@ describe("project and technology scoped answers", () => {
   });
 
   it("answers status words directly for every project", () => {
-    assert.match(matchProjectScopedAnswer("Is the claims platform live?")?.answer.answer ?? "", /not live.*standby/);
+    assert.match(matchProjectScopedAnswer("Is the claims platform live?")?.answer.answer ?? "", /^No\. .*standby.*not the live system/);
     assert.match(matchProjectScopedAnswer("Is Cube a prototype?")?.answer.answer ?? "", /^Yes, Cube is a prototype/);
     assert.match(
       matchProjectScopedAnswer("What database does Zororo AI OS use?")?.answer.answer ?? "",

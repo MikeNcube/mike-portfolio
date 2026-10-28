@@ -178,7 +178,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "outreach",
     ],
     answer:
-      "Email Mike at mikencube03@gmail.com [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+      "Email Mike at mikencube03@gmail.com or call him on [phone removed] ([phone removed], primary) or [phone removed] (secondary) [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
     sourceIds: ["availability", "positioning"],
   },
   {
@@ -706,6 +706,39 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
     answer:
       "In the claims operations platform, PII is encrypted at the app layer and masked by default on list views, with an audit log of who read PII [1]. Proactive Sentinel applies POPIA controls: AES-256-GCM PII encryption, PII masking at ingest, an immutable audit log, and tenant isolation per request [2]. Zororo AI OS detects PII with Microsoft Presidio, plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits [3].",
     sourceIds: ["zororo-claims", "proactive-sentinel-tech", "zororo-ai-os"],
+  },
+  {
+    question: "How does Mike keep LLM answers grounded?",
+    aliases: [
+      "how does mike keep llm answers grounded",
+      "how does mike prevent hallucinations",
+    ],
+    factList: true,
+    answer:
+      "Mike treats models as fallible dependencies: every LLM call gets validation, retries, and a fallback [1]. This assistant answers only from a curated knowledge base, cites its sources, and refuses questions outside that scope [2]. A retrieval gate discards chunks below 0.35 cosine similarity, so generation is not fed weak matches [3]. Factual answers must include inline citations [3].",
+    sourceIds: ["engineering-approach", "this-assistant", "rag-injection-defence"],
+  },
+  {
+    question: "How does Mike secure his systems?",
+    aliases: [
+      "how does mike secure his systems",
+      "how are mike's systems secured",
+    ],
+    factList: true,
+    answer:
+      "The CRM uses role-based access and server-side session revocation [1]. In the claims operations platform, access is enforced at both the middleware and API layers, and PII is encrypted at the app layer [2]. In ZDI, a capability check and workflow guards mean a requester can never approve their own request [3]. Proactive Sentinel uses JWT auth, AES-256-GCM PII encryption and tenant isolation per request, with POPIA controls such as PII masking at ingest and an immutable audit log [4].",
+    sourceIds: ["zororo-crm", "zororo-claims", "zdi-signature-workflow", "proactive-sentinel-tech"],
+  },
+  {
+    question: "Do Mike's systems make payments?",
+    aliases: [
+      "do mike's systems make payments",
+      "do mike's systems handle payments",
+    ],
+    factList: true,
+    answer:
+      "ZDI never pays, never produces a bank file and never marks anything as paid [1]. The claims operations platform covers funeral-case processing across claims, cash services and courtesy services [2].",
+    sourceIds: ["zdi-signature-workflow", "zororo-claims"],
   },
 ];
 
