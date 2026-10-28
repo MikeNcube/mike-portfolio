@@ -1093,6 +1093,13 @@ export function citedFallbackFromChunks(
   return composeFromProvidedChunks(question, chunks);
 }
 
+// The authored answer whose own question or alias is this question, word for word.
+function authoredAnswerFor(question: string): StaticAnswer | null {
+  const qNorm = normaliseQuestion(question);
+  return STATIC_ANSWERS.find((item) =>
+    [item.question, ...item.aliases].some((c) => normaliseQuestion(c) === qNorm)) ?? null;
+}
+
 function exactStaticHit(question: string): StaticAnswer | null {
   const qNorm = normaliseQuestion(question);
   for (const item of STATIC_ANSWERS) {
@@ -1355,19 +1362,30 @@ export function ensureInlineCitation(
 }
 
 // Apply production-system split, ZDI/AI OS status, and per-item production citations.
-// An answer that opens on "It" ("It is labelled reference, not production") leans on
-// the question for its subject; the answer names it instead: the asked project, or
-// the subject of the first cited source.
+// An answer that opens as if continuing ("Also, ...", "The assistant also refuses")
+// or on a pronoun ("He has six-plus years", "It is labelled reference") leans on text
+// the reader cannot see. The opening is made to stand alone: the connective goes,
+// "He" and "His" become Mike, and "It" names the asked project or the cited source.
 function withNamedSubject(question: string, result: AnswerResult): string {
-  const text = result.response.trimStart();
+  const text = standAloneOpening(result.response.trimStart());
+  const person = text.match(/^(He|His)\s/);
+  if (person) return `${person[1] === "His" ? "Mike's" : "Mike"} ${text.slice(person[0].length)}`;
   const opener = text.match(/^(It's|Its|It)\s/);
-  if (!opener) return result.response;
+  if (!opener) return text;
   const subject = namedProjects(question)[0]?.name ?? subjectOfTitle(result.sources[0]?.title ?? "");
-  if (!subject) return result.response;
+  if (!subject) return text;
   const rest = text.slice(opener[0].length);
   if (opener[1] === "It's") return `${subject} is ${rest}`;
   if (opener[1] === "Its") return `${subject}'s ${rest}`;
   return `${subject} ${rest}`;
+}
+
+// A leading connective ("Also,", "Additionally", "And") and an "also" among the
+// first few words of the opening sentence, both of which point back at nothing.
+function standAloneOpening(text: string): string {
+  const unconnected = text.replace(/^(?:Also|Additionally|Moreover|Furthermore|Plus|And)\b,?\s+/, "");
+  const opening = unconnected.charAt(0).toUpperCase() + unconnected.slice(1);
+  return opening.replace(/^((?:\S+\s+){1,4}?)also\s+/i, "$1");
 }
 
 // "Recommender data pipeline (reference)" names "The recommender data pipeline";
@@ -2192,6 +2210,16 @@ async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
   }
   if (isUnknowableQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
+  // Asked exactly as an authored answer's question or alias ("Who is Mike Ncube?"):
+  // that answer was written and checked for this wording; a model's may drift.
+  const authored = authoredAnswerFor(question);
+  if (authored) {
+    return withContactEmail(question, polishResult(question, {
+      response: authored.answer,
+      sources: sourcesFor(authored),
+      via: "static",
+    }, []));
   }
 
   const audience = input.audience ?? "developer";

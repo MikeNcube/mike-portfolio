@@ -256,6 +256,38 @@ describe("judged misses from the final live run", () => {
   });
 });
 
+describe("model answers open so they stand alone", () => {
+  const groq = (question: string, ids: string[], text: string) => {
+    const chunks = ids.map((id) => {
+      const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === id);
+      assert.ok(chunk, id);
+      return { ...chunk, score: 0.9 };
+    });
+    return answerQuestion({ question, retrieveFn: async () => chunks, generateGroq: async () => text });
+  };
+
+  it("names Mike when a model answer opens on 'He'", async () => {
+    const result = await groq("How many years has Mike worked in software?", ["positioning"],
+      "He has six-plus years in software, about three focused on generative AI [1].");
+    assert.match(result.response, /^Mike has six-plus years/, result.response);
+  });
+
+  it("drops a connective that points back at nothing", async () => {
+    const lead = await groq("What does the content pipeline run on?", ["ai-social-agent"],
+      "Also, it runs on local Ollama at zero API cost [1].");
+    assert.match(lead.response, /^The content pipeline runs on local Ollama/, lead.response);
+    const inner = await groq("Does Mike's RAG assistant hallucinate?", ["this-assistant"],
+      "The portfolio assistant also refuses questions outside its curated knowledge base [1].");
+    assert.match(inner.response, /^The portfolio assistant refuses questions/, inner.response);
+  });
+
+  it("serves the authored answer to a question asked in its exact wording", async () => {
+    const result = await groq("Who is Mike Ncube?", ["positioning"], "He has six-plus years in software [1].");
+    assert.equal(result.via, "static");
+    assert.match(result.response, /Applied AI Engineer/, result.response);
+  });
+});
+
 describe("a place word does not anchor a personal question onto a profile answer", () => {
   it("refuses what Mike owns and where he has been", async () => {
     for (const question of ["Is Mike a homeowner in Gauteng?", "What cities has Mike visited?", "Has he taken any trips overseas?"]) {
