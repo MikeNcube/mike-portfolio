@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-import { answerQuestion, EMAIL_FALLBACK, shouldCacheAnswer, type AnswerResult } from "@/lib/answer";
+import { answerWithStaticFallback, shouldCacheAnswer, type AnswerResult } from "@/lib/answer";
 import { generateGemini, generateGroq } from "@/lib/providers";
 import { allowRequest } from "@/lib/rate-limit";
 import { normaliseQuestion } from "@/lib/static-answers";
@@ -113,24 +113,19 @@ export async function POST(req: NextRequest) {
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  try {
-    const result = await answerQuestion({
-      question,
-      audience: audienceKey,
-      geminiKey,
-      generateGemini: geminiKey
-        ? (prompt) => generateGemini(prompt, geminiKey)
-        : undefined,
-      generateGroq: groqKey ? (prompt) => generateGroq(prompt, groqKey) : undefined,
-    });
+  const result = await answerWithStaticFallback({
+    question,
+    audience: audienceKey,
+    geminiKey,
+    generateGemini: geminiKey
+      ? (prompt) => generateGemini(prompt, geminiKey)
+      : undefined,
+    generateGroq: groqKey ? (prompt) => generateGroq(prompt, groqKey) : undefined,
+  });
 
-    if (shouldCacheAnswer(result)) {
-      responseCache.set(cacheKey(question, audienceKey), result);
-    }
-
-    return jsonAnswer(result);
-  } catch (err) {
-    console.error("answerQuestion failed:", err);
-    return jsonAnswer({ response: EMAIL_FALLBACK, sources: [], via: "email" });
+  if (shouldCacheAnswer(result)) {
+    responseCache.set(cacheKey(question, audienceKey), result);
   }
+
+  return jsonAnswer(result);
 }
