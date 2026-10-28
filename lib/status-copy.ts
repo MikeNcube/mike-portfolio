@@ -12,7 +12,7 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r57";
+export const ANSWER_CACHE_VERSION = "r58";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 

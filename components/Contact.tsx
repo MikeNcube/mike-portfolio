@@ -25,12 +25,6 @@ export default function Contact() {
             <a href={`mailto:${profile.email}?subject=Hi%20Mike`} className="text-base link">
               {profile.email}
             </a>
-            <a href={`tel:${profile.phonePrimary.tel}`} className="link">
-              {profile.phonePrimary.display} ({profile.phonePrimary.international})
-            </a>
-            <a href={`tel:${profile.phoneSecondary.tel}`} className="link">
-              {profile.phoneSecondary.display}
-            </a>
             <a href={profile.github} target="_blank" rel="noreferrer noopener" className="link">
               github.com/MikeNcube
             </a>
