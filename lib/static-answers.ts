@@ -178,7 +178,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "outreach",
     ],
     answer:
-      "Email Mike at mikencube03@gmail.com or call or WhatsApp him on 078 136 0508 (+27 78 136 0508, primary) or 071 846 0107 (secondary) [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+      "Email Mike at mikencube03@gmail.com or message him on LinkedIn at linkedin.com/in/mike-ncube-669563a7 [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
     sourceIds: ["availability", "positioning"],
   },
   {

@@ -43,7 +43,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'availability',
     title: 'Availability and target roles',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike is available for full-time or contract and works remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), AI Automation Engineer. Contact: email mikencube03@gmail.com; phone 078 136 0508 (+27 78 136 0508, primary) or 071 846 0107 (secondary), and Mike is on WhatsApp on both numbers; github.com/MikeNcube; linkedin.com/in/mike-ncube-669563a7.',
+    text: 'Mike is available for full-time or contract and works remote-first from South Africa. Target roles: Applied AI Engineer, Generative AI Engineer, AI Solutions Engineer, Software Engineer (AI Systems), AI Automation Engineer. Contact: email mikencube03@gmail.com or LinkedIn linkedin.com/in/mike-ncube-669563a7; github.com/MikeNcube. No phone number is listed.',
   },
   {
     id: 'portfolio-rag-assistant',
