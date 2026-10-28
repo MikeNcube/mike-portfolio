@@ -17,8 +17,17 @@ import { isProductionSystemsQuestion } from "../lib/status-copy";
 import { normaliseTechAliases } from "../lib/tech-lexicon";
 
 const EMAIL = /mikencube03@gmail\.com/;
-const PRIMARY = /[phone removed]/;
-const SECONDARY = /[phone removed]/;
+const LINKEDIN = /linkedin\.com\/in\/mike-ncube-669563a7/;
+// Any South African phone number, local or international form.
+const ANY_PHONE = /\b0\d{2}[ -]?\d{3}[ -]?\d{4}\b|\+27/;
+
+// Mike publishes no phone number: a request for one is told so and gets the email and LinkedIn.
+function assertNoPhoneContact(response: string): void {
+  assert.match(response, /No phone number is listed/, response);
+  assert.match(response, EMAIL, response);
+  assert.match(response, LINKEDIN, response);
+  assert.doesNotMatch(response, ANY_PHONE, response);
+}
 
 function lead(text: string): string {
   return text.split(/(?<=[.!?](?:\s*\[\d+\])*)\s+(?=[A-Z])/)[0] ?? text;
@@ -228,12 +237,10 @@ describe("phone contact", () => {
     "Does Mike list a mobile number?",
     "Where do I find Mike's cell number?",
   ]) {
-    it(`gives the email and both numbers: ${question}`, async () => {
+    it(`says no number is listed and gives the email and LinkedIn: ${question}`, async () => {
       assert.equal(isContactRequest(question), true, question);
       const result = await answerQuestion({ question });
-      assert.match(result.response, EMAIL, result.response);
-      assert.match(result.response, PRIMARY, result.response);
-      assert.match(result.response, SECONDARY, result.response);
+      assertNoPhoneContact(result.response);
     });
   }
 
@@ -247,25 +254,25 @@ describe("phone contact", () => {
       assert.equal(asksForMikesNumber(question), false, question);
       const result = await answerQuestion({ question });
       assert.equal(isRefusal(result.response), true, result.response);
-      assert.doesNotMatch(result.response, PRIMARY, result.response);
+      assert.doesNotMatch(result.response, ANY_PHONE, result.response);
     });
   }
 
-  it("adds both numbers to a contact answer that has only the email", () => {
+  it("adds LinkedIn to a contact answer that has only the email", () => {
     const text = ensureContactDetails("Mike is available for full-time or contract [1]. Email mikencube03@gmail.com.");
-    assert.match(text, PRIMARY);
-    assert.match(text, SECONDARY);
+    assert.match(text, LINKEDIN);
     assert.equal(text.match(/mikencube03@gmail\.com/g)?.length, 1);
   });
 
-  it("gives both numbers when a model answers a contact request", async () => {
+  it("gives the email and LinkedIn when a model answers a contact request", async () => {
     const result = await answerQuestion({
       question: "How can a recruiter get in touch with Mike?",
       retrieveFn: async () => [kb("availability")],
       generateGemini: async () => "Mike is available for full-time or contract [1].",
     });
     assert.match(result.response, EMAIL, result.response);
-    assert.match(result.response, PRIMARY, result.response);
+    assert.match(result.response, LINKEDIN, result.response);
+    assert.doesNotMatch(result.response, ANY_PHONE, result.response);
   });
 });
 
@@ -274,7 +281,7 @@ describe("review and probe findings", () => {
     it(`does not read "number" as a phone number: ${question}`, async () => {
       assert.equal(asksForMikesNumber(question), false, question);
       const result = await answerQuestion({ question });
-      assert.doesNotMatch(result.response, PRIMARY, result.response);
+      assert.doesNotMatch(result.response, /No phone number is listed/, result.response);
     });
   }
 
@@ -288,7 +295,7 @@ describe("review and probe findings", () => {
   it("refuses a number asked for beside another party", async () => {
     const result = await answerQuestion({ question: "What is Mike's number for the claims team?" });
     assert.equal(isRefusal(result.response), true, result.response);
-    assert.doesNotMatch(result.response, PRIMARY, result.response);
+    assert.doesNotMatch(result.response, ANY_PHONE, result.response);
   });
 
   it("says a planned tool is not in use", async () => {
@@ -378,11 +385,9 @@ describe("first live run on the new preview", () => {
 
 describe("second live run on the new preview", () => {
   for (const question of ["Is there a mobile number I can message Mike on?", "Which number should I WhatsApp to reach Mike?"]) {
-    it(`gives the email and both numbers for Mike's own number: ${question}`, async () => {
+    it(`says no number is listed for Mike's own number: ${question}`, async () => {
       const result = await answerQuestion({ question });
-      assert.match(result.response, EMAIL, result.response);
-      assert.match(result.response, PRIMARY, result.response);
-      assert.match(result.response, SECONDARY, result.response);
+      assertNoPhoneContact(result.response);
     });
   }
 

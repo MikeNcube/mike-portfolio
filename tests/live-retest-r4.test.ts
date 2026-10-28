@@ -1,6 +1,6 @@
 // Regression tests for Mike's r4 decisions on fix/assistant-grounding: the two
 // misread questions from the live retest with three paraphrases each, the
-// contact channels (WhatsApp, a direct line), and the over-refusals the
+// contact channels (email and LinkedIn; no phone number), and the over-refusals the
 // knowledge base can answer. Neighbouring questions guard each mechanism.
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -14,8 +14,9 @@ import { resetQuotaForTests } from "../lib/quota";
 import { isRefusal } from "../lib/refusal";
 
 const EMAIL = /mikencube03@gmail\.com/;
-const PRIMARY = /[phone removed]/;
-const SECONDARY = /[phone removed]/;
+const LINKEDIN = /linkedin\.com\/in\/mike-ncube-669563a7/;
+// Any South African phone number, local or international form.
+const ANY_PHONE = /\b0\d{2}[ -]?\d{3}[ -]?\d{4}\b|\+27/;
 
 function lead(text: string): string {
   return text.split(/(?<=[.!?](?:\s*\[\d+\])*)\s+(?=[A-Z])/)[0] ?? text;
@@ -106,7 +107,7 @@ describe("a staff group named as the users of a system names that system", () =>
   });
 });
 
-describe("WhatsApp and a direct line are Mike's numbers", () => {
+describe("phone, WhatsApp and direct-line requests: no number is listed", () => {
   for (const question of [
     "Is there a WhatsApp line for Mike?",
     "Is Mike on WhatsApp?",
@@ -118,24 +119,26 @@ describe("WhatsApp and a direct line are Mike's numbers", () => {
   ]) {
     it(question, async () => {
       const result = await ask(question);
+      assert.match(result.response, /No phone number is listed/, result.response);
       assert.match(result.response, EMAIL, result.response);
-      assert.match(result.response, PRIMARY, result.response);
-      assert.match(result.response, SECONDARY, result.response);
-      assert.match(result.response, /WhatsApp/, result.response);
+      assert.match(result.response, LINKEDIN, result.response);
+      assert.doesNotMatch(result.response, ANY_PHONE, result.response);
     });
   }
 
-  it("states WhatsApp on both numbers in the contact chunk", () => {
+  it("lists email and LinkedIn, and no phone number, in the contact chunk", () => {
     const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "availability");
     assert.ok(chunk);
-    assert.match(chunk.text, /WhatsApp on both numbers/);
+    assert.match(chunk.text, EMAIL);
+    assert.match(chunk.text, LINKEDIN);
+    assert.doesNotMatch(chunk.text, ANY_PHONE);
   });
 
   it("does not read a line manager or a system's messages as Mike's number", async () => {
     assert.equal(asksForMikesNumber("Does Mike have a line manager?"), false);
     for (const question of ["Does Mike have a line manager?", "Does the CRM send WhatsApp messages?"]) {
       const result = await ask(question);
-      assert.doesNotMatch(result.response, PRIMARY, result.response);
+      assert.doesNotMatch(result.response, ANY_PHONE, result.response);
     }
   });
 
@@ -179,7 +182,7 @@ describe("over-refusals the knowledge base covers", () => {
   it("keeps 'number one' a ranking word, so a skill question stays on skills", async () => {
     const result = await ask("What is his number one skill?");
     assert.match(result.response, /stack/, result.response);
-    assert.doesNotMatch(result.response, PRIMARY, result.response);
+    assert.doesNotMatch(result.response, ANY_PHONE, result.response);
   });
 });
 
@@ -224,9 +227,64 @@ describe("judged misses from the final live run", () => {
     assert.match(lead(quotation.response), /attaches a quotation/, quotation.response);
   });
 
+  it("answers a grounding question about the assistant with its safeguards", async () => {
+    const result = await ask("Does Mike's RAG assistant hallucinate?");
+    assert.match(lead(result.response), /curated knowledge base|cites its sources/, result.response);
+    assert.doesNotMatch(lead(result.response), /primary public AI proof/, result.response);
+  });
+
+  it("adds the nearest related facts when a project's sources skip the asked aspect", async () => {
+    const result = await ask("How does the CRM protect personal data?");
+    assert.match(result.response, /do not mention personal-data handling/, result.response);
+    assert.match(result.response, /On access control, they list role-based access/, result.response);
+  });
+
+  it("names the subject when a model answer opens on 'It'", async () => {
+    const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "recommender-pipeline");
+    assert.ok(chunk);
+    const result = await answerQuestion({
+      question: "What is the recommender pipeline?",
+      retrieveFn: async () => [{ ...chunk, score: 0.9 }],
+      generateGroq: async () => "It is labelled reference, not production [1].",
+    });
+    assert.match(result.response, /^The recommender data pipeline is labelled reference/, result.response);
+  });
+
   it("answers a lowercase subject named only in a source title", async () => {
     const result = await ask("Explain the recommender pipeline");
     assert.match(result.response, /reference architecture/, result.response);
+  });
+});
+
+describe("model answers open so they stand alone", () => {
+  const groq = (question: string, ids: string[], text: string) => {
+    const chunks = ids.map((id) => {
+      const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === id);
+      assert.ok(chunk, id);
+      return { ...chunk, score: 0.9 };
+    });
+    return answerQuestion({ question, retrieveFn: async () => chunks, generateGroq: async () => text });
+  };
+
+  it("names Mike when a model answer opens on 'He'", async () => {
+    const result = await groq("How many years has Mike worked in software?", ["positioning"],
+      "He has six-plus years in software, about three focused on generative AI [1].");
+    assert.match(result.response, /^Mike has six-plus years/, result.response);
+  });
+
+  it("drops a connective that points back at nothing", async () => {
+    const lead = await groq("What does the content pipeline run on?", ["ai-social-agent"],
+      "Also, it runs on local Ollama at zero API cost [1].");
+    assert.match(lead.response, /^The content pipeline runs on local Ollama/, lead.response);
+    const inner = await groq("Does Mike's RAG assistant hallucinate?", ["this-assistant"],
+      "The portfolio assistant also refuses questions outside its curated knowledge base [1].");
+    assert.match(inner.response, /^The portfolio assistant refuses questions/, inner.response);
+  });
+
+  it("serves the authored answer to a question asked in its exact wording", async () => {
+    const result = await groq("Who is Mike Ncube?", ["positioning"], "He has six-plus years in software [1].");
+    assert.equal(result.via, "static");
+    assert.match(result.response, /Applied AI Engineer/, result.response);
   });
 });
 

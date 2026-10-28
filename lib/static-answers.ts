@@ -178,7 +178,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "outreach",
     ],
     answer:
-      "Email Mike at mikencube03@gmail.com or call or WhatsApp him on [phone removed] ([phone removed], primary) or [phone removed] (secondary) [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+      "Email Mike at mikencube03@gmail.com or message him on LinkedIn at linkedin.com/in/mike-ncube-669563a7 [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
     sourceIds: ["availability", "positioning"],
   },
   {

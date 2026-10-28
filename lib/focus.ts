@@ -38,7 +38,10 @@ export function focusEntities(question: string, analysis: QuestionAnalysis): str
       && namedProjects(raw).length === 0
       && isDistinctiveKbTerm(raw),
     );
-  return [...new Set([...analysis.knownTech, ...named])];
+  // A technology inside a project's name ("RAG" in "Mike's RAG assistant") names the project too.
+  const outsideLower = new Set([...outsideNames].map((raw) => raw.toLowerCase()));
+  const tech = analysis.knownTech.filter((t) => t.includes(" ") || outsideLower.has(t.toLowerCase()));
+  return [...new Set([...tech, ...named])];
 }
 
 function concepts(analysis: QuestionAnalysis): ProfileConcept[] {

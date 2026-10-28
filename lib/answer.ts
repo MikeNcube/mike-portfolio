@@ -141,10 +141,11 @@ export function isHonestUnknownQuestion(question: string): boolean {
   return isUnknowableQuestion(question) || isStartJoinAvailabilityQuestion(question);
 }
 
-export const CONTACT_PHONE_PRIMARY = "[phone removed]";
-export const CONTACT_PHONE_SECONDARY = "[phone removed]";
-const CONTACT_PHONES =
-  `${CONTACT_PHONE_PRIMARY} ([phone removed], primary) or ${CONTACT_PHONE_SECONDARY} (secondary)`;
+// Mike's contact channels are email and LinkedIn. No phone number is published.
+export const CONTACT_LINKEDIN = "linkedin.com/in/mike-ncube-669563a7";
+const NO_PHONE_LEAD = "No phone number is listed for Mike.";
+// Asking for a number, a call, a text or a messaging app.
+const PHONE_ASK_RE = /\b(?:phone|cell(?:phone)?|mobile|telephone|landline|number|whats-?app|sms|text|call|ring|direct\s+line|line)\b/i;
 
 function withClosingSentence(text: string, sentence: string): string {
   const trimmed = text.trim();
@@ -162,11 +163,11 @@ export function ensureContactEmail(text: string): string {
   return withClosingSentence(text, `Email ${CONTACT_EMAIL}.`);
 }
 
-// A request for a way to reach Mike gets every channel: the email and both numbers.
+// A request for a way to reach Mike gets both channels: the email and LinkedIn.
 export function ensureContactDetails(text: string): string {
   const withEmail = ensureContactEmail(text);
-  if (withEmail.includes(CONTACT_PHONE_PRIMARY) && withEmail.includes(CONTACT_PHONE_SECONDARY)) return withEmail;
-  return withClosingSentence(withEmail, `Phone or WhatsApp ${CONTACT_PHONES}.`);
+  if (withEmail.toLowerCase().includes(CONTACT_LINKEDIN)) return withEmail;
+  return withClosingSentence(withEmail, `Or message him on LinkedIn at ${CONTACT_LINKEDIN}.`);
 }
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
@@ -1092,6 +1093,13 @@ export function citedFallbackFromChunks(
   return composeFromProvidedChunks(question, chunks);
 }
 
+// The authored answer whose own question or alias is this question, word for word.
+function authoredAnswerFor(question: string): StaticAnswer | null {
+  const qNorm = normaliseQuestion(question);
+  return STATIC_ANSWERS.find((item) =>
+    [item.question, ...item.aliases].some((c) => normaliseQuestion(c) === qNorm)) ?? null;
+}
+
 function exactStaticHit(question: string): StaticAnswer | null {
   const qNorm = normaliseQuestion(question);
   for (const item of STATIC_ANSWERS) {
@@ -1210,7 +1218,7 @@ function staticOrSafeReply(
     return refusalResult();
   }
   if (isContactQuestion(question)) {
-    return polishResult(question, contactStaticReply(), chunks);
+    return polishResult(question, contactStaticReply(question), chunks);
   }
   return refusalResult();
 }
@@ -1219,27 +1227,29 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
   if (!isContactQuestion(question)) return result;
   // "How do users reach their case on the claims platform?" is about the system, not Mike.
   if (namedProjects(question).length > 0 && !/\b(?:mike|him|his)\b/i.test(question)) return result;
-  if (isRefusal(result.response)) return polishResult(question, contactStaticReply(), []);
+  if (isRefusal(result.response)) return polishResult(question, contactStaticReply(question), []);
   const ensure = isContactRequest(question) ? ensureContactDetails : ensureContactEmail;
   return { ...result, response: ensure(result.response) };
 }
 
-function contactStaticReply(): AnswerResult {
+// The contact answer: email and LinkedIn. A request for a number, a call or a
+// messaging app is told plainly that no phone number is listed.
+function contactStaticReply(question = ""): AnswerResult {
   const hit = matchStaticAnswer("How can I contact Mike?");
-  if (hit) {
-    return { response: hit.answer, sources: sourcesFor(hit), via: "static" };
-  }
-  return {
-    response:
-      `Email Mike at ${CONTACT_EMAIL} or call or WhatsApp him on ${CONTACT_PHONES} [1]. He works remote-first from South Africa and is available for full-time or contract [1].`,
-    sources: sourcesFor({
-      question: "How can I contact Mike?",
-      aliases: [],
-      answer: "",
-      sourceIds: ["availability", "positioning"],
-    }),
-    via: "static",
-  };
+  const base: AnswerResult = hit
+    ? { response: hit.answer, sources: sourcesFor(hit), via: "static" }
+    : {
+      response:
+        `Email Mike at ${CONTACT_EMAIL} or message him on LinkedIn at ${CONTACT_LINKEDIN} [1]. He works remote-first from South Africa and is available for full-time or contract [1].`,
+      sources: sourcesFor({
+        question: "How can I contact Mike?",
+        aliases: [],
+        answer: "",
+        sourceIds: ["availability", "positioning"],
+      }),
+      via: "static",
+    };
+  return PHONE_ASK_RE.test(question) ? { ...base, response: `${NO_PHONE_LEAD} ${base.response}` } : base;
 }
 
 function experienceStaticReply(): AnswerResult | null {
@@ -1352,6 +1362,40 @@ export function ensureInlineCitation(
 }
 
 // Apply production-system split, ZDI/AI OS status, and per-item production citations.
+// An answer that opens as if continuing ("Also, ...", "The assistant also refuses")
+// or on a pronoun ("He has six-plus years", "It is labelled reference") leans on text
+// the reader cannot see. The opening is made to stand alone: the connective goes,
+// "He" and "His" become Mike, and "It" names the asked project or the cited source.
+function withNamedSubject(question: string, result: AnswerResult): string {
+  const text = standAloneOpening(result.response.trimStart());
+  const person = text.match(/^(He|His)\s/);
+  if (person) return `${person[1] === "His" ? "Mike's" : "Mike"} ${text.slice(person[0].length)}`;
+  const opener = text.match(/^(It's|Its|It)\s/);
+  if (!opener) return text;
+  const subject = namedProjects(question)[0]?.name ?? subjectOfTitle(result.sources[0]?.title ?? "");
+  if (!subject) return text;
+  const rest = text.slice(opener[0].length);
+  if (opener[1] === "It's") return `${subject} is ${rest}`;
+  if (opener[1] === "Its") return `${subject}'s ${rest}`;
+  return `${subject} ${rest}`;
+}
+
+// A leading connective ("Also,", "Additionally", "And") and an "also" among the
+// first few words of the opening sentence, both of which point back at nothing.
+function standAloneOpening(text: string): string {
+  const unconnected = text.replace(/^(?:Also|Additionally|Moreover|Furthermore|Plus|And)\b,?\s+/, "");
+  const opening = unconnected.charAt(0).toUpperCase() + unconnected.slice(1);
+  return opening.replace(/^((?:\S+\s+){1,4}?)also\s+/i, "$1");
+}
+
+// "Recommender data pipeline (reference)" names "The recommender data pipeline";
+// a proper name ("Sitewarden — ...") stays as written.
+function subjectOfTitle(title: string): string {
+  const short = title.split(/ — | \(/)[0].trim();
+  if (!short) return "";
+  return /^[A-Z][a-z]+(?:\s+[a-z][\w-]*)+$/.test(short) ? `The ${short.charAt(0).toLowerCase()}${short.slice(1)}` : short;
+}
+
 function polishResult(
   question: string,
   result: AnswerResult,
@@ -1363,7 +1407,7 @@ function polishResult(
   }
   const sourced = sourcesWithCanonicalStatus(question, result.response, result.sources)
     .filter((s): s is AnswerSource => Boolean(s.title && s.url));
-  const response = ensureProjectStatusCopy(question, result.response, sourced);
+  const response = ensureProjectStatusCopy(question, withNamedSubject(question, result), sourced);
   const from = sourced;
   let out = response;
   let sources = from;
@@ -1705,7 +1749,7 @@ export async function answerQuestion(rawInput: AnswerInput): Promise<AnswerResul
   // A contact request has one right answer. It is settled before the coverage gate
   // so a word in it the knowledge base never uses ("forward") cannot refuse it, and
   // before retrieval so no model or retrieval order can replace it.
-  if (asksForContact(question, analysis)) return polishResult(question, contactStaticReply(), []);
+  if (asksForContact(question, analysis)) return polishResult(question, contactStaticReply(question), []);
   // A number asked for beside someone or something else ("his number for the CRM
   // team") may not be Mike's; nobody else's number is given.
   if (asksForANumber(question) && !asksForMikesNumber(question)) return refusalResult();
@@ -1865,7 +1909,7 @@ function focusGuard(question: string, analysis: QuestionAnalysis, result: Answer
     // A specific aspect of one project, or a detail its overview leaves out, is
     // answered from the project's own sentence when one clearly fits better.
     const own = dominantConcepts(analysis).length > 0
-      ? projectFocusAnswer(projects[0], question, analysis)
+      ? authoredAspectAnswer(projects[0], analysis, question) ?? projectFocusAnswer(projects[0], question, analysis)
       : projectSentenceByWords(projects[0], question, result.response);
     if (own) return polishResult(question, own, []);
   }
@@ -1965,12 +2009,28 @@ const ASPECT_LABEL: Record<string, string> = {
   labels: "maturity labels",
   injection: "prompt-injection defences",
   remote: "remote work",
+  security: "access control",
 };
 
 // For one named project: the project's own sentence about the asked thing. When
 // a specific aspect (personal data, failures, labels) was asked and the project's
 // sources say nothing on it, a plain statement of that. Otherwise null, and the
 // project overview stands: a general word ("data") absent from it is not a miss.
+// The authored answer for an aspect when it is written about this one project: every
+// project source it cites is the project's own ("How does Mike keep LLM answers
+// grounded?" cites only this assistant). Aspect answers spanning several projects
+// (personal data, security) are left to the project's own sentences.
+function authoredAspectAnswer(project: NamedProject, analysis: QuestionAnalysis, question: string): AnswerResult | null {
+  for (const concept of dominantConcepts(analysis)) {
+    const authored = STATIC_ANSWERS.find((a) => a.question === concept.canonical);
+    const projectSources = authored?.sourceIds.filter((id) => PROJECT_CHUNK_IDS.has(id)) ?? [];
+    if (projectSources.length === 0 || !projectSources.every((id) => project.sourceIds.includes(id))) continue;
+    const canonical = conceptCanonicalResult(concept.canonical);
+    if (canonical) return withSequencedCitations(canonical, leadWithFocus(canonical.response, question, analysis));
+  }
+  return null;
+}
+
 function projectFocusAnswer(project: NamedProject, question: string, analysis: QuestionAnalysis): AnswerResult | null {
   const entities = focusEntities(question, analysis);
   const aspect = askedAspect(question, analysis);
@@ -1991,11 +2051,38 @@ function projectFocusAnswer(project: NamedProject, question: string, analysis: Q
   // The aspect's name, never the visitor's verb ("mask", "labelled").
   const missing = ASPECT_LABEL[aspect.concept.id] ?? aspect.term;
   const name = project.name.startsWith("The ") ? project.name : `The ${project.name}`;
-  return {
+  const silent: AnswerResult = {
     response: `${name} sources do not mention ${missing} [1].`,
     sources: first ? [{ id: first.id, title: first.title, url: first.sourceUrl }] : [],
     via: "static",
   };
+  return withRelatedAspect(project, aspect.concept.id, silent);
+}
+
+// Aspects close enough that the one the sources do cover is worth adding when the
+// asked one is missing: access control is the nearest the CRM sources come to personal data.
+const RELATED_ASPECT: Record<string, string> = { privacy: "security", security: "privacy" };
+
+function withRelatedAspect(project: NamedProject, aspectId: string, silent: AnswerResult): AnswerResult {
+  const related = conceptById(RELATED_ASPECT[aspectId] ?? "");
+  if (!related) return silent;
+  const best = bestProjectSentence(project, (sentence) => (related.evidence.test(sentence) ? 1 : 0));
+  if (!best) return silent;
+  // Only the clauses that carry the related aspect ("role-based access, server-side
+  // session revocation"), not the whole sentence they sit in.
+  const clauses = best.result.response.replace(/\s*\[\d+\]/g, "").replace(/[.!?]+$/, "")
+    .split(/,\s*(?:and\s+)?|;\s*/)
+    .map((c) => c.trim())
+    .filter((c) => related.evidence.test(c));
+  if (clauses.length === 0) return silent;
+  const source = best.result.sources[0];
+  const sources = source && !silent.sources.some((s) => sameSource(s, source))
+    ? [...silent.sources, source]
+    : silent.sources;
+  const cite = source ? sources.findIndex((s) => sameSource(s, source)) + 1 : 1;
+  const listed = joinList(clauses.map((c) => c.charAt(0).toLowerCase() + c.slice(1)));
+  const label = ASPECT_LABEL[related.id] ?? related.id;
+  return { ...silent, response: `${silent.response} On ${label}, they list ${listed} [${cite}].`, sources };
 }
 
 // The highest-scoring sentence in a project's own chunks (score 0 never wins),
@@ -2123,6 +2210,16 @@ async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
   }
   if (isUnknowableQuestion(question)) {
     return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
+  // Asked exactly as an authored answer's question or alias ("Who is Mike Ncube?"):
+  // that answer was written and checked for this wording; a model's may drift.
+  const authored = authoredAnswerFor(question);
+  if (authored) {
+    return withContactEmail(question, polishResult(question, {
+      response: authored.answer,
+      sources: sourcesFor(authored),
+      via: "static",
+    }, []));
   }
 
   const audience = input.audience ?? "developer";

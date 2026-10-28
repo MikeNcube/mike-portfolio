@@ -91,7 +91,7 @@ beforeEach(() => {
 describe("assistant fallback chain", () => {
   it("falls back to Groq when Gemini fails", async () => {
     const result = await answerQuestion({
-      question: "What is Cube?",
+      question: "Give me a short description of Cube.",
       retrieveFn: async () => [{
         id: "cube-agent",
         title: "Cube — coding agent (prototype)",
@@ -104,7 +104,7 @@ describe("assistant fallback chain", () => {
       },
       generateGroq: async (prompt) => {
         assert.match(prompt, /CONTEXT:/);
-        assert.match(prompt, /QUESTION: What is Cube\?/);
+        assert.match(prompt, /QUESTION: Give me a short description of Cube\./);
         return "Cube is a coding agent prototype [1].";
       },
     });
@@ -548,7 +548,7 @@ describe("cited sources", () => {
 
   it("strips inline Sources footers from the answer body", async () => {
     const result = await answerQuestion({
-      question: "What is the CRM?",
+      question: "Give me a short description of the CRM.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
         "The CRM is FastAPI [1]. (Sources: [1], [2])",
@@ -587,7 +587,7 @@ describe("cited sources", () => {
 
   it("remaps inline citations to the returned sources list", async () => {
     const result = await answerQuestion({
-      question: "What is Cube?",
+      question: "Give me a short description of Cube.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () => "Cube is a coding agent [3].",
     });
@@ -600,7 +600,7 @@ describe("cited sources", () => {
 
   it("parses full-width citations and keeps every cited source", async () => {
     const result = await answerQuestion({
-      question: "What is Cube?",
+      question: "Give me a short description of Cube.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () => "Cube is a coding agent \u30103\u3011.",
     });
@@ -623,7 +623,7 @@ describe("cited sources", () => {
       },
     ];
     const result = await answerQuestion({
-      question: "What is ZDI?",
+      question: "Give me a short description of ZDI.",
       retrieveFn: async () => chunks,
       generateGemini: async () => "ZDI is a signature workflow \u30102\u3011.",
     });
@@ -635,7 +635,7 @@ describe("cited sources", () => {
 
   it("replaces a curly-apostrophe Gemini refusal with the static Cube answer", async () => {
     const result = await answerQuestion({
-      question: "What is Cube?",
+      question: "Give me a short description of Cube.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () =>
         "I\u2019m sorry, but I can\u2019t provide that. \u30101\u3011",
@@ -649,7 +649,7 @@ describe("cited sources", () => {
 
   it("collapses duplicate adjacent citations", async () => {
     const result = await answerQuestion({
-      question: "What is the CRM?",
+      question: "Give me a short description of the CRM.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () => "The CRM is FastAPI [1][1].",
     });
@@ -661,7 +661,7 @@ describe("cited sources", () => {
 
   it("drops an out-of-range [n] and keeps the cited source", async () => {
     const result = await answerQuestion({
-      question: "What is the CRM?",
+      question: "Give me a short description of the CRM.",
       retrieveFn: async () => SIX_CHUNKS,
       generateGemini: async () => "The CRM is FastAPI [1][99].",
     });
@@ -1781,7 +1781,7 @@ describe("production-system and ZDI status copy", () => {
 
   it("retargets ZDI and claims cites when production sources are swapped", async () => {
     const result = await answerQuestion({
-      question: "What production systems has Mike shipped?",
+      question: "Which production systems has Mike put live?",
       retrieveFn: async () => [
         {
           id: "zororo-claims",
