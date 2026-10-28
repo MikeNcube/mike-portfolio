@@ -523,10 +523,11 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     canonical: "Do Mike's systems make payments?",
     evidence: /never pays|bank file|marks anything as paid|cash services/i,
     terms: ["pay", "pays", "paying", "paid", "payment", "payments", "payout", "payouts",
-      "pay out", "pays out", "invoice", "invoices", "invoicing", "billing", "supplier",
-      "suppliers", "vendor payments", "bank file", "bank files", "disburse", "disburses",
-      "disbursement", "disbursements", "remittance", "settlement", "settlements", "money",
-      "vendor", "vendors", "funds", "eft"],
+      "pay out", "pays out", "invoice", "invoices", "invoicing", "billing",
+      // A supplier or vendor alone is not a payment ("supplier quotations").
+      "supplier payments", "vendor payments", "bank file", "bank files", "disburse",
+      "disburses", "disbursement", "disbursements", "remittance", "settlement",
+      "settlements", "money", "funds", "eft"],
     dominant: true,
   },
   {
@@ -672,7 +673,7 @@ const CONCEPT_ORDER = new Map(PROFILE_CONCEPTS.map((c, i) => [c.id, i]));
 const REFUSE_LEXICON = buildLexicon(REFUSE_TOPICS);
 // Read first when the question asks for Mike's own number, so the number is a contact detail.
 const MIKES_NUMBER_LEXICON = buildLexicon([{ id: "contact",
-  terms: [...PHONE_NUMBER_TERMS, "number", "numbers"] }]);
+  terms: [...PHONE_NUMBER_TERMS, "number", "numbers", "whatsapp"] }]);
 const CONCEPT_LEXICON = buildLexicon(PROFILE_CONCEPTS);
 const TECH_PHRASES = buildLexicon([{ id: "tech", terms: TECH_LEXICON.filter((t) => t.includes(" ")) }]);
 const TECH_SINGLES = new Set(TECH_LEXICON.filter((t) => !t.includes(" ")));

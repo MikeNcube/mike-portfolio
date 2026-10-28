@@ -376,6 +376,29 @@ describe("first live run on the new preview", () => {
   });
 });
 
+describe("second live run on the new preview", () => {
+  for (const question of ["Is there a mobile number I can message Mike on?", "Which number should I WhatsApp to reach Mike?"]) {
+    it(`gives the email and both numbers for Mike's own number: ${question}`, async () => {
+      const result = await answerQuestion({ question });
+      assert.match(result.response, EMAIL, result.response);
+      assert.match(result.response, PRIMARY, result.response);
+      assert.match(result.response, SECONDARY, result.response);
+    });
+  }
+
+  it("does not read a supplier document as a payment", async () => {
+    const result = await answerQuestion({ question: "Can a requester attach a supplier's quote in ZDI?" });
+    assert.doesNotMatch(lead(result.response), /never pays/, result.response);
+    assert.match(result.response, /quotation/, result.response);
+  });
+
+  it("ties providers to the model APIs the overview lists", async () => {
+    const result = await answerQuestion({ question: "What model providers does Mike work with?" });
+    assert.equal(isRefusal(result.response), false, result.response);
+    assert.match(result.response, /Claude|OpenAI|Gemini/, result.response);
+  });
+});
+
 describe("validator accepts category nouns and generic verbs", () => {
   const supported: Array<[string, string[]]> = [
     ["Mike's GitHub handle is MikeNcube [1].", ["availability"]],
