@@ -16,6 +16,9 @@ export type StaticAnswer = {
   aliases: string[];
   answer: string;
   sourceIds: string[];
+  // Sentences are independent facts, so the one a narrow question asks about may
+  // lead. Other answers keep their authored order once their opening fits.
+  factList?: boolean;
 };
 
 export const STATIC_ANSWERS: StaticAnswer[] = [
@@ -57,9 +60,10 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does the assistant work",
       "how does the fact assistant work",
     ],
+    factList: true,
     answer:
-      "The live RAG assistant embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded answer [1]. If embeddings fail, it falls back to BM25 keyword search over the same chunks. Generation tries Gemini 2.5 Flash first, then Groq openai/gpt-oss-120b, then a static CV answer [2].",
-    sourceIds: ["portfolio-rag-assistant", "this-assistant"],
+      "The live RAG assistant embeds the knowledge base and each query with Gemini embedding-001, and cosine similarity retrieves the top 6 chunks [1]. Chunks below 0.35 cosine similarity are discarded [1]. If embeddings fail, retrieval falls back to BM25 keyword search over the same chunks [1]. Gemini 2.5 Flash generates the grounded answer; if Gemini errors or is rate-limited, Groq openai/gpt-oss-120b takes over, and if both fail a static CV answer is served [1].",
+    sourceIds: ["portfolio-rag-assistant"],
   },
   {
     question: "How does Mike defend against prompt injection in his RAG systems?",
@@ -424,8 +428,9 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what powers this assistant",
       "which model answers my questions here",
     ],
+    factList: true,
     answer:
-      "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. It embeds the knowledge base with Gemini embedding-001, embeds each query, retrieves the top 6 chunks by cosine similarity, drops chunks below 0.35, then generates a grounded cited answer [2]. If embeddings fail, it falls back to BM25 keyword search. Generation tries Gemini 2.5 Flash first, then Groq, then a static CV answer [2]. It refuses questions outside that scope. The grounding prompt is server-side [1].",
+      "This assistant is a RAG pipeline on Mike's Next.js portfolio [1]. Gemini embedding-001 embeds the knowledge base and each query, and cosine similarity retrieves the top 6 chunks [2]. Chunks below 0.35 cosine similarity are discarded [2]. Gemini 2.5 Flash generates the grounded, cited answers; if Gemini errors or is rate-limited, Groq takes over, and if both fail a static CV answer is served [2]. If embeddings fail, retrieval falls back to BM25 keyword search [2]. A distributed per-IP limit of 20 requests per 10 minutes runs through Upstash Redis when configured; otherwise each instance applies its own cap [2]. The assistant refuses questions outside its scope, and the grounding prompt is server-side [1].",
     sourceIds: ["this-assistant", "portfolio-rag-assistant"],
   },
   {
@@ -435,6 +440,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what are mike's engineering defaults",
       "how does mike design for failure",
     ],
+    factList: true,
     answer:
       "Mike's engineering defaults: models are fallible dependencies (every LLM call gets validation, retries, and a fallback) [1]. Every run is auditable (structured JSON logs, trace IDs, audit entries for state changes) [1]. Pipelines are contracts with Pydantic schemas at system boundaries and validation before persistence [1].",
     sourceIds: ["engineering-approach"],
@@ -675,8 +681,31 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what are mike's repo labels",
     ],
     answer:
-      "Mike's engineering defaults say labels are honest: each repo is labelled production, prototype, or lab [1].",
-    sourceIds: ["engineering-approach"],
+      "Mike's engineering defaults say labels are honest: each repo is labelled production, prototype, or lab [1]. Production marks shipped live systems such as Digi App Form [2] and the lead-management CRM [3]. Sitewarden [4] and Cube [5] are prototypes, not deployed. The resilient web tier on AWS is labelled lab, not production [6].",
+    sourceIds: ["engineering-approach", "digi-app-form", "zororo-crm", "sitewarden", "cube-agent", "aws-web-tier"],
+  },
+  {
+    question: "What is the claims extraction pipeline?",
+    aliases: [
+      "what is the claims extraction pipeline",
+      "tell me about the claims extraction pipeline",
+      "claims extraction pipeline",
+    ],
+    answer:
+      "The claims document extraction pipeline, built at Zororo-Phumulani, is a production-ready system pending management approval [1]. Claude vision extraction is validated through Pydantic schemas, with per-field confidence scoring and a needs-review flag for human verification [1].",
+    sourceIds: ["claims-pipeline"],
+  },
+  {
+    question: "How does Mike handle personal data?",
+    aliases: [
+      "how does mike handle personal data",
+      "how does mike handle pii",
+      "how does mike protect pii",
+    ],
+    factList: true,
+    answer:
+      "In the claims operations platform, PII is encrypted at the app layer and masked by default on list views, with an audit log of who read PII [1]. Proactive Sentinel applies POPIA controls: AES-256-GCM PII encryption, PII masking at ingest, an immutable audit log, and tenant isolation per request [2]. Zororo AI OS detects PII with Microsoft Presidio, plus custom recognizers for South African ID, Zimbabwe national ID and asylum/refugee permits [3].",
+    sourceIds: ["zororo-claims", "proactive-sentinel-tech", "zororo-ai-os"],
   },
 ];
 

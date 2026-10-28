@@ -15,6 +15,8 @@ import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { STATIC_ANSWERS } from "./static-answers";
 import { stem } from "./stem";
 import { TECH_LEXICON } from "./tech-lexicon";
+import { thesaurusWords } from "./thesaurus";
+import { GENERIC_WORD_LIST } from "./generic-words";
 
 export { stem };
 
@@ -31,104 +33,6 @@ export function questionTokens(question: string): QuestionToken[] {
     .map((raw) => ({ raw, norm: raw.toLowerCase(), stem: stem(raw) }));
 }
 
-// General English function and discourse words. No domain vocabulary.
-const GENERIC_WORD_LIST = [
-  // question words and auxiliaries
-  "what", "which", "who", "whom", "whose", "where", "when", "why", "how", "whatever",
-  "is", "are", "was", "were", "be", "been", "being", "am", "do", "does", "did", "done",
-  "doing", "has", "have", "had", "having", "can", "could", "would", "should", "will",
-  "shall", "may", "might", "must", "dont", "doesnt", "didnt", "isnt", "arent", "wasnt",
-  "werent", "cant", "cannot", "couldnt", "wouldnt", "shouldnt", "wont", "hasnt",
-  "havent", "hadnt", "im", "ive", "id", "youre", "hes", "theyre", "thats", "theres",
-  // pronouns and determiners
-  "i", "me", "my", "mine", "myself", "we", "us", "our", "ours", "you", "your", "yours",
-  "he", "him", "his", "himself", "she", "her", "they", "them", "their", "it", "its",
-  "this", "that", "these", "those", "there", "here", "someone", "somebody", "anyone",
-  "anybody", "anything", "something", "everything", "nothing", "one", "ones", "a",
-  "an", "the", "any", "some", "all", "each", "every", "both", "either", "neither",
-  "no", "not", "none", "much", "many", "more", "most", "few", "fewer", "several",
-  "other", "others", "another", "such", "own", "same", "else",
-  // prepositions and conjunctions
-  "about", "above", "across", "after", "against", "along", "among", "around", "as",
-  "at", "before", "behind", "below", "beneath", "beside", "besides", "between",
-  "beyond", "by", "down", "during", "except", "for", "from", "in", "inside", "into",
-  "like", "near", "of", "off", "on", "onto", "out", "outside", "over", "past", "per",
-  "since", "through", "throughout", "till", "to", "toward", "towards", "under",
-  "until", "up", "upon", "with", "within", "without", "via", "versus", "vs", "and",
-  "or", "but", "nor", "so", "yet", "if", "then", "than", "because", "while",
-  "whether", "though", "although", "also", "too", "plus", "including", "regarding",
-  "re", "according",
-  // adverbs, discourse and politeness
-  "just", "really", "actually", "currently", "presently", "now", "today", "nowadays",
-  "right", "still", "already", "ever", "never", "always", "often", "sometimes",
-  "usually", "again", "once", "even", "only", "very", "quite", "pretty", "rather",
-  "exactly", "precisely", "roughly", "approximately", "around", "basically",
-  "generally", "typically", "mostly", "mainly", "primarily", "specifically",
-  "particularly", "overall", "simply", "briefly", "quickly", "quick", "brief",
-  "short", "please", "kindly", "thanks", "thank", "hi", "hello", "hey", "ok",
-  "okay", "yes", "yeah", "maybe", "perhaps", "well", "anyway", "honestly", "truly",
-  "certainly", "definitely", "probably", "possibly", "likely", "yet", "these",
-  "days", "day", "moment", "lately", "recently", "recent", "latest", "these days",
-  // generic request and cognition verbs
-  "tell", "say", "says", "said", "ask", "give", "gave", "share", "show", "explain",
-  "describe", "summarise", "summarize", "list", "name", "outline", "walk", "mention",
-  "talk", "go", "goes", "going", "get", "gets", "got", "make", "makes", "let", "find",
-  "see", "look", "looks", "seem", "seems", "mean", "means", "think", "thinks",
-  "know", "knows", "knew", "known", "believe", "feel", "need", "needs", "try",
-  "help", "call", "called", "consider", "considered", "count", "include",
-  "includes", "involve", "involves", "cover", "covers", "matter", "matters",
-  "happen", "become", "remain", "stay", "come", "bring", "keep", "put", "take",
-  "use", "uses", "used", "using", "have", "hold", "holds", "held", "work", "works",
-  "worked", "working", "able", "familiar", "comfortable", "proficient",
-  "proficiency", "fluent", "expert", "expertise", "skilled", "hands-on", "hands",
-  "solid", "deep", "strong", "good", "great", "real", "actual", "true", "official",
-  "formal", "formally", "specific", "particular", "general", "typical", "usual",
-  "normal", "common", "main", "key", "major", "core", "primary", "biggest", "big",
-  "small", "new", "current", "present", "previous", "first", "last", "next",
-  "certain", "sure", "possible", "kind", "kinds", "sort", "sorts", "type", "types",
-  "thing", "things", "stuff", "way", "ways", "lot", "lots", "bit", "level", "point",
-  "part", "parts", "detail", "details", "info", "information", "summary", "overview",
-  "example", "examples", "specifics", "quickly", "anymore", "somewhere", "anywhere",
-  "everywhere", "whole", "entire", "exact", "mike", "ncube", "s", "mr", "guy",
-  "person", "people", "engineer", "engineers", "developer", "developers",
-  // domain-neutral nouns, verbs and adjectives common in questions
-  "reason", "reasons", "power", "powers", "land", "url", "link", "links", "page",
-  "prevent", "act", "acts", "card", "accept", "accepts", "join", "extra",
-  "additional", "large", "larger", "size", "stop", "stops", "prefer", "prefers",
-  "preferred", "favour", "favor", "favourite", "favorite", "set", "setup", "option",
-  "options", "engage", "independent", "appear", "appears", "screen", "represent",
-  "represents", "publish", "published", "one", "two", "three", "four", "five", "six",
-  "seven", "eight", "nine", "ten", "dozen", "treat", "treats", "paper", "sentence",
-  "sentences", "paragraph", "line", "lines", "word", "words", "fully", "full",
-  "total", "far", "practise", "existing", "table", "integrate",
-  "expect", "expected", "advertise", "duty", "duties", "solo", "alone", "alongside",
-  "free", "board", "welcome", "enquiry", "enquiries", "inquiry", "recruit",
-  "recruiting", "recruiter", "recruiters", "conversation", "implement", "ensure",
-  "thorough", "high", "low", "bar", "provide", "add", "stance", "avoid", "silent",
-  "fail", "fails", "instrument", "bad", "string", "print",
-  "printed", "belong", "belongs", "offer", "offers", "require", "required",
-  "lengthy", "length", "immediate", "tiny", "chase", "chasing", "restrict",
-  "restricted", "arrangement", "delivery", "ping", "gone", "finish", "finished",
-  "store", "stores", "hit", "prior", "path", "credit", "meant", "usage", "original",
-  "hidden", "natural", "visitor", "visitors", "reply", "replies", "benefit",
-  "month", "months", "week", "weeks", "quarter", "protect", "mitigate", "resist",
-  "defend", "guard", "handle", "handles", "design", "designed", "fact", "facts",
-  "pick", "picked", "sit", "sits", "behind", "happen", "happens", "address", "ui",
-  "uis", "ux", "api", "apis", "kb", "faq", "mid", "junior", "entry",
-  "principal", "industry", "field", "domain", "space", "sector", "problem", "problems",
-  "solve", "solves", "solved", "purpose", "point", "online", "automatically",
-  "automatic", "manually", "answer",
-  "answers", "question", "questions", "reply", "respond", "response", "write",
-  "writes", "wrote", "read", "reads", "run", "runs", "running", "ran",
-  "change", "changes", "improve", "explore", "check", "checks", "compare",
-  "difference", "differences", "similar", "fast", "slow",
-  "easy", "hard", "simple", "complex", "safe", "safely", "sound", "right", "wrong",
-  "correct", "clear", "clean", "open", "close", "closed", "done", "complete",
-  "completed", "ready", "since", "ago", "started", "begin", "began", "end",
-  "ended", "goal", "goals", "plan", "plans", "planned", "focus", "focused", "aspect",
-  // comparatives such as "better" and "worse" are left out on purpose: they mark opinions
-  "aspects", "feature", "features", "piece", "pieces",
-];
 
 function stemSet(words: readonly string[]): Set<string> {
   return new Set(words.map(stem));
@@ -362,7 +266,12 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     terms: ["contact", "contacted", "reach", "reachable", "email", "e-mail", "emails",
       "mail", "mailbox", "inbox", "get in touch", "touch", "message", "dm", "write to",
       "outreach", "correspondence", "book a call", "book a meeting", "schedule a call",
-      "set up a call", "arrange a call"],
+      "set up a call", "arrange a call", "get hold of", "get ahold of", "reach out",
+      "talk to", "talk with", "speak to", "speak with", "hear from", "touch base",
+      "leave a message", "leave a note", "drop a line", "drop a message", "send a message",
+      "send a note",
+      // "book" as a verb schedules time; these phrases are matched before the leisure word.
+      "to book", "book a", "book an", "book one", "book some", "book time", "book in"],
   },
   {
     // Working from wherever Mike is. Combined with another place it is still remote
@@ -516,9 +425,11 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     id: "strongest",
     canonical: "What is Mike's strongest project?",
     evidence: /Digi App Form|strongest/i,
-    terms: ["strongest", "best", "proudest", "proud", "flagship", "impressive",
-      "showcase", "favourite project", "favorite project", "signature project",
-      "standout project", "greatest", "demo"],
+    // Bare "best" is left out: "the best way to" asks for a method, not a project.
+    terms: ["strongest", "best project", "best projects", "best work", "best build",
+      "best builds", "best system", "best systems", "best thing", "best piece", "proudest",
+      "proud", "flagship", "impressive", "showcase", "favourite project", "favorite project",
+      "signature project", "standout project", "greatest", "demo"],
   },
   {
     id: "shipped",
@@ -537,15 +448,46 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "verification", "break", "breaks", "robust", "robustness"],
   },
   {
+    // Personal and sensitive data. Dominant: a project list or SOC overview that
+    // mentions PII in passing does not say how personal data is handled.
+    id: "privacy",
+    canonical: "How does Mike handle personal data?",
+    evidence: /\bPII\b/,
+    terms: ["pii", "personal data", "personal information", "personal info",
+      "personal details", "private details", "sensitive details", "identifying details",
+      "personally identifiable",
+      "personally identifiable information", "private data", "private information",
+      "sensitive data", "sensitive information", "special personal information",
+      "data protection", "data privacy", "privacy", "popia", "customer data", "client data",
+      "user data", "member data", "policyholder data", "data subject", "data subjects",
+      "mask", "masks", "masked", "masking", "redact", "redacts", "redacted", "redaction",
+      "anonymise", "anonymize", "anonymised", "anonymized", "anonymisation",
+      "anonymization", "pseudonymise", "pseudonymize", "encrypt", "encrypts", "encrypted",
+      "encryption"],
+    dominant: true,
+  },
+  {
     // How failures are handled. Dominant: an answer about the models or tools
     // involved does not answer what happens when they fail.
     id: "failure-handling",
     canonical: "How does Mike approach engineering?",
-    evidence: /fallible|fallback|retries/i,
+    evidence: /fallible|fall(?:s|ing)? ?back|failover|retries|takes over/i,
     terms: ["failure", "failures", "fallback", "fallbacks", "fall back", "falls back",
       "retry", "retries", "retrying", "outage", "outages", "downtime", "error handling",
       "resilience", "resilient", "fault tolerance", "fault-tolerant", "graceful degradation",
-      "degrade gracefully"],
+      "degrade gracefully", "goes down", "go down", "went down", "gone down", "is down",
+      "are down", "be down", "was down", "unavailable", "unreachable", "offline", "timeout",
+      "timeouts", "times out", "timed out", "time out", "rate-limited",
+      // A rate limit is a failure only when a model or provider imposes it; the
+      // assistant's own per-IP limit is a feature, not an outage.
+      "model ... rate ... limit", "rate ... limit ... model", "llm ... rate ... limit",
+      "rate ... limit ... llm", "provider ... rate ... limit", "rate ... limit ... provider",
+      "throttled", "throttling", "crash", "crashes",
+      "crashed", "errors out", "error out", "hallucinate", "hallucinates", "hallucinated",
+      "hallucination", "hallucinations", "bad output", "bad outputs", "wrong output",
+      "invalid output", "malformed output", "bad answer", "bad answers", "bad response",
+      "bad responses", "wrong answer", "wrong answers", "garbage", "gibberish",
+      "if ... fail", "when ... fail", "if ... down", "when ... down"],
     dominant: true,
   },
   {
@@ -554,8 +496,12 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     id: "labels",
     canonical: "How does Mike label his repos?",
     evidence: /labelled production, prototype, or lab/i,
-    terms: ["labels", "maturity", "maturity label", "maturity labels", "maturity level",
-      "maturity levels", "repo labels", "project labels", "status labels"],
+    terms: ["labels", "labelled", "labeled", "labelling", "labeling", "tag", "tags",
+      "tagged", "tagging", "badge", "badges", "maturity", "maturity label",
+      "maturity labels", "maturity level", "maturity levels", "repo labels",
+      "project labels", "status labels", "prototype ... lab", "lab ... prototype",
+      "production ... lab", "lab ... production", "repo ... prototype",
+      "prototype ... repo", "project ... prototype", "prototype ... project"],
     dominant: true,
   },
   {
@@ -591,6 +537,27 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "semantic search", "hybrid search", "vector", "vectors"],
   },
   {
+    // Ahead of ai-tools so "which model writes the replies" is about this chat.
+    id: "assistant",
+    canonical: "How does this assistant work?",
+    evidence: /RAG|Gemini/,
+    terms: ["assistant", "chatbot", "chat bot", "bot", "chat", "this assistant",
+      "this chat", "the chat", "answering", "this site", "this website", "portfolio site",
+      "the replies", "the answers", "the responses", "your replies", "your answers",
+      "your responses", "these replies", "these answers", "its replies", "its answers"],
+  },
+  {
+    // How the assistant finds its sources: embeddings, similarity and the cutoff.
+    id: "retrieval",
+    canonical: "How does the RAG pipeline work technically?",
+    evidence: /0\.35|cosine|BM25|embedding-001/,
+    // Bare "threshold" or "cutoff" ("threshold for pain") needs a retrieval word beside it.
+    terms: ["retrieval", "retrieve", "retrieves", "retrieved", "retriever", "similarity",
+      "cosine", "top-k", "top k", "chunk", "chunks", "chunking", "embedding", "embeddings",
+      "embed", "embeds", "bm25", "keyword search", "relevance score", "relevance threshold",
+      "relevance cutoff"],
+  },
+  {
     id: "ai-tools",
     canonical: "What AI tools does Mike use?",
     evidence: /Gemini|LangGraph|Claude|OpenAI|Bedrock|Groq/,
@@ -623,19 +590,13 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
       "work history", "journey", "professional", "professionally"],
   },
   {
-    id: "assistant",
-    canonical: "How does this assistant work?",
-    evidence: /RAG|Gemini/,
-    terms: ["assistant", "chatbot", "chat bot", "bot", "chat", "this assistant",
-      "this chat", "answering", "this site", "this website", "portfolio site"],
-  },
-  {
     id: "who",
     canonical: "Who is Mike Ncube?",
     evidence: /Applied AI Engineer/,
+    // "learn about" means finding out, not training, so it is matched here first.
     terms: ["introduce", "introduction", "bio", "biography", "blurb", "elevator",
       "positioning", "one-liner", "one liner", "nutshell", "snapshot", "profile",
-      "highlights"],
+      "highlights", "learn about", "learn more", "find out about", "find out more"],
   },
 ];
 
@@ -647,23 +608,27 @@ const CONCEPT_LEXICON = buildLexicon(PROFILE_CONCEPTS);
 const TECH_PHRASES = buildLexicon([{ id: "tech", terms: TECH_LEXICON.filter((t) => t.includes(" ")) }]);
 const TECH_SINGLES = new Set(TECH_LEXICON.filter((t) => !t.includes(" ")));
 
-function buildKbVocabulary(): { stems: Set<string>; text: string } {
-  const parts: string[] = [];
+// `stems` explains question words (KB text plus related terms and synonyms).
+// `factText` is only what the KB states, so a technology counts as listed only
+// when Mike's content names it, never because a synonym table mentions it.
+function buildKbVocabulary(): { stems: Set<string>; factText: string } {
+  const facts: string[] = [];
   for (const chunk of KNOWLEDGE_CHUNKS) {
-    parts.push(chunk.title, chunk.text, ...(chunk.keywords ?? []));
+    facts.push(chunk.title, chunk.text, ...(chunk.keywords ?? []));
   }
-  for (const item of STATIC_ANSWERS) parts.push(item.answer);
-  for (const [key, needles] of Object.entries(RELATED_TERMS)) parts.push(key, ...needles);
-  const text = parts.join("\n");
+  for (const item of STATIC_ANSWERS) facts.push(item.answer);
+  const vocabulary = [...facts];
+  for (const [key, needles] of Object.entries(RELATED_TERMS)) vocabulary.push(key, ...needles);
+  vocabulary.push(...thesaurusWords());
   const stems = new Set<string>();
-  for (const token of questionTokens(text)) {
+  for (const token of questionTokens(vocabulary.join("\n"))) {
     stems.add(token.stem);
     stems.add(token.norm);
     for (const piece of token.norm.split(/[-/]/)) {
       if (piece) stems.add(stem(piece));
     }
   }
-  return { stems, text: text.toLowerCase() };
+  return { stems, factText: facts.join("\n").toLowerCase() };
 }
 
 const KB_VOCAB = buildKbVocabulary();
@@ -680,9 +645,20 @@ const KB_CHUNK_FREQUENCY = (() => {
   return freq;
 })();
 
-function isDistinctiveKbTerm(term: string): boolean {
+export function isDistinctiveKbTerm(term: string): boolean {
   const count = KB_CHUNK_FREQUENCY.get(stem(term)) ?? 0;
   return count > 0 && count <= DISTINCTIVE_MAX_CHUNKS;
+}
+
+// General function or request word that carries no topic of its own.
+export function isGenericWord(word: string): boolean {
+  const token = questionTokens(word)[0];
+  if (!token) return true;
+  return GENERIC_STEMS.has(token.stem) || GENERIC_STEMS.has(token.norm);
+}
+
+export function conceptById(id: string): ProfileConcept | undefined {
+  return CONCEPT_BY_ID.get(id);
 }
 
 const DERIVATIONAL_SUFFIXES = [
@@ -708,7 +684,7 @@ function kbKnows(token: QuestionToken): boolean {
 
 function techInKb(term: string): boolean {
   const escaped = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(KB_VOCAB.text);
+  return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(KB_VOCAB.factText);
 }
 
 export type QuestionAnalysis = {
@@ -851,18 +827,16 @@ function asksAboutWorkingThere(concepts: string[]): boolean {
 
 // Reason to refuse before retrieval, or null when the question is in scope.
 // One ordinary unexplained word is tolerated when the question is anchored on a
-// concept, project or listed technology ("Can we engage Mike as a contractor?").
+// concept, project or listed technology ("Can we engage Mike as a contractor?"),
+// and two when a dominant concept anchors it: its answer is fixed copy, so the
+// extra wording ("of insured members") cannot pull in a different topic.
 // Unexplained names never are: they name something the portfolio does not cover.
 export function coverageRefusalReason(analysis: QuestionAnalysis): string | null {
   if (analysis.refuseTopic) return `topic:${analysis.refuseTopic}`;
   if (analysis.concepts.includes("elsewhere") && asksAboutWorkingThere(analysis.concepts)) {
     return "topic:relocation";
   }
-  const anchored = analysis.concepts.length > 0
-    || analysis.projects.length > 0
-    || analysis.knownTech.length > 0;
-  const tolerated = anchored && analysis.unexplainedNames.length === 0 ? 1 : 0;
-  if (analysis.unexplained.length > tolerated) return `unexplained:${analysis.unexplained.join(",")}`;
+  // Only unlisted technology: say which, rather than a generic refusal for other words.
   if (
     analysis.unknownTech.length > 0
     && analysis.knownTech.length === 0
@@ -870,6 +844,12 @@ export function coverageRefusalReason(analysis: QuestionAnalysis): string | null
   ) {
     return `unknown-tech:${analysis.unknownTech.join(",")}`;
   }
+  const anchored = analysis.concepts.length > 0
+    || analysis.projects.length > 0
+    || analysis.knownTech.length > 0;
+  const dominant = analysis.concepts.some((id) => CONCEPT_BY_ID.get(id)?.dominant);
+  const tolerated = !anchored || analysis.unexplainedNames.length > 0 ? 0 : dominant ? 2 : 1;
+  if (analysis.unexplained.length > tolerated) return `unexplained:${analysis.unexplained.join(",")}`;
   return null;
 }
 

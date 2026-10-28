@@ -6,6 +6,7 @@ import {
   CANONICAL_TECH_LEAD_CRM_ANSWER,
   CANONICAL_ZDI_LIVE_ANSWER,
 } from "./status-copy";
+import { isPolarQuestion } from "./question-form";
 
 export type RecruiterIntent = {
   id: string;
@@ -14,6 +15,7 @@ export type RecruiterIntent = {
 
 export type NamedProject = {
   id: string;
+  name: string;
   sourceIds: string[];
   staticQuestion: string;
   stack: string;
@@ -50,7 +52,7 @@ const PROJECTS: Array<{
     staticQuestion: "What is ZDI?",
     stack: "ZDI stack: FastAPI, PostgreSQL and Next.js [1].",
     languages: "The ZDI sources name frameworks rather than languages: FastAPI, PostgreSQL and Next.js [1].",
-    ai: "ZDI has no AI in approvals [1].",
+    ai: "ZDI has no AI in approvals [1]. Requests follow a requester → manager → Accounts approval workflow, and a requester can never approve their own request [1].",
     database: "ZDI uses PostgreSQL as its database [1].",
   },
   {
@@ -91,7 +93,8 @@ const PROJECTS: Array<{
   {
     id: "claims",
     name: "The claims platform",
-    re: /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b/i,
+    // "claims system" too: the platform's own source describes it as the standby for one.
+    re: /\bclaims operations\b|\bzororo-claims\b|\bclaims platform\b|\bclaims system\b/i,
     sourceIds: ["zororo-claims"],
     staticQuestion: "What is the claims operations platform?",
     stack: "The claims platform stack: Next.js, TypeScript, NextAuth, Prisma, PostgreSQL, Docker [1].",
@@ -133,6 +136,17 @@ const PROJECTS: Array<{
     languages: "Cube is a coding agent prototype. The sources do not name its programming languages [1].",
     ai: "Cube is a coding agent with its own tool-calling loop and provider-agnostic model adapters [1].",
     database: "The Cube sources do not name a database [1].",
+  },
+  {
+    id: "claims-pipeline",
+    name: "The claims extraction pipeline",
+    re: /\bclaims\s+(?:document\s+)?extraction(?:\s+pipeline)?\b/i,
+    sourceIds: ["claims-pipeline"],
+    staticQuestion: "What is the claims extraction pipeline?",
+    stack: "The claims extraction pipeline uses Claude vision extraction validated through Pydantic schemas [1].",
+    languages: "The claims extraction pipeline sources name Claude vision extraction and Pydantic schemas, not a programming language [1].",
+    ai: "The claims extraction pipeline uses Claude vision extraction, validated through Pydantic schemas, with per-field confidence scoring and a needs-review flag for human verification [1].",
+    database: "The claims extraction pipeline sources do not name a database [1].",
   },
   {
     id: "social",
@@ -201,6 +215,11 @@ const PROJECT_STATE: Record<string, { live: boolean; prototype: boolean; line: s
   },
   cube: { live: false, prototype: true, line: "Cube is a coding agent prototype, not deployed [1]." },
   social: { live: false, prototype: true, line: "The multi-agent content pipeline is a prototype [1]." },
+  "claims-pipeline": {
+    live: false,
+    prototype: false,
+    line: "The claims document extraction pipeline is a production-ready system pending management approval [1].",
+  },
 };
 
 // Technologies named in the knowledge base, for "Does <project> use <tech>?".
@@ -211,6 +230,9 @@ const KB_TECH_TERMS = [
   "n8n", "opentelemetry", "gemini", "groq", "railway", "aws", "pytest", "sqlalchemy",
   "alembic", "pydantic", "jinja2", "gunicorn", "openai", "claude", "bedrock",
 ];
+
+// Test frameworks a source may name. Used to say plainly when none is named.
+const TEST_FRAMEWORKS = ["pytest", "jest", "vitest", "mocha", "cypress", "playwright", "selenium", "junit", "unittest"];
 
 function askedTech(question: string): string | null {
   for (const term of KB_TECH_TERMS) {
@@ -261,12 +283,19 @@ function projectStateAnswer(project: (typeof PROJECTS)[number], question: string
   return lead ? `${lead} ${state.line}` : state.line;
 }
 
+// The text with every project name blanked out, so its words ("Proactive") are
+// not mistaken for something else the visitor asked about.
+export function withoutProjectNames(text: string): string {
+  return PROJECTS.reduce((out, project) => out.replace(new RegExp(project.re.source, "gi"), " "), text);
+}
+
 export function namedProjects(question: string): NamedProject[] {
   const hits: NamedProject[] = [];
   for (const project of PROJECTS) {
     if (!project.re.test(question)) continue;
     hits.push({
       id: project.id,
+      name: project.name,
       sourceIds: project.sourceIds,
       staticQuestion: project.staticQuestion,
       stack: project.stack,
@@ -299,8 +328,14 @@ function projectTopic(question: string): ProjectTopic {
   if (/\b(?:tech lead|team lead|engineering lead)\b/i.test(hay)) return "lead";
   if (/\b(?:stands? for|acronym|abbreviation|short for|full name)\b/i.test(hay)) return "acronym";
   if (/\b(?:use|uses|using)\s+(?:any\s+)?(?:ai|llms?|models?|machine learning)\b/i.test(hay)) return "ai";
-  if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews)\b/i.test(hay)) return "approvers";
-  if (/\b(?:still running|paused|currently paused|serving traffic|run state|stay up|status|prototypes?)\b/i.test(hay)) {
+  // AI as the asked agent or method ("decided by AI"), outside a project's own name.
+  if (/\b(?:ai|llms?|machine learning|genai|gpt)\b/i.test(hay.replace(/\bzororo ai os\b/g, ""))) return "ai";
+  if (/\b(?:which|what)\s+(?:ai\s+|llm\s+|language\s+|vision\s+)?models?\b/i.test(hay)) return "ai";
+  if (/\b(?:approv(?:e|es|er|ers|al)|who signs|who reviews|signs? off|signed off|sign-off)\b/i.test(hay)) return "approvers";
+  // "status of their case" asks about a record inside the system, not the project's status.
+  const recordStatus = /\bstatus\s+of\s+(?:their|a|an|his|her|my|your|each|every)\b/i.test(hay);
+  // A project's label or tag is its maturity status.
+  if (!recordStatus && /\b(?:still running|paused|currently paused|serving traffic|run state|stay up|status|prototypes?|label(?:led|ed)?|tag(?:ged)?|maturity)\b/i.test(hay)) {
     return "status";
   }
   if (
@@ -342,24 +377,42 @@ function scoped(
   };
 }
 
+// "What is X used for" asks a purpose. The sources list tools, not their purposes.
+const PURPOSE_RE = /\b(?:used\s+for|uses?\s+(?:\S+\s+){1,2}for|for\s+what|purpose|role\s+of)\b/i;
+
 function usesTechAnswer(project: (typeof PROJECTS)[number], question: string): RecruiterIntent | null {
   const tech = askedTech(question);
   if (!tech) return null;
   const sourceIds = project.stackSourceIds ?? project.sourceIds;
+  const bareName = nameMidSentence(project.name).replace(/^the /, "");
   if (mentionsTech(chunkText(sourceIds), tech)) {
-    return scoped(project, "uses-tech", `Yes. ${project.stack}`, sourceIds);
+    if (isPolarQuestion(question)) return scoped(project, "uses-tech", `Yes. ${project.stack}`, sourceIds);
+    const purpose = PURPOSE_RE.test(question)
+      ? ` The ${bareName} sources list ${tech} but do not say what it is used for.`
+      : "";
+    return scoped(project, "uses-tech", `${project.stack}${purpose}`, sourceIds);
   }
   if (!mentionsTech(chunkText(["stack"]), tech)) {
     return scoped(project, "uses-tech", `No. ${project.stack}`, sourceIds);
   }
   const cite = sourceIds.length + 1;
-  const bareName = nameMidSentence(project.name).replace(/^the /, "");
   return scoped(
     project,
     "uses-tech",
     `No. ${project.stack} ${tech} is in Mike's wider stack [${cite}], not in the ${bareName} sources.`,
     [...sourceIds, "stack"],
   );
+}
+
+// Names the test framework a project's own sources state, or says none is named.
+function testFrameworkAnswer(project: (typeof PROJECTS)[number], testing: string): string {
+  const text = chunkText(project.sourceIds).toLowerCase();
+  const named = TEST_FRAMEWORKS.filter((name) => new RegExp(`\\b${name}\\b`).test(text));
+  const name = nameMidSentence(project.name).replace(/^the /, "");
+  const lead = named.length > 0
+    ? `The ${name} sources name ${named.join(" and ")} [1].`
+    : `The ${name} sources do not name a test framework [1].`;
+  return `${lead} ${testing}`;
 }
 
 // A named technology with no project: answer the asked aspect across Mike's work.
@@ -455,7 +508,11 @@ export function matchProjectScopedAnswer(question: string): RecruiterIntent | nu
       return scoped(project, "remote", staticByQuestion(project.staticQuestion).answer);
     case "testing": {
       const testing = PROJECT_TESTING[project.id];
-      return testing ? scoped(project, "testing", testing) : null;
+      if (!testing) return null;
+      if (/\b(?:framework|library|runner|tool(?:ing)?)s?\b/i.test(question)) {
+        return scoped(project, "testing", testFrameworkAnswer(project, testing));
+      }
+      return scoped(project, "testing", testing);
     }
     case "storage":
       return { id: `project-${project.id}-storage`, answer: staticByQuestion(project.staticQuestion) };

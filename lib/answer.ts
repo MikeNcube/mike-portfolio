@@ -9,14 +9,27 @@ import {
   STATIC_ANSWERS,
   type StaticAnswer,
 } from "./static-answers";
-import { matchProjectScopedAnswer, matchTechScopedAnswer, namedProjects } from "./intent";
+import { matchProjectScopedAnswer, matchTechScopedAnswer, namedProjects, type NamedProject } from "./intent";
 import {
   analyseQuestion,
+  conceptById,
   conceptOverride,
   coverageRefusalReason,
   type QuestionAnalysis,
 } from "./concepts";
 import { canonicalQuestionForPhrase } from "./intent-exemplars";
+import { isContactRequest } from "./contact-intent";
+import {
+  addressesFocus,
+  askedAspect,
+  dominantConcepts,
+  focusEntities,
+  leadSentence,
+  leadWithFocus,
+  mentionsTerm,
+  questionWordHits,
+} from "./focus";
+import { stripUnaskedYesNo } from "./question-form";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
   contentTerms,
@@ -100,8 +113,13 @@ export function isContactQuestion(question: string): boolean {
   if (/\b(?:start (?:date|next|this)|can mike start|when can (?:mike|he) start)\b/i.test(question)) {
     return false;
   }
+  // "How do I contact my bank?" aims the contact at someone other than Mike.
+  if (CONTACT_OTHER_RE.test(question)) return false;
   return CONTACT_QUESTION_RE.test(question);
 }
+
+const CONTACT_OTHER_RE =
+  /\b(?:contact|reach(?:\s+out\s+to)?|e-?mail|message|ping|call|talk\s+to|speak\s+(?:to|with)|get\s+in\s+touch\s+with|get\s+hold\s+of)\s+(?:my|our|your|their|her|the|a|an|its)\s+(?!email\b|e-mail\b)\w+/i;
 
 export function isHonestUnknownQuestion(question: string): boolean {
   return isUnknowableQuestion(question) || isStartJoinAvailabilityQuestion(question);
@@ -1156,6 +1174,8 @@ function staticOrSafeReply(
 
 function withContactEmail(question: string, result: AnswerResult): AnswerResult {
   if (!isContactQuestion(question)) return result;
+  // "How do users reach their case on the claims platform?" is about the system, not Mike.
+  if (namedProjects(question).length > 0 && !/\b(?:mike|him|his)\b/i.test(question)) return result;
   if (isRefusal(result.response)) return polishResult(question, contactStaticReply(), []);
   return { ...result, response: ensureContactEmail(result.response) };
 }
@@ -1473,16 +1493,17 @@ function validateModelText(
   label: "gemini" | "groq",
   raw: string,
   chunks: RetrievedChunk[],
+  question: string,
 ): string {
   const text = stripSourceFooter(normaliseModelText(raw));
   const cited = chunks.map((c) => ({ id: c.id, text: `${c.title}\n${c.text}` }));
-  const problems = findUnsupportedClaims(text, cited);
+  const problems = findUnsupportedClaims(text, cited, { question });
   if (problems.length > 0) {
     const words = [...new Set(problems.flatMap((p) => p.words))].join(", ");
     console.warn(`[validator] ${label} answer rejected, unsupported: ${words}`);
     return "";
   }
-  return validateModelSentences(text, cited);
+  return validateModelSentences(text, cited, { question });
 }
 
 async function tryGenerate(
@@ -1558,9 +1579,14 @@ function reconcileWithConcepts(
   const refused = isRefusal(result.response);
   const concept = conceptOverride(analysis, result.response, refused);
   const fallback = !concept && refused ? anchoredFallback(question, analysis) : null;
+  // "X or Y?" with X listed and Y not: lead with X itself, not a whole stack line.
+  const mixedTech = !concept && analysis.projects.length === 0
+    && analysis.knownTech.length > 0 && analysis.unknownTech.length > 0
+    ? knownTechLead(analysis.knownTech)
+    : null;
   const reconciled = concept
     ? conceptCanonicalResult(concept.canonical) ?? result
-    : fallback ?? result;
+    : mixedTech ?? fallback ?? result;
   if (isRefusal(reconciled.response) || analysis.unknownTech.length === 0) return reconciled;
   if (/(?:isn'?t|aren't|not) listed in Mike's portfolio/i.test(reconciled.response)) return reconciled;
   return {
@@ -1575,14 +1601,243 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
     return answerRetrieveFirst(input);
   }
   if (isUnknowableQuestion(question)) return refusalResult();
-  // Coverage gate runs before retrieval so off-portfolio questions never reach a model.
   const analysis = analyseQuestion(question);
+  // A contact request has one right answer. It is settled before the coverage gate
+  // so a word in it the knowledge base never uses ("forward") cannot refuse it, and
+  // before retrieval so no model or retrieval order can replace it.
+  if (asksForContact(question, analysis)) return polishResult(question, contactStaticReply(), []);
+  // Coverage gate runs before retrieval so off-portfolio questions never reach a model.
   const reason = coverageRefusalReason(analysis);
   if (reason?.startsWith("unknown-tech:")) return refusalResult(unknownTechRefusal(analysis.unknownTech));
   if (reason) return refusalResult();
-  // A contact question has one right answer; no model or retrieval order may replace it.
-  if (asksForContact(question, analysis)) return polishResult(question, contactStaticReply(), []);
-  return reconcileWithConcepts(question, analysis, await answerRetrieveFirst(input));
+  // "How do I contact my bank?": a contact request aimed at someone else is off-topic.
+  if (analysis.projects.length === 0 && CONTACT_OTHER_RE.test(question) && !/\b(?:mike|him|his)\b/i.test(question)) {
+    return refusalResult();
+  }
+  if (asksAboutEarlierWork(question, analysis)) return polishResult(question, earlierWorkReply(), []);
+  const reconciled = reconcileWithConcepts(question, analysis, await answerRetrieveFirst(input));
+  return finishAnswer(question, analysis, reconciled);
+}
+
+// Earlier employers or roles. The sources name only the current ones, so the
+// current employer must not be offered as the answer to "where before".
+const EARLIER_WORK_RE =
+  /\b(?:previous|prior|former|earlier|past|last|other|first)\s+(?:employers?|jobs?|roles?|compan(?:y|ies)|positions?|titles?|workplaces?)\b|\b(?:before|prior to)\s+(?:joining\s+|he\s+joined\s+|working\s+(?:at|for)\s+|starting\s+at\s+)?(?:zororo|his current|the current|this (?:job|role)|2022)\b|\bwork(?:ed)?\s+before\b|\bused to work\b/i;
+
+function asksAboutEarlierWork(question: string, analysis: QuestionAnalysis): boolean {
+  if (analysis.projects.length > 0) return false;
+  return EARLIER_WORK_RE.test(question)
+    && analysis.concepts.some((id) => ["employer", "title", "roles", "experience"].includes(id));
+}
+
+function earlierWorkReply(): AnswerResult {
+  const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "employer");
+  return {
+    response:
+      "The sources name only Mike's current employer and title: Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance, 2022 to present [1]. They do not list earlier employers or roles.",
+    sources: chunk ? [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }] : [],
+    via: "static",
+  };
+}
+
+// Last pass: lead a certification question about a listed technology with the plain
+// "no certification" fact, make a static answer open with a sentence about what was
+// asked, and drop a yes/no opener that a wh-question did not ask for.
+function finishAnswer(question: string, analysis: QuestionAnalysis, result: AnswerResult): AnswerResult {
+  if (isRefusal(result.response)) return result;
+  const focused = focusGuard(question, analysis, withCertificationLead(question, analysis, result));
+  if (isRefusal(focused.response)) return focused;
+  return { ...focused, response: stripUnaskedYesNo(question, focused.response) };
+}
+
+function withSequencedCitations(result: AnswerResult, text: string, sources = result.sources): AnswerResult {
+  const sequential = sequentializeCitations(text, sources);
+  return { ...result, response: sequential.text, sources: sequential.sources };
+}
+
+const NO_CERTIFICATION_RE = /\bno (?:named )?certifications?\b|\bcertification is listed\b/i;
+
+function withCertificationLead(question: string, analysis: QuestionAnalysis, result: AnswerResult): AnswerResult {
+  if (!/\bcertif/i.test(question) || analysis.knownTech.length === 0) return result;
+  if (NO_CERTIFICATION_RE.test(leadSentence(result.response))) return result;
+  const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "certifications");
+  if (!chunk) return result;
+  let sources = result.sources;
+  let index = sources.findIndex((s) => s.id === chunk.id);
+  if (index < 0) {
+    sources = [...sources, { id: chunk.id, title: chunk.title, url: chunk.sourceUrl }];
+    index = sources.length - 1;
+  }
+  const lead = `No ${joinList(analysis.knownTech)} certification is listed: Mike has no named certifications [${index + 1}].`;
+  return withSequencedCitations(result, `${lead} ${result.response}`, sources);
+}
+
+// Canonical copy chosen by an explicit predicate already answers its own question.
+function hasCanonicalRoute(question: string): boolean {
+  return isProductionSystemsQuestion(question)
+    || isWorkQuestion(question)
+    || isAwsQuestion(question)
+    || isZdiLiveQuestion(question)
+    || isCrmAndZdiLiveQuestion(question)
+    || isTechLeadCrmQuestion(question)
+    || isExperienceQuestion(question)
+    || isInjectionDefenceQuestion(question);
+}
+
+function leadKey(text: string): string {
+  return leadSentence(text).replace(/\[\d+\]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function isFactListAnswer(text: string): boolean {
+  const key = leadKey(text);
+  return STATIC_ANSWERS.some((s) => s.factList && leadKey(s.answer) === key);
+}
+
+// True when the answer is the canonical answer for one of the question's concepts.
+function isConceptAnswer(result: AnswerResult, analysis: QuestionAnalysis): boolean {
+  const key = leadKey(result.response);
+  return analysis.concepts.some((id) => {
+    const concept = conceptById(id);
+    const hit = concept && STATIC_ANSWERS.find((s) => s.question === concept.canonical);
+    return Boolean(hit && leadKey(hit.answer) === key);
+  });
+}
+
+// A static answer must open with a sentence about what was asked. Order of
+// fallbacks: the same answer led by its best sentence, a dominant or top concept's
+// answer, the named project's own sentence (or a plain "not mentioned"), the
+// concept answer it already was, then a refusal. A wrong topic is worse than a refusal.
+function focusGuard(question: string, analysis: QuestionAnalysis, result: AnswerResult): AnswerResult {
+  if (result.via !== "static" || isRefusal(result.response) || hasCanonicalRoute(question)) return result;
+  const scoped = matchProjectScopedAnswer(question) ?? matchTechScopedAnswer(question);
+  if (scoped && !scoped.id.endsWith("-overview")) return result;
+  const projects = namedProjects(question);
+  if (projects.length === 1) {
+    // A specific aspect of one project, or a detail its overview leaves out, is
+    // answered from the project's own sentence when one clearly fits better.
+    const own = dominantConcepts(analysis).length > 0
+      ? projectFocusAnswer(projects[0], question, analysis)
+      : projectSentenceByWords(projects[0], question, result.response);
+    if (own) return polishResult(question, own, []);
+  }
+  // An authored answer whose opening already fits keeps its order; a list of
+  // independent facts leads with the asked one.
+  if (addressesFocus(leadSentence(result.response), question, analysis) && !isFactListAnswer(result.response)) {
+    return result;
+  }
+  const led = leadWithFocus(result.response, question, analysis);
+  if (addressesFocus(leadSentence(led), question, analysis)) return withSequencedCitations(result, led);
+  if (projects.length === 1) return withSequencedCitations(result, led);
+  for (const concept of [...dominantConcepts(analysis), conceptById(analysis.concepts[0] ?? "")]) {
+    const canonical = concept ? conceptCanonicalResult(concept.canonical) : null;
+    if (!canonical) continue;
+    const text = leadWithFocus(canonical.response, question, analysis);
+    if (addressesFocus(leadSentence(text), question, analysis)) return withSequencedCitations(canonical, text);
+  }
+  if (isConceptAnswer(result, analysis)) return withSequencedCitations(result, led);
+  console.warn(`[focus] static answer dropped; lead does not name: ${focusEntities(question, analysis).join(", ")}`);
+  return analysis.unknownTech.length > 0 ? refusalResult(unknownTechRefusal(analysis.unknownTech)) : refusalResult();
+}
+
+const ASPECT_LABEL: Record<string, string> = {
+  privacy: "personal-data handling",
+  "failure-handling": "failure handling",
+  labels: "maturity labels",
+  injection: "prompt-injection defences",
+  remote: "remote work",
+};
+
+// For one named project: the project's own sentence about the asked thing. When
+// a specific aspect (personal data, failures, labels) was asked and the project's
+// sources say nothing on it, a plain statement of that. Otherwise null, and the
+// project overview stands: a general word ("data") absent from it is not a miss.
+function projectFocusAnswer(project: NamedProject, question: string, analysis: QuestionAnalysis): AnswerResult | null {
+  const entities = focusEntities(question, analysis);
+  const aspect = askedAspect(question, analysis);
+  const aspectTerms = aspect ? aspect.concept.terms.filter((t) => !t.includes("...")) : [];
+  const best = bestProjectSentence(project, (sentence) => {
+    const entityHit = entities.some((t) => mentionsTerm(sentence, t));
+    const aspectHit = Boolean(aspect && (aspect.concept.evidence.test(sentence) || aspectTerms.some((t) => mentionsTerm(sentence, t))));
+    if (!entityHit && !aspectHit) return 0;
+    return (entityHit ? 3 : 0) + (aspectHit ? 2 : 0) + questionWordHits(sentence, question);
+  });
+  if (best) return best.result;
+  const first = KNOWLEDGE_CHUNKS.find((c) => project.sourceIds.includes(c.id));
+  if (!aspect) return null;
+  // The aspect's name, never the visitor's verb ("mask", "labelled").
+  const missing = ASPECT_LABEL[aspect.concept.id] ?? aspect.term;
+  const name = project.name.startsWith("The ") ? project.name : `The ${project.name}`;
+  return {
+    response: `${name} sources do not mention ${missing} [1].`,
+    sources: first ? [{ id: first.id, title: first.title, url: first.sourceUrl }] : [],
+    via: "static",
+  };
+}
+
+// The highest-scoring sentence in a project's own chunks (score 0 never wins),
+// rewritten to stand alone and cited to its chunk.
+function bestProjectSentence(
+  project: NamedProject,
+  score: (sentence: string) => number,
+): { result: AnswerResult; score: number } | null {
+  let best: { result: AnswerResult; score: number } | null = null;
+  for (const chunk of KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id))) {
+    for (const raw of splitIntoSentences(chunk.text)) {
+      const sentence = raw.trim();
+      if (sentenceLeaksSourceOrPath(sentence)) continue;
+      const value = score(sentence);
+      if (value <= 0 || (best && value <= best.score)) continue;
+      const text = rewriteFallbackSentence(sentence, chunk.title);
+      if (!text) continue;
+      best = {
+        score: value,
+        result: {
+          response: `${text.replace(/[.!?]+$/, "")} [1].`,
+          sources: [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }],
+          via: "static",
+        },
+      };
+    }
+  }
+  return best;
+}
+
+// A detail the overview leaves out ("what hash binds a signature"): the project's
+// own sentence, when it matches at least two of the question's topic words and
+// more of them than the whole current answer does.
+function projectSentenceByWords(project: NamedProject, question: string, current: string): AnswerResult | null {
+  const currentHits = questionWordHits(current, question);
+  const best = bestProjectSentence(project, (sentence) => questionWordHits(sentence, question));
+  if (!best || best.score < 2 || best.score <= currentHits) return null;
+  return best.result;
+}
+
+// "pgvector hybrid search" for pgvector: the stack entry that names a technology.
+function stackEntryFor(tech: string): string | null {
+  const stack = KNOWLEDGE_CHUNKS.find((c) => c.id === "stack");
+  if (!stack) return null;
+  const escaped = tech.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?:^|[^a-z0-9])${escaped}`, "i");
+  const entries = stack.text
+    .replace(/\s*\(([^)]*)\)/g, ", $1")
+    .split(/\.\s+|,\s*/)
+    .map((e) => e.replace(/^[A-Za-z/ -]+:\s*/, "").replace(/\.+$/, "").trim())
+    .filter(Boolean);
+  return entries.find((e) => re.test(e)) ?? null;
+}
+
+// Opens a mixed known/unknown technology question with the listed technology itself.
+function knownTechLead(techs: string[]): AnswerResult | null {
+  const stack = KNOWLEDGE_CHUNKS.find((c) => c.id === "stack");
+  const entries = techs.map(stackEntryFor);
+  if (stack && entries.every((e): e is string => Boolean(e))) {
+    return {
+      response: `Mike's stack lists ${joinList([...new Set(entries)])} [1].`,
+      sources: [{ id: stack.id, title: stack.title, url: stack.sourceUrl }],
+      via: "static",
+    };
+  }
+  return knownTechResult(techs[0]);
 }
 
 // Still a refusal (no sources, decline wording), but it names what is missing.
@@ -1598,11 +1853,12 @@ const CONTACT_TARGET_RE =
   /\b(?:contact|reach|email|e-mail|message|ping|get in touch with)\s+(?:mike|him)\b|\b(?:contact|email|e-mail)\s+(?:details|info|information|address)\b|\b(?:mike'?s|his)\s+(?:email|e-mail|contact)\b(?!\s+signature)/i;
 
 function asksForContact(question: string, analysis: QuestionAnalysis): boolean {
-  return analysis.concepts[0] === "contact"
-    && CONTACT_TARGET_RE.test(question)
-    && analysis.projects.length === 0
-    && analysis.knownTech.length === 0
-    && analysis.unknownTech.length === 0;
+  if (analysis.refuseTopic) return false;
+  if (analysis.projects.length > 0 || analysis.knownTech.length > 0 || analysis.unknownTech.length > 0) return false;
+  // A named channel ("on LinkedIn") is answered by that channel's link.
+  if (analysis.concepts.includes("linkedin") || analysis.concepts.includes("github")) return false;
+  return isContactRequest(question)
+    || (analysis.concepts[0] === "contact" && CONTACT_TARGET_RE.test(question));
 }
 
 async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
@@ -1645,7 +1901,7 @@ async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
             if (isRefusal(geminiText)) {
               return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
             }
-            const validated = validateModelText("gemini", geminiText, forPrompt);
+            const validated = validateModelText("gemini", geminiText, forPrompt, question);
             if (!validated.trim()) {
               return withContactEmail(question, staticOrSafeReply(question, relevant, geminiText));
             }
@@ -1658,7 +1914,7 @@ async function answerRetrieveFirst(input: AnswerInput): Promise<AnswerResult> {
         if (groqAvailable()) {
           const groqText = await tryGenerate(input.generateGroq, prompt, "groq");
           if (groqText) {
-            const validated = validateModelText("groq", groqText, forPrompt);
+            const validated = validateModelText("groq", groqText, forPrompt, question);
             const grounded = validated.trim() ? groundGroqAnswer(validated, forPrompt) : null;
             if (grounded) {
               return withContactEmail(question, polishResult(question, grounded, forPrompt));

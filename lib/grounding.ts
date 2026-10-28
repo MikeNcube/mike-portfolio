@@ -4,11 +4,14 @@
 // terms fail the candidate.
 
 import { tokenize } from "./bm25";
+import { GENERIC_WORD_LIST } from "./generic-words";
 import { namedProjects } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { splitIntoSentences } from "./normalise-answer";
+import { isWhQuestion } from "./question-form";
 import { stem } from "./stem";
 import { TECH_LEXICON_SET } from "./tech-lexicon";
+import { squash, synonymsOf, thesaurusWords, THESAURUS_PHRASES } from "./thesaurus";
 
 const NAME_TOKENS = new Set(["mike", "ncube"]);
 
@@ -505,7 +508,8 @@ export function prettySubject(term: string): string {
 
 export function unknownTechNote(unknown: string[]): string {
   if (unknown.length === 0) return "";
-  const names = unknown.map(prettySubject);
+  // "golang" and "go" both print as "Go"; name each technology once.
+  const names = [...new Map(unknown.map((term) => [prettySubject(term).toLowerCase(), prettySubject(term)])).values()];
   const joined = names.length === 1
     ? names[0]
     : names.length === 2
@@ -534,7 +538,7 @@ export function listedTechInQuestion(question: string): string[] {
 
 // Words that frame a sentence without asserting anything about Mike's work.
 // Everything else in a cited sentence (qualifiers, purposes, tools, statuses,
-// numbers, negations) is a claim and must appear in a block the sentence cites.
+// numbers, negations) is a claim and must appear in a block the answer cites.
 const CLAIM_FRAME_WORDS = new Set([
   "a", "an", "the", "and", "or", "but", "nor", "so", "as", "at", "by", "for", "from",
   "in", "into", "of", "on", "onto", "to", "with", "within", "via", "per", "than",
@@ -549,11 +553,27 @@ const CLAIM_FRAME_WORDS = new Set([
   "system", "systems", "list", "lists", "listed", "mention", "mentions", "mentioned",
   "describe", "describes", "described", "note", "notes", "noted", "state", "states",
   "stated", "according", "source", "sources", "context", "email", "contact", "reach",
+  // Generic verbs of making and enabling, like build/built above.
+  "design", "designs", "designed", "designing", "let", "lets", "letting", "underlying",
 ]);
+
+// General request words a visitor's wh-question may lend an answer ("send", "offer").
+const REQUEST_WORDS: Set<string> = new Set(
+  GENERIC_WORD_LIST.flatMap((w) => [w, stem(w), squash(w)]),
+);
+
+const NEGATION_WORDS = new Set(["not", "no", "never", "none", "without", "neither", "nor"]);
 
 export type CitedChunk = { id?: string; text: string };
 
-type ChunkIndex = { id?: string; projects: string[]; lower: string; words: Set<string>; stems: Set<string> };
+type ChunkIndex = {
+  id?: string;
+  projects: string[];
+  lower: string;
+  squashed: string;
+  words: Set<string>;
+  stems: Set<string>;
+};
 
 function indexChunk(chunk: CitedChunk): ChunkIndex {
   const lower = chunk.text.toLowerCase();
@@ -564,13 +584,13 @@ function indexChunk(chunk: CitedChunk): ChunkIndex {
   const stems = new Set<string>();
   for (const raw of lower.match(/[a-z0-9][a-z0-9.+#&_/-]*/g) ?? []) {
     const word = raw.replace(/[.\-/]+$/, "");
-    for (const piece of [word, ...word.split(/[-/]/)]) {
+    for (const piece of [word, squash(word), ...word.split(/[-/]/)]) {
       if (!piece) continue;
       words.add(piece);
       stems.add(stem(piece));
     }
   }
-  return { id: chunk.id, projects, lower, words, stems };
+  return { id: chunk.id, projects, lower, squashed: squash(lower), words, stems };
 }
 
 function belongsTo(chunk: ChunkIndex, project: { id: string; sourceIds: string[] }): boolean {
@@ -582,12 +602,33 @@ function chunkSupports(chunk: ChunkIndex, word: string): boolean {
     const escaped = word.replace(/\./g, "\\.");
     return new RegExp(`(^|[^0-9.])${escaped}($|[^0-9]|\\.(?![0-9]))`).test(chunk.lower);
   }
-  // Compounds ("rule-based") must appear whole; their parts do not support them.
-  if (word.includes("-")) {
-    return chunk.lower.includes(word) || chunk.lower.includes(word.replace(/-/g, " "));
+  // Compounds ("rule-based") and phrases must appear whole, with or without the
+  // hyphen or space ("front-end", "front end", "frontend"); their parts do not support them.
+  if (word.includes("-") || word.includes(" ")) {
+    return chunk.lower.includes(word) || chunk.lower.includes(word.replace(/-/g, " "))
+      || chunk.squashed.includes(squash(word));
   }
   if (/[.@+#&_]/.test(word)) return chunk.lower.includes(word);
   return chunk.words.has(word) || chunk.stems.has(stem(word));
+}
+
+// A word, or one of its listed synonyms, appears in the chunk.
+function chunkSupportsOrSynonym(chunk: ChunkIndex, word: string): boolean {
+  return chunkSupports(chunk, word) || synonymsOf(word).some((syn) => chunkSupports(chunk, syn));
+}
+
+// Thesaurus phrases ("continuous integration") are one claim each; the rest are words.
+function claimUnits(sentence: string): string[] {
+  let rest = sentence.replace(/\[\d+\]/g, " ");
+  const units: string[] = [];
+  for (const phrase of THESAURUS_PHRASES) {
+    const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    if (re.test(rest)) {
+      units.push(phrase);
+      rest = rest.replace(re, " ");
+    }
+  }
+  return [...units, ...claimWords(rest)];
 }
 
 function claimWords(sentence: string): string[] {
@@ -606,29 +647,76 @@ function claimWords(sentence: string): string[] {
   return out;
 }
 
+// Keys a question contributes: each word, its stem, its squashed form, and its synonyms.
+function questionKeys(question: string): Set<string> {
+  const keys = new Set<string>();
+  for (const unit of claimUnits(question)) {
+    for (const form of [unit, ...synonymsOf(unit)]) {
+      keys.add(form);
+      keys.add(squash(form));
+      keys.add(stem(squash(form)));
+    }
+  }
+  return keys;
+}
+
+// A wh-question's own words describe what is wanted ("where do I send an offer"),
+// so an answer may repeat them when they are general request words, or when a
+// cited block states what they cover ("frontend" beside TypeScript and React).
+// A topic word the cited blocks say nothing about ("PII masking" in a block with
+// no PII) is a presupposition, not support. A yes/no question's words are the
+// claim under test, and project sentences need sources, so neither gets this.
+function questionAllows(word: string, keys: Set<string>, pool: ChunkIndex[]): boolean {
+  if (keys.size === 0) return false;
+  if (NEGATION_WORDS.has(word) || /\d/.test(word) || /[-/]/.test(word)) return false;
+  if (TECH_LEXICON_SET.has(word)) return false;
+  const forms = [word, squash(word), stem(squash(word))];
+  if (!forms.some((form) => keys.has(form))) return false;
+  if (forms.some((form) => REQUEST_WORDS.has(form))) return true;
+  const related = (RELATED_TERMS[word] ?? []).filter((needle) => needle !== word);
+  return related.some((needle) => pool.some((c) => chunkSupports(c, needle)));
+}
+
 export type UnsupportedClaim = { sentence: string; words: string[] };
 
-// Every cited sentence must be supported word by word by the blocks it cites.
-// A technology linked to a named project must be stated in that project's own
-// block, so a tool listed elsewhere cannot be credited to it.
-export function findUnsupportedClaims(text: string, chunks: Array<string | CitedChunk>): UnsupportedClaim[] {
+export type ValidationOptions = { question?: string };
+
+// Every cited sentence must be supported word by word by blocks the answer cites.
+// A sentence that names a project may only lean on that project's blocks or on
+// general blocks, and a technology linked to a named project must be stated in that
+// project's own block, so a tool listed elsewhere cannot be credited to it.
+export function findUnsupportedClaims(
+  text: string,
+  chunks: Array<string | CitedChunk>,
+  options: ValidationOptions = {},
+): UnsupportedClaim[] {
   const indexed = chunks.map((c) => indexChunk(typeof c === "string" ? { text: c } : c));
+  const sentences = splitIntoSentences(text).map((p) => p.trim()).filter(Boolean);
+  const answerCites = new Set([...text.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
+  const answerCited = [...answerCites].map((n) => indexed[n - 1]).filter((c): c is ChunkIndex => Boolean(c));
+  const keys = options.question && isWhQuestion(options.question) ? questionKeys(options.question) : new Set<string>();
   const problems: UnsupportedClaim[] = [];
-  for (const sentence of splitIntoSentences(text).map((p) => p.trim()).filter(Boolean)) {
+  for (const sentence of sentences) {
     const cites = [...sentence.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
     if (cites.length === 0) continue;
     const cited = cites.map((n) => indexed[n - 1]).filter((c): c is ChunkIndex => Boolean(c));
     const projects = namedProjects(sentence);
+    // Another project's block cannot vouch for a sentence about this one, even when cited.
+    const pool = projects.length === 0
+      ? answerCited
+      : answerCited.filter((c) => c.projects.length === 0 || projects.some((p) => belongsTo(c, p)));
     const missing = new Set<string>();
     if (cited.length === 0) missing.add(`[${cites.join("][")}]`);
-    for (const word of claimWords(sentence)) {
-      if (!cited.some((c) => chunkSupports(c, word))) {
+    for (const word of claimUnits(sentence)) {
+      const supported = pool.some((c) => chunkSupportsOrSynonym(c, word))
+        || (projects.length === 0 && questionAllows(word, keys, pool));
+      if (!supported) {
         missing.add(word);
         continue;
       }
       if (!TECH_LEXICON_SET.has(word)) continue;
       for (const project of projects) {
-        const own = cited.filter((c) => belongsTo(c, project));
+        const own = pool.filter((c) => belongsTo(c, project));
         if (!own.some((c) => chunkSupports(c, word))) missing.add(`${word}@${project.id}`);
       }
     }
@@ -643,11 +731,11 @@ export function findUnsupportedClaims(text: string, chunks: Array<string | Cited
 export function validateModelSentences(
   text: string,
   chunks: Array<string | CitedChunk>,
+  options: ValidationOptions = {},
 ): string {
-  if (findUnsupportedClaims(text, chunks).length > 0) return "";
+  if (findUnsupportedClaims(text, chunks, options).length > 0) return "";
   return splitIntoSentences(text)
     .map((p) => p.trim())
     .filter((p) => /\[\d+\]/.test(p))
     .join(" ");
 }
-
