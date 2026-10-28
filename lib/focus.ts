@@ -5,6 +5,7 @@
 import {
   conceptById,
   isDistinctiveKbTerm,
+  isSpecificTerm,
   isGenericWord,
   questionTokens,
   type ProfileConcept,
@@ -124,7 +125,7 @@ export function addedTopicCoverage(
 ): { added: number; covered: number } {
   const known = stemsOf(`${cannedWording} ${namedProjects(question).map((p) => p.name).join(" ")}`);
   const unclaimed = new Set(
-    [...analysis.kbTerms.filter(isDistinctiveKbTerm), ...analysis.knownTech, ...analysis.unknownTech]
+    [...analysis.kbTerms.filter(isSpecificTerm), ...analysis.knownTech, ...analysis.unknownTech]
       .flatMap((term) => questionTokens(term).map((t) => t.stem)),
   );
   const answerStems = stemsOf(answer);

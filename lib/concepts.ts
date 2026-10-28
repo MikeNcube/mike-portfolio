@@ -17,7 +17,7 @@ import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { STATIC_ANSWERS } from "./static-answers";
 import { stem } from "./stem";
 import { TECH_LEXICON, TECH_VENDORS } from "./tech-lexicon";
-import { thesaurusWords } from "./thesaurus";
+import { synonymsOf, thesaurusWords } from "./thesaurus";
 import { GENERIC_WORD_LIST } from "./generic-words";
 
 export { stem };
@@ -718,6 +718,16 @@ const KB_CHUNK_FREQUENCY = (() => {
 export function isDistinctiveKbTerm(term: string): boolean {
   const count = KB_CHUNK_FREQUENCY.get(stem(term)) ?? 0;
   return count > 0 && count <= DISTINCTIVE_MAX_CHUNKS;
+}
+
+// A specific word: distinctive in the KB, or a thesaurus word the KB never uses
+// itself ("vendors", known only through "providers"). Either way a general
+// overview does not speak to it. Other words the KB lacks ("bio") are wording,
+// not topics.
+export function isSpecificTerm(term: string): boolean {
+  const count = KB_CHUNK_FREQUENCY.get(stem(term)) ?? 0;
+  if (count === 0) return synonymsOf(term).length > 0;
+  return count <= DISTINCTIVE_MAX_CHUNKS;
 }
 
 // General function or request word that carries no topic of its own.
