@@ -89,6 +89,8 @@ const NUMBER = String.raw`(?:numbers?|no\.?)(?=\s*(?:$|[?.!,;:])|\s+(?:please|so
 const MIKE_HIMSELF = String.raw`(?:mike|him)\b(?!['’]s)`;
 const CALL_ACT = String.raw`(?:call|phone|ring|reach|contact|message|text|sms|whats-?app)`;
 const NOT_A_COUNT = String.raw`(?!\s+(?:of|one|1)\b)`;
+// A phone line or messaging channel. "Line" alone ("line manager", "line of work") is not one.
+const LINE = String.raw`(?:(?:direct|phone|telephone|land|cell|mobile|private|whats-?app)\s*-?\s*lines?\b|whats-?app\b)`;
 
 // A phone number that belongs to Mike. Anyone else's number (his employer's, a
 // customer's, one a system stores) is personal data the assistant never gives.
@@ -99,6 +101,12 @@ const MIKES_NUMBER_PATTERNS: RegExp[] = [
   new RegExp(String.raw`\bnumbers?\s+(?:for|of)\s+${MIKE_HIMSELF}`, "i"),
   new RegExp(String.raw`\bnumbers?\b${NOT_A_COUNT}[^?.!]{0,40}\b${CALL_ACT}\s+${MIKE_HIMSELF}`, "i"),
   new RegExp(String.raw`\b${CALL_ACT}\s+${MIKE_HIMSELF}[^?.!]{0,30}\bnumbers?\b${NOT_A_COUNT}`, "i"),
+  // A line or messaging channel: "his direct line", "a WhatsApp line for Mike", "Is Mike on WhatsApp?".
+  new RegExp(String.raw`\b(?:mike'?s|his)\s+(?:(?:work|personal|best|main|primary|other|second(?:ary)?)\s+)?${LINE}`, "i"),
+  new RegExp(String.raw`\b(?:mike|he)\s+(?:have|has|got|share|list|use|uses)\s+(?:a\s+|any\s+)?${LINE}`, "i"),
+  new RegExp(String.raw`\b${LINE}\s+(?:for|to)\s+${MIKE_HIMSELF}`, "i"),
+  new RegExp(String.raw`\b(?:mike|he)\s+(?:on|reachable\s+on|available\s+on)\s+whats-?app\b`, "i"),
+  new RegExp(String.raw`\bwhats-?app(?:ing)?\s+${MIKE_HIMSELF}`, "i"),
 ];
 
 // Someone or something else named beside the number: "call his employer",

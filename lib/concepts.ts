@@ -12,7 +12,7 @@
 import { moneyIsMikes } from "./compensation";
 import { asksForMikesNumber } from "./contact-intent";
 import { RELATED_TERMS } from "./grounding";
-import { namedProjects } from "./intent";
+import { namedProjects, staffGroupMentions, unservedStaffGroups, withoutProjectNames } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
 import { STATIC_ANSWERS } from "./static-answers";
 import { stem } from "./stem";
@@ -84,6 +84,16 @@ const PHONE_NUMBER_TERMS = ["phone number", "phone numbers", "contact number", "
   "cell number", "cell numbers", "cellphone number", "mobile number", "mobile numbers",
   "telephone number", "telephone numbers"];
 
+// Whoever supplies the models: an AI kind before a supplier noun ("LLM vendors").
+// Read after the concept phrases, so "rate limits from model APIs" stays a failure question.
+const AI_SUPPLIER_TERMS = ["ai", "llm", "model", "genai", "gen ai", "language model", "foundation model"]
+  .flatMap((kind) => ["companies", "company", "vendors", "vendor", "providers", "provider", "suppliers",
+    "supplier", "firms", "partners", "apis", "api"].map((supplier) => `${kind} ${supplier}`));
+const AI_SUPPLIER_LEXICON = buildLexicon([{ id: "ai-tools", terms: AI_SUPPLIER_TERMS }]);
+
+// Ranking words that carry no topic of their own: "his number one skill" is about skills.
+const GENERIC_PHRASES = buildLexicon([{ id: "generic", terms: ["number one", "number 1", "no 1"] }]);
+
 // Topics the knowledge base cannot answer. A hit refuses with the email fallback.
 export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
   {
@@ -109,6 +119,65 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     id: "references",
     terms: ["references", "referees", "referee", "reference check", "reference checks",
       "background check", "criminal record", "credit check"],
+  },
+  {
+    // How a job ended or was judged. The sources hold no employment record.
+    id: "employment-record",
+    terms: ["fired", "sacked", "dismissed", "dismissal", "let go", "laid off", "layoff",
+      "layoffs", "retrenched", "retrenchment", "terminated", "termination", "disciplinary",
+      "performance review", "performance reviews", "appraisal", "appraisals", "probation"],
+  },
+  {
+    // How Mike feels about his job.
+    id: "job-feelings",
+    terms: ["unhappy", "dissatisfied", "frustrated", "miserable", "burnout", "burned out",
+      "burnt out", "stressed", "bored", "morale", "job satisfaction"],
+  },
+  {
+    // Other employers' offers and interviews. Looking for work is his availability,
+    // and "job offer" alone is something sent to Mike, so neither counts here.
+    id: "job-search",
+    terms: ["other offers", "competing offers", "competing ... offers", "offers on the table", "offer on the table",
+      "headhunted", "poached", "other ... interview", "interview ... elsewhere",
+      "interview ... other"],
+  },
+  {
+    // Personal taste and judgement calls the sources never record. A "favourite
+    // project" is matched first as the strongest-project question.
+    id: "opinions",
+    terms: ["favourite", "favorite", "favourites", "favorites", "hot take", "hot takes",
+      "overrated", "underrated", "prefer ... why", "why ... prefer"],
+  },
+  {
+    // Plans and predictions about Mike's life and career.
+    id: "future",
+    terms: ["see himself", "sees himself", "future plans", "plans for the future",
+      "long-term plans", "long-term goals", "career goals", "career plans", "ambition",
+      "ambitions", "aspiration", "aspirations", "five-year plan", "in five years",
+      "in ten years", "five years from now", "ten years from now", "be living",
+      // Study he might take on: the sources record only what he has done.
+      "plan ... study", "plan ... degree", "plan ... masters", "plan ... phd",
+      "want ... study", "want ... degree", "want ... masters", "want ... phd"],
+  },
+  {
+    // A business of his own. Taking on gigs beside the job is his contract availability.
+    id: "side-work",
+    terms: ["side business", "side businesses", "own business", "own company"],
+  },
+  {
+    // Academic results. The sources say only that there is no formal degree.
+    id: "grades",
+    terms: ["grades", "gpa", "transcript", "transcripts", "matric results", "matric average",
+      "matric marks", "university marks", "school marks", "his marks", "exam results",
+      "academic record", "class rank", "distinctions", "cum laude"],
+  },
+  {
+    // Figures about the employer's business or a system's usage that the sources never give.
+    id: "company-figures",
+    terms: ["revenue", "revenues", "turnover", "profit", "profits", "profitable",
+      "profitability", "loss ratio", "claims ratio", "market share", "valuation",
+      "share price", "headcount", "staff count", "employee count", "number of employees",
+      "how many employees", "many ... employ", "monthly active", "daily active", "mau", "dau"],
   },
   {
     id: "relocation",
@@ -215,9 +284,12 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     // People Mike answers to. The knowledge base names no one but Mike.
     id: "reporting-line",
     terms: ["boss", "bosses", "mike manager", "his manager", "mike line manager",
-      "his line manager", "mike supervisor", "his supervisor", "mike superior",
+      "his line manager", "line manager", "line managers", "mike supervisor", "his supervisor", "mike superior",
       "his superior", "mike report to", "he report to", "mike answer to", "he answer to",
-      "manage mike", "supervise mike"],
+      "manage mike", "supervise mike",
+      // Details of each colleague: the sources give a team size but name no one.
+      "colleague names", "colleagues names", "names of ... colleagues", "colleagues ... each",
+      "each ... colleagues", "coworkers ... each", "each ... coworkers"],
   },
   {
     // Probes for implementation internals rather than Mike's work.
@@ -225,7 +297,9 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
     terms: ["system prompt", "system prompts", "file path", "file paths", "source path",
       "environment variable", "environment variables", "env var", "env vars", "api key",
       "api keys", "secret key", "access token", "hidden instructions", "your instructions",
-      "your prompt", "prompt file"],
+      "your prompt", "prompt file", "knowledge base file", "knowledge base files", "kb file",
+      "raw knowledge", "paste ... knowledge", "dump ... knowledge", "print ... knowledge",
+      "training data"],
   },
   {
     id: "assistant-task",
@@ -444,7 +518,8 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     terms: ["strongest", "best project", "best projects", "best work", "best build",
       "best builds", "best system", "best systems", "best thing", "best piece", "proudest",
       "proud", "flagship", "impressive", "showcase", "favourite project", "favorite project",
-      "signature project", "standout project", "greatest", "demo"],
+      "signature project", "standout project", "greatest", "demo", "achievement",
+      "achievements", "accomplishment", "accomplishments"],
   },
   {
     id: "shipped",
@@ -629,7 +704,7 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
     canonical: "What AI tools does Mike use?",
     evidence: /Gemini|LangGraph|Claude|OpenAI|Bedrock|Groq/,
     terms: ["ai tools", "ai tool", "llm", "llms", "genai", "generative ai", "model",
-      "models", "model providers", "ai stack", "ai frameworks", "agent frameworks",
+      "models", "ai stack", "ai frameworks", "agent frameworks",
       "agent framework", "orchestration", "agents", "agent", "agentic"],
   },
   {
@@ -671,9 +746,11 @@ const CONCEPT_BY_ID = new Map(PROFILE_CONCEPTS.map((c) => [c.id, c]));
 const CONCEPT_ORDER = new Map(PROFILE_CONCEPTS.map((c, i) => [c.id, i]));
 
 const REFUSE_LEXICON = buildLexicon(REFUSE_TOPICS);
-// Read first when the question asks for Mike's own number, so the number is a contact detail.
+// Read first when the question asks for Mike's own number or line, so the number
+// and the device it rings ("a direct phone line") are contact details.
 const MIKES_NUMBER_LEXICON = buildLexicon([{ id: "contact",
-  terms: [...PHONE_NUMBER_TERMS, "number", "numbers", "whatsapp"] }]);
+  terms: [...PHONE_NUMBER_TERMS, "number", "numbers", "whatsapp", "line", "lines", "landline",
+    "phone", "telephone", "cell", "cellphone", "mobile"] }]);
 const CONCEPT_LEXICON = buildLexicon(PROFILE_CONCEPTS);
 const TECH_PHRASES = buildLexicon([{ id: "tech", terms: TECH_LEXICON.filter((t) => t.includes(" ")) }]);
 const TECH_SINGLES = new Set(TECH_LEXICON.filter((t) => !t.includes(" ")));
@@ -816,8 +893,28 @@ function matchPhrases(
 // Asking whether Mike holds a credential: certified, an exam, a certificate.
 const CREDENTIAL_ASK_RE = /\bcertif\w*|\bcerts?\b|\bexams?\b|\bcredentials?\b|\baccredit\w*|\bqualifications?\b/i;
 
+// A certification exam code: a short capitalised series, a hyphen and a two- or
+// three-digit number ("AZ-900", "SAA-C03"). Codes the KB uses for something else
+// ("AES-256", "SHA-256") are not exams.
+const EXAM_CODE_RE = /^[A-Z]{2,4}-C?\d{2,3}$/;
+
+function examCodeIndexes(tokens: QuestionToken[]): number[] {
+  return tokens.flatMap((token, i) => (EXAM_CODE_RE.test(token.raw) && !techInKb(token.norm) ? [i] : []));
+}
+
 export function isCredentialAsk(question: string): boolean {
-  return CREDENTIAL_ASK_RE.test(question);
+  return CREDENTIAL_ASK_RE.test(question) || examCodeIndexes(questionTokens(question)).length > 0;
+}
+
+// Marks the tokens of `phrase` where they appear in order in the question.
+function markPhrase(tokens: QuestionToken[], used: boolean[], phrase: string): void {
+  const stems = questionTokens(phrase).map((t) => t.stem);
+  for (let i = 0; i + stems.length <= tokens.length; i++) {
+    if (stems.every((s, k) => tokens[i + k].stem === s)) {
+      for (let k = i; k < i + stems.length; k++) used[k] = true;
+      return;
+    }
+  }
 }
 
 // Pay words that name money moving through a system as readily as Mike's own pay.
@@ -878,6 +975,29 @@ function goLanguageIndex(tokens: QuestionToken[], used: boolean[]): number {
   return -1;
 }
 
+// "does Mike build with", "has he built products on": what he builds with is his
+// stack, not a list of what he built. "the build on his CV" is a noun and is left alone.
+const BUILD_VERB_FORMS = new Set(["build", "builds", "building", "built"]);
+const BUILD_OBJECTS = new Set(["products", "apps", "applications", "systems", "projects", "things",
+  "software", "tools", "services", "solutions"]);
+const BUILD_TOOL_AFTER = new Set(["with", "on", "using", "atop"]);
+const BUILD_VERB_BEFORE = new Set(["mike", "he", "i", "we", "you", "they", "to", "do", "does", "did",
+  "has", "have", "had", "can", "could", "will", "would", "should", "is", "was", "usually", "typically",
+  "mostly", "mainly", "normally", "prefer", "prefers", "like", "likes", "rather"]);
+
+// The span "build [products] with" as [start, end), or null.
+function buildWithSpan(tokens: QuestionToken[], used: boolean[]): [number, number] | null {
+  for (let i = 1; i + 1 < tokens.length; i++) {
+    if (!BUILD_VERB_FORMS.has(tokens[i].norm) || !BUILD_VERB_BEFORE.has(tokens[i - 1].norm)) continue;
+    const object = BUILD_OBJECTS.has(tokens[i + 1].norm) ? 1 : 0;
+    const after = i + 1 + object;
+    if (after >= tokens.length || !BUILD_TOOL_AFTER.has(tokens[after].norm)) continue;
+    if (used.slice(i, after + 1).some(Boolean)) continue;
+    return [i, after + 1];
+  }
+  return null;
+}
+
 export function analyseQuestion(question: string): QuestionAnalysis {
   const tokens = questionTokens(question);
   const used = tokens.map(() => false);
@@ -905,8 +1025,24 @@ export function analyseQuestion(question: string): QuestionAnalysis {
       }
     });
   }
+  matchPhrases(tokens, used, GENERIC_PHRASES, () => {});
+  // "for the claims team" names the claims systems; its words are not a team Mike leads.
+  for (const mention of staffGroupMentions(question)) markPhrase(tokens, used, mention);
+  for (const group of unservedStaffGroups(question)) {
+    markPhrase(tokens, used, group);
+    unexplained.push(group);
+    unexplainedNames.push(group);
+  }
+  // An exam code is an unlisted credential: it stays unexplained, and the question is about certifications.
+  if (examCodeIndexes(tokens).length > 0) hitConcepts(["certifications"]);
   matchPhrases(tokens, used, REFUSE_LEXICON, (ids) => refuse.push(...ids));
   matchPhrases(tokens, used, CONCEPT_LEXICON, (ids) => hitConcepts(ids));
+  matchPhrases(tokens, used, AI_SUPPLIER_LEXICON, (ids) => hitConcepts(ids));
+  const buildWith = buildWithSpan(tokens, used);
+  if (buildWith) {
+    for (let k = buildWith[0]; k < buildWith[1]; k++) used[k] = true;
+    hitConcepts(["skills"]);
+  }
   matchPhrases(tokens, used, TECH_PHRASES, (_ids, start, end) => {
     const raw = tokens.slice(start, end).map((t) => t.raw).join(" ");
     hitTech(raw, raw.toLowerCase());
@@ -960,9 +1096,12 @@ export function analyseQuestion(question: string): QuestionAnalysis {
     return "unexplained";
   };
 
+  // A word inside a project's name ("extractor" in "the claims extractor") names the project.
+  const outsideNames = new Set(questionTokens(withoutProjectNames(question)).map((t) => t.stem));
   tokens.forEach((token, i) => {
     if (used[i]) return;
     if (classify(token) !== "unexplained") return;
+    if (!outsideNames.has(token.stem)) return;
     // Split the raw form so a named piece keeps the visitor's casing ("EKS").
     const pieces = token.raw.split(/[-/]/).filter(Boolean);
     if (pieces.length > 1) {

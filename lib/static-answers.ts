@@ -178,7 +178,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "outreach",
     ],
     answer:
-      "Email Mike at mikencube03@gmail.com or call him on 078 136 0508 (+27 78 136 0508, primary) or 071 846 0107 (secondary) [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+      "Email Mike at mikencube03@gmail.com or call or WhatsApp him on 078 136 0508 (+27 78 136 0508, primary) or 071 846 0107 (secondary) [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
     sourceIds: ["availability", "positioning"],
   },
   {
@@ -811,6 +811,11 @@ export function matchMultiProjectAnswer(question: string): StaticAnswer | null {
     items.push(hit.item);
   }
   if (items.length < 2) return null;
+  return stitchStaticAnswers(question, items);
+}
+
+// One answer from several, in order, with each one's citations renumbered.
+export function stitchStaticAnswers(question: string, items: StaticAnswer[]): StaticAnswer {
   const sourceIds: string[] = [];
   const parts: string[] = [];
   for (const item of items) {
