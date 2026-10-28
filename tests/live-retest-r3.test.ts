@@ -392,6 +392,16 @@ describe("second live run on the new preview", () => {
     assert.match(result.response, /quotation/, result.response);
   });
 
+  it("does not answer a specific question with the list of what Mike built", async () => {
+    const result = await answerQuestion({ question: "Which AI vendors has Mike built products on?" });
+    assert.doesNotMatch(result.response, /shipped Digi App Form/, result.response);
+  });
+
+  it("does not open a correction question with an unrelated ZDI sentence", async () => {
+    const result = await answerQuestion({ question: "What does ZDI do when a request is returned for correction?" });
+    assert.doesNotMatch(lead(result.response), /capability check/i, result.response);
+  });
+
   it("ties providers to the model APIs the overview lists", async () => {
     const result = await answerQuestion({ question: "What model providers does Mike work with?" });
     assert.equal(isRefusal(result.response), false, result.response);

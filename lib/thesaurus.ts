@@ -30,7 +30,7 @@ export const SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ["validate", "validation", "validated"],
   ["status", "tracking", "progress"],
   ["limit", "cap", "quota", "throttle"],
-  ["provider", "providers", "api", "apis"],
+  ["provider", "providers", "api", "apis", "vendor", "vendors"],
   ["quote", "quotes", "quotation", "quotations"],
   ["supplier", "suppliers", "vendor", "vendors"],
 ];
