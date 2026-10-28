@@ -65,10 +65,15 @@ export function askedAspect(question: string, analysis: QuestionAnalysis): { con
 // True when `sentence` speaks to what the question is about.
 export function addressesFocus(sentence: string, question: string, analysis: QuestionAnalysis): boolean {
   const dominant = dominantConcepts(analysis);
+  const entities = focusEntities(question, analysis);
   // A dominant aspect (failures, personal data) is the point of the question:
   // naming Gemini without saying what happens when it fails does not answer it.
-  if (dominant.length > 0) return dominant.some((c) => c.evidence.test(sentence));
-  const entities = focusEntities(question, analysis);
+  // With a named thing as well ("the label on the AWS lab repo"), the aspect said
+  // about something else does not answer it either.
+  if (dominant.length > 0) {
+    return dominant.some((c) => c.evidence.test(sentence))
+      && (entities.length === 0 || entities.some((term) => mentionsTerm(sentence, term)));
+  }
   if (entities.length > 0) return entities.some((term) => mentionsTerm(sentence, term));
   const projects = namedProjects(question);
   if (projects.length > 0) {
@@ -102,6 +107,42 @@ export function questionWordHits(sentence: string, question: string): number {
     if (forms.some((form) => sentenceStems.has(form))) hits += 1;
   }
   return hits;
+}
+
+// The topic words a question adds to the question a canned answer was written for
+// ("security" in "What security protects Mike's production systems?" against "What
+// production systems has Mike shipped?"), and how many the answer covers by stem
+// or listed synonym.
+// Words a profile concept explains ("customer data" for personal data) are already
+// served by that concept's answer, and common KB words name nothing in particular,
+// so only technologies and distinctive KB terms count as added.
+export function addedTopicCoverage(
+  question: string,
+  analysis: QuestionAnalysis,
+  cannedWording: string,
+  answer: string,
+): { added: number; covered: number } {
+  const known = stemsOf(`${cannedWording} ${namedProjects(question).map((p) => p.name).join(" ")}`);
+  const unclaimed = new Set(
+    [...analysis.kbTerms.filter(isDistinctiveKbTerm), ...analysis.knownTech, ...analysis.unknownTech]
+      .flatMap((term) => questionTokens(term).map((t) => t.stem)),
+  );
+  const answerStems = stemsOf(answer);
+  const answerLower = answer.toLowerCase();
+  const seen = new Set<string>();
+  let added = 0;
+  let covered = 0;
+  for (const token of questionTokens(withoutProjectNames(question))) {
+    if (!unclaimed.has(token.stem)) continue;
+    if (isGenericWord(token.norm) || /^\d/.test(token.norm) || token.norm.length < 3) continue;
+    if (seen.has(token.stem) || known.has(token.stem)) continue;
+    seen.add(token.stem);
+    added += 1;
+    const forms = [token.stem, ...synonymsOf(token.norm).map((s) => questionTokens(s)[0]?.stem ?? s)];
+    // Inside a compound name counts too: "graph" in "LangGraph".
+    if (forms.some((form) => answerStems.has(form) || (form.length >= 4 && answerLower.includes(form)))) covered += 1;
+  }
+  return { added, covered };
 }
 
 // Sentences that cannot open an answer because they lean on the one before.

@@ -61,3 +61,21 @@ export const TECH_LEXICON: readonly string[] = [
 ];
 
 export const TECH_LEXICON_SET: ReadonlySet<string> = new Set(TECH_LEXICON);
+
+// Vendor names that prefix a product name ("Apache Kafka", "Microsoft Azure").
+export const TECH_VENDORS: ReadonlySet<string> = new Set([
+  "apache", "amazon", "aws", "google", "microsoft", "azure", "ibm", "oracle", "hashicorp",
+  "confluent", "elastic", "meta",
+]);
+
+// Product names written out in full, mapped to the short name the lexicon and the
+// knowledge base use, so "Amazon Web Services" is recognised as AWS.
+const TECH_ALIASES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bamazon\s+web\s+services\b/gi, "AWS"],
+  [/\bgoogle\s+cloud\s+platform\b/gi, "GCP"],
+  [/\bmicrosoft\s+azure\b/gi, "Azure"],
+];
+
+export function normaliseTechAliases(text: string): string {
+  return TECH_ALIASES.reduce((out, [re, short]) => out.replace(re, short), text);
+}

@@ -9,17 +9,26 @@ import {
   STATIC_ANSWERS,
   type StaticAnswer,
 } from "./static-answers";
-import { matchProjectScopedAnswer, matchTechScopedAnswer, namedProjects, type NamedProject } from "./intent";
+import {
+  matchProjectScopedAnswer,
+  matchTechScopedAnswer,
+  namedProjects,
+  withoutProjectNames,
+  type NamedProject,
+} from "./intent";
 import {
   analyseQuestion,
   conceptById,
+  isCredentialAsk,
+  isDistinctiveKbTerm,
   conceptOverride,
   coverageRefusalReason,
   type QuestionAnalysis,
 } from "./concepts";
 import { canonicalQuestionForPhrase } from "./intent-exemplars";
-import { isContactRequest } from "./contact-intent";
+import { asksForANumber, asksForMikesNumber, isContactRequest } from "./contact-intent";
 import {
+  addedTopicCoverage,
   addressesFocus,
   askedAspect,
   dominantConcepts,
@@ -30,6 +39,8 @@ import {
   questionWordHits,
 } from "./focus";
 import { stripUnaskedYesNo } from "./question-form";
+import { normaliseTechAliases } from "./tech-lexicon";
+import { synonymGroupKey } from "./thesaurus";
 import { isStartJoinAvailabilityQuestion, isUnknowableQuestion } from "./unknowable";
 import {
   contentTerms,
@@ -103,7 +114,7 @@ export function isOffTopicQuestion(question: string): boolean {
 }
 
 const CONTACT_QUESTION_RE =
-  /\b(available|availability|hiring|hire|contact(?:ing|s)?|email|reach|get in touch|contract|full[ -]?time)\b/i;
+  /\b(available|availability|hiring|hire|contact(?:ing|s)?|email|reach|get in touch|contract|full[ -]?time|phone|telephone)\b/i;
 
 export function isContactQuestion(question: string): boolean {
   if (/\bwhy\b.{0,40}\bhire\b/i.test(question)) return false;
@@ -125,8 +136,12 @@ export function isHonestUnknownQuestion(question: string): boolean {
   return isUnknowableQuestion(question) || isStartJoinAvailabilityQuestion(question);
 }
 
-export function ensureContactEmail(text: string): string {
-  if (text.toLowerCase().includes(CONTACT_EMAIL)) return text;
+export const CONTACT_PHONE_PRIMARY = "078 136 0508";
+export const CONTACT_PHONE_SECONDARY = "071 846 0107";
+const CONTACT_PHONES =
+  `${CONTACT_PHONE_PRIMARY} (+27 78 136 0508, primary) or ${CONTACT_PHONE_SECONDARY} (secondary)`;
+
+function withClosingSentence(text: string, sentence: string): string {
   const trimmed = text.trim();
   if (!trimmed) return trimmed;
   const body = /\[\d+\]$/.test(trimmed)
@@ -134,7 +149,19 @@ export function ensureContactEmail(text: string): string {
     : /[.!?]$/.test(trimmed)
       ? trimmed
       : `${trimmed}.`;
-  return normaliseModelText(`${body} Email ${CONTACT_EMAIL}.`);
+  return normaliseModelText(`${body} ${sentence}`);
+}
+
+export function ensureContactEmail(text: string): string {
+  if (text.toLowerCase().includes(CONTACT_EMAIL)) return text;
+  return withClosingSentence(text, `Email ${CONTACT_EMAIL}.`);
+}
+
+// A request for a way to reach Mike gets every channel: the email and both numbers.
+export function ensureContactDetails(text: string): string {
+  const withEmail = ensureContactEmail(text);
+  if (withEmail.includes(CONTACT_PHONE_PRIMARY) && withEmail.includes(CONTACT_PHONE_SECONDARY)) return withEmail;
+  return withClosingSentence(withEmail, `Phone ${CONTACT_PHONES}.`);
 }
 
 export type AnswerVia = "gemini" | "groq" | "static" | "email";
@@ -535,6 +562,14 @@ function rewriteFallbackSentence(raw: string, title: string): string {
     if (namedTech || /\b(is|are|was|were|share|shares|uses)\b/i.test(body)) {
       return `${project}: ${body}.`;
     }
+  }
+  // "A role-based platform for ...": a description with no verb describes the project.
+  if (project && /^(?:A|An)\s/.test(body) && !/\b(?:is|are|was|were|has|have|had|uses?|used|runs?|takes?|does|can|will|would)\b/i.test(body)) {
+    // "Claims operations platform" is a common noun phrase and takes "The"; "Proactive Sentinel" is a name.
+    const subject = /^[A-Z][a-z]+(?:\s+[a-z][\w-]*)+$/.test(project)
+      ? `The ${project.charAt(0).toLowerCase()}${project.slice(1)}`
+      : project;
+    return `${subject} is ${body.charAt(0).toLowerCase()}${body.slice(1)}.`;
   }
   return sentence;
 }
@@ -1177,7 +1212,8 @@ function withContactEmail(question: string, result: AnswerResult): AnswerResult 
   // "How do users reach their case on the claims platform?" is about the system, not Mike.
   if (namedProjects(question).length > 0 && !/\b(?:mike|him|his)\b/i.test(question)) return result;
   if (isRefusal(result.response)) return polishResult(question, contactStaticReply(), []);
-  return { ...result, response: ensureContactEmail(result.response) };
+  const ensure = isContactRequest(question) ? ensureContactDetails : ensureContactEmail;
+  return { ...result, response: ensure(result.response) };
 }
 
 function contactStaticReply(): AnswerResult {
@@ -1187,7 +1223,7 @@ function contactStaticReply(): AnswerResult {
   }
   return {
     response:
-      "Email Mike at mikencube03@gmail.com [1]. He works remote-first from South Africa and is available for full-time or contract [1].",
+      `Email Mike at ${CONTACT_EMAIL} or call him on ${CONTACT_PHONES} [1]. He works remote-first from South Africa and is available for full-time or contract [1].`,
     sources: sourcesFor({
       question: "How can I contact Mike?",
       aliases: [],
@@ -1565,6 +1601,10 @@ function knownTechResult(tech: string): AnswerResult | null {
 function anchoredFallback(question: string, analysis: QuestionAnalysis): AnswerResult | null {
   const projects = namedProjects(question);
   if (projects.length === 1) return conceptCanonicalResult(projects[0].staticQuestion);
+  // "Does Mike's RAG hallucinate?" asks about the aspect: "Yes, RAG is in his stack"
+  // would read as yes to the aspect.
+  const dominant = dominantConcepts(analysis)[0];
+  if (dominant) return conceptCanonicalResult(dominant.canonical);
   if (projects.length === 0 && analysis.knownTech.length > 0) return knownTechResult(analysis.knownTech[0]);
   return null;
 }
@@ -1595,8 +1635,10 @@ function reconcileWithConcepts(
   };
 }
 
-export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> {
-  const question = input.question.trim();
+export async function answerQuestion(rawInput: AnswerInput): Promise<AnswerResult> {
+  // "Amazon Web Services" is AWS to every later step: routing, retrieval and the gate.
+  const question = normaliseTechAliases(rawInput.question.trim());
+  const input = { ...rawInput, question };
   if (isJailbreakPrompt(question) || isInjectionDefenceQuestion(question)) {
     return answerRetrieveFirst(input);
   }
@@ -1606,6 +1648,16 @@ export async function answerQuestion(input: AnswerInput): Promise<AnswerResult> 
   // so a word in it the knowledge base never uses ("forward") cannot refuse it, and
   // before retrieval so no model or retrieval order can replace it.
   if (asksForContact(question, analysis)) return polishResult(question, contactStaticReply(), []);
+  // A number asked for beside someone or something else ("his number for the CRM
+  // team") may not be Mike's; nobody else's number is given.
+  if (asksForANumber(question) && !asksForMikesNumber(question)) return refusalResult();
+  // A credential the portfolio does not name ("a Google Cloud ML certificate") is
+  // answered by the fact that Mike has no named certifications, not by refusing
+  // the technologies in the certificate's name.
+  if (asksForUnlistedCredential(analysis, question)) {
+    const reply = credentialReply();
+    if (reply) return finishAnswer(question, analysis, reply);
+  }
   // Coverage gate runs before retrieval so off-portfolio questions never reach a model.
   const reason = coverageRefusalReason(analysis);
   if (reason?.startsWith("unknown-tech:")) return refusalResult(unknownTechRefusal(analysis.unknownTech));
@@ -1647,7 +1699,18 @@ function finishAnswer(question: string, analysis: QuestionAnalysis, result: Answ
   if (isRefusal(result.response)) return result;
   const focused = focusGuard(question, analysis, withCertificationLead(question, analysis, result));
   if (isRefusal(focused.response)) return focused;
-  return { ...focused, response: stripUnaskedYesNo(question, focused.response) };
+  const answered = stripUnaskedYesNo(question, focused.response);
+  return { ...focused, response: withNoFigureLead(question, analysis, answered) };
+}
+
+// A measure asked for ("hallucination rate", "accuracy score").
+const METRIC_ASK_RE = /\b(?:rates?|scores?|percent(?:age)?s?|figures?|metrics?|benchmarks?|how\s+(?:accurate|often))\b|%/i;
+
+// The sources describe how answers are kept grounded but give no measure of it, so
+// a question asking for one is told that before the safeguards are listed.
+function withNoFigureLead(question: string, analysis: QuestionAnalysis, response: string): string {
+  if (!analysis.concepts.includes("grounding") || !METRIC_ASK_RE.test(question)) return response;
+  return `The sources give no accuracy score or hallucination rate. ${response}`;
 }
 
 function withSequencedCitations(result: AnswerResult, text: string, sources = result.sources): AnswerResult {
@@ -1657,8 +1720,22 @@ function withSequencedCitations(result: AnswerResult, text: string, sources = re
 
 const NO_CERTIFICATION_RE = /\bno (?:named )?certifications?\b|\bcertification is listed\b/i;
 
+function asksForUnlistedCredential(analysis: QuestionAnalysis, question: string): boolean {
+  return !analysis.refuseTopic
+    && analysis.projects.length === 0
+    && isCredentialAsk(question)
+    && analysis.concepts.includes("certifications")
+    && (analysis.unknownTech.length > 0 || analysis.unexplained.length > 0);
+}
+
+function credentialReply(): AnswerResult | null {
+  const canonical = conceptCanonicalResult("What certifications does Mike hold?");
+  if (!canonical) return null;
+  return { ...canonical, response: `No such certification is listed. ${canonical.response}` };
+}
+
 function withCertificationLead(question: string, analysis: QuestionAnalysis, result: AnswerResult): AnswerResult {
-  if (!/\bcertif/i.test(question) || analysis.knownTech.length === 0) return result;
+  if (!isCredentialAsk(question) || analysis.knownTech.length === 0) return result;
   if (NO_CERTIFICATION_RE.test(leadSentence(result.response))) return result;
   const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "certifications");
   if (!chunk) return result;
@@ -1682,6 +1759,10 @@ function hasCanonicalRoute(question: string): boolean {
     || isTechLeadCrmQuestion(question)
     || isExperienceQuestion(question)
     || isInjectionDefenceQuestion(question);
+}
+
+function missesDominantTopic(question: string, analysis: QuestionAnalysis, response: string): boolean {
+  return dominantConcepts(analysis).length > 0 && !addressesFocus(leadSentence(response), question, analysis);
 }
 
 function leadKey(text: string): string {
@@ -1708,7 +1789,10 @@ function isConceptAnswer(result: AnswerResult, analysis: QuestionAnalysis): bool
 // answer, the named project's own sentence (or a plain "not mentioned"), the
 // concept answer it already was, then a refusal. A wrong topic is worse than a refusal.
 function focusGuard(question: string, analysis: QuestionAnalysis, result: AnswerResult): AnswerResult {
-  if (result.via !== "static" || isRefusal(result.response) || hasCanonicalRoute(question)) return result;
+  if (result.via !== "static" || isRefusal(result.response)) return result;
+  // Canonical copy answers its own question, unless the question's main topic is a
+  // dominant aspect (failures, personal data) that the copy does not open with.
+  if (hasCanonicalRoute(question) && !missesDominantTopic(question, analysis, result.response)) return result;
   const scoped = matchProjectScopedAnswer(question) ?? matchTechScopedAnswer(question);
   if (scoped && !scoped.id.endsWith("-overview")) return result;
   const projects = namedProjects(question);
@@ -1720,23 +1804,64 @@ function focusGuard(question: string, analysis: QuestionAnalysis, result: Answer
       : projectSentenceByWords(projects[0], question, result.response);
     if (own) return polishResult(question, own, []);
   }
+  // `original` is the answer as written; `shown` may be the same facts reordered.
+  const fits = (original: string, shown: string) =>
+    addressesFocus(leadSentence(shown), question, analysis) && !leavesTopicUncovered(question, analysis, original, shown);
   // An authored answer whose opening already fits keeps its order; a list of
   // independent facts leads with the asked one.
-  if (addressesFocus(leadSentence(result.response), question, analysis) && !isFactListAnswer(result.response)) {
-    return result;
-  }
+  if (fits(result.response, result.response) && !isFactListAnswer(result.response)) return result;
   const led = leadWithFocus(result.response, question, analysis);
-  if (addressesFocus(leadSentence(led), question, analysis)) return withSequencedCitations(result, led);
+  if (fits(result.response, led)) return withSequencedCitations(result, led);
   if (projects.length === 1) return withSequencedCitations(result, led);
   for (const concept of [...dominantConcepts(analysis), conceptById(analysis.concepts[0] ?? "")]) {
     const canonical = concept ? conceptCanonicalResult(concept.canonical) : null;
     if (!canonical) continue;
     const text = leadWithFocus(canonical.response, question, analysis);
-    if (addressesFocus(leadSentence(text), question, analysis)) return withSequencedCitations(canonical, text);
+    if (fits(canonical.response, text)) return withSequencedCitations(canonical, text);
   }
-  if (isConceptAnswer(result, analysis)) return withSequencedCitations(result, led);
+  if (isConceptAnswer(result, analysis) && !leavesTopicUncovered(question, analysis, result.response, led)) {
+    return withSequencedCitations(result, led);
+  }
+  const named = askedTermSentence(question, analysis);
+  if (named) return polishResult(question, named, []);
   console.warn(`[focus] static answer dropped; lead does not name: ${focusEntities(question, analysis).join(", ")}`);
   return analysis.unknownTech.length > 0 ? refusalResult(unknownTechRefusal(analysis.unknownTech)) : refusalResult();
+}
+
+// Overview answers: lists of what Mike shipped, built, uses or knows. Retrieval
+// reaches them from almost any question about his work.
+const BROAD_ANSWER_QUESTIONS = new Set([
+  "What production systems has Mike shipped?",
+  "What has Mike built at Zororo-Phumulani?",
+  "What AI tools does Mike use?",
+  "What are Mike's main skills?",
+  "Tell me about Mike's experience",
+  "Who is Mike Ncube?",
+]);
+
+// True when an overview answer covers fewer than half of the specific terms this
+// question adds to the question it was written for: "What security protects
+// Mike's production systems?" is not answered by the list of what he shipped.
+function leavesTopicUncovered(question: string, analysis: QuestionAnalysis, original: string, shown: string): boolean {
+  const key = leadKey(original);
+  const served = STATIC_ANSWERS.find((s) => leadKey(s.answer) === key);
+  if (!served || !BROAD_ANSWER_QUESTIONS.has(served.question)) return false;
+  const { added, covered } = addedTopicCoverage(question, analysis, [served.question, ...served.aliases].join(" "), shown);
+  return added > 0 && covered * 2 < added;
+}
+
+// The knowledge-base sentence that names every distinctive term the question asks
+// about ("multi-agent"), when a canned answer did not. Null when no sentence does.
+function askedTermSentence(question: string, analysis: QuestionAnalysis): AnswerResult | null {
+  const outsideNames = withoutProjectNames(question);
+  // Names of things only ("multi-agent", "LangGraph"): a plain lowercase word
+  // ("returns", "monitored") is as often an action as a thing.
+  const terms = [...new Set(analysis.kbTerms.filter((t) =>
+    isDistinctiveKbTerm(t) && outsideNames.includes(t) && /-|[A-Z]/.test(t)))];
+  if (terms.length === 0) return null;
+  const best = bestChunkSentence(KNOWLEDGE_CHUNKS, (sentence) =>
+    terms.every((t) => mentionsTerm(sentence, t)) ? 1 + questionWordHits(sentence, question) : 0);
+  return best?.result ?? null;
 }
 
 const ASPECT_LABEL: Record<string, string> = {
@@ -1757,9 +1882,13 @@ function projectFocusAnswer(project: NamedProject, question: string, analysis: Q
   const aspectTerms = aspect ? aspect.concept.terms.filter((t) => !t.includes("...")) : [];
   const best = bestProjectSentence(project, (sentence) => {
     const entityHit = entities.some((t) => mentionsTerm(sentence, t));
-    const aspectHit = Boolean(aspect && (aspect.concept.evidence.test(sentence) || aspectTerms.some((t) => mentionsTerm(sentence, t))));
+    // A sentence about the aspect itself ("POPIA: PII masking, audit log") names
+    // more of its ideas than one that lists it in passing ("Stack: ... PII encryption").
+    // The visitor's own words ("encrypted") count double: they say which part was asked.
+    const aspectIdeas = new Set(aspectTerms.filter((t) => mentionsTerm(sentence, t)).map(synonymGroupKey)).size;
+    const aspectHit = Boolean(aspect && (aspect.concept.evidence.test(sentence) || aspectIdeas > 0));
     if (!entityHit && !aspectHit) return 0;
-    return (entityHit ? 3 : 0) + (aspectHit ? 2 : 0) + questionWordHits(sentence, question);
+    return (entityHit ? 3 : 0) + (aspectHit ? 2 + aspectIdeas : 0) + 2 * questionWordHits(sentence, question);
   });
   if (best) return best.result;
   const first = KNOWLEDGE_CHUNKS.find((c) => project.sourceIds.includes(c.id));
@@ -1780,8 +1909,15 @@ function bestProjectSentence(
   project: NamedProject,
   score: (sentence: string) => number,
 ): { result: AnswerResult; score: number } | null {
+  return bestChunkSentence(KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id)), score);
+}
+
+function bestChunkSentence(
+  chunks: typeof KNOWLEDGE_CHUNKS,
+  score: (sentence: string) => number,
+): { result: AnswerResult; score: number } | null {
   let best: { result: AnswerResult; score: number } | null = null;
-  for (const chunk of KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id))) {
+  for (const chunk of chunks) {
     for (const raw of splitIntoSentences(chunk.text)) {
       const sentence = raw.trim();
       if (sentenceLeaksSourceOrPath(sentence)) continue;

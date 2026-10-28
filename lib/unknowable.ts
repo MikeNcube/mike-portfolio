@@ -1,6 +1,8 @@
 // One lemma table for topics this assistant must not invent.
 // Replaces OFF_TOPIC_QUESTION_RE, HONEST_UNKNOWN_RE, start-join, and off-topic overrides.
 
+import { moneyIsMikes } from "./compensation";
+
 const FAVOURITE_WORK_RE =
   /\b(?:favourites?|favorites?|preferred|favour|favor)\b[\s\w]{0,24}\b(?:language|languages|framework|frameworks|tool|tools|stack|project|projects|role|roles|build|builds)\b/i;
 
@@ -8,7 +10,8 @@ const UNKNOWABLE_PHRASES: RegExp[] = [
   /\b(?:current\s+)?salary\b/i,
   /\bsalaries\b/i,
   /\bcompensation\b/i,
-  /\bpay(?:\s*package|check|cheque)?\b/i,
+  /\bremunerat\w*/i,
+  /\bpay\s*(?:package|check|cheque|slip)\b/i,
   /\bpackage is mike on\b/i,
   /\bwhat(?:'s| is) mike'?s package\b/i,
   /\bwages?\b/i,
@@ -96,6 +99,8 @@ export function isStartJoinAvailabilityQuestion(question: string): boolean {
 export function isUnknowableQuestion(question: string): boolean {
   const hay = question.toLowerCase();
   if (UNKNOWABLE_PHRASES.some((re) => re.test(question))) return true;
+  // Bare "pay" is Mike's pay unless a named system is the one paying.
+  if (/\bpay\b/i.test(question) && moneyIsMikes(question)) return true;
   if (
     /\b(?:favourites?|favorites?|preferred)\b/.test(hay)
     && !FAVOURITE_WORK_RE.test(hay)

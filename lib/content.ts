@@ -489,6 +489,8 @@ export const profile = {
   location: "Johannesburg, South Africa",
   locationShort: "South Africa",
   email: "mikencube03@gmail.com",
+  phonePrimary: { display: "078 136 0508", international: "+27 78 136 0508", tel: "+27781360508" },
+  phoneSecondary: { display: "071 846 0107", tel: "+27718460107" },
   github: "https://github.com/MikeNcube",
   linkedin: "https://www.linkedin.com/in/mike-ncube-669563a7/",
   avatar: "/Mike_Org.jpeg",

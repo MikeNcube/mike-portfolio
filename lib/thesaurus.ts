@@ -13,15 +13,17 @@ export const SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ["llm", "language model", "large language model", "model"],
   ["reply", "answer", "response"],
   ["write", "generate", "produce", "compose"],
-  ["outage", "down", "downtime", "unavailable", "offline", "fail", "failure", "error", "rate-limited", "rate-limit", "rate-limits", "rate-limiting"],
+  ["outage", "down", "downtime", "unavailable", "offline", "fail", "failure", "error", "rate-limited", "rate-limit", "rate-limits", "rate-limiting", "fallible"],
+  ["fallback", "fallbacks", "fall back", "falls back", "falling back", "fell back"],
   ["pii", "personal data", "personal information", "personally identifiable information", "sensitive data"],
-  ["privacy", "data protection"],
+  ["privacy", "data protection", "popia"],
   ["label", "labelled", "labeled", "tag", "tagged", "badge", "marker"],
   ["mask", "masking", "redact", "redaction"],
   ["encrypt", "encrypted", "encryption"],
   ["shape", "inform", "influence"],
   ["ci", "continuous integration"],
   ["email", "e-mail", "mail"],
+  ["phone", "call", "telephone", "ring", "cellphone"],
   ["contact", "reach", "get in touch", "get hold of"],
   ["insurance", "assurance", "insurer", "insured"],
   ["approve", "approval", "approver", "sign-off"],
@@ -64,6 +66,11 @@ export function synonymsOf(word: string): string[] {
     }
   }
   return [...out];
+}
+
+// One key per idea: a word and its listed synonyms share it ("encrypt", "encryption").
+export function synonymGroupKey(word: string): string {
+  return [word, ...synonymsOf(word)].map(keyOf).sort()[0];
 }
 
 // Every word and phrase in the thesaurus, for vocabulary checks.

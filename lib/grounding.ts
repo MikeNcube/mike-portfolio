@@ -4,6 +4,7 @@
 // terms fail the candidate.
 
 import { tokenize } from "./bm25";
+import { CATEGORY_PHRASES, categoryMembers } from "./claim-categories";
 import { GENERIC_WORD_LIST } from "./generic-words";
 import { namedProjects } from "./intent";
 import { KNOWLEDGE_CHUNKS } from "./knowledge";
@@ -555,7 +556,35 @@ const CLAIM_FRAME_WORDS = new Set([
   "stated", "according", "source", "sources", "context", "email", "contact", "reach",
   // Generic verbs of making and enabling, like build/built above.
   "design", "designs", "designed", "designing", "let", "lets", "letting", "underlying",
+  // Generic verbs of doing and handling. The claim is in their objects ("handles
+  // retries"), which still need support.
+  "treat", "treats", "treated", "treating", "handle", "handles", "handled", "handling",
+  "make", "makes", "made", "making", "give", "gives", "gave", "given", "giving", "get",
+  "gets", "got", "gotten", "getting", "take", "takes", "took", "taken", "taking", "run",
+  "runs", "ran", "running", "rely", "relies", "relied", "relying", "apply", "applies",
+  "applied", "applying", "follow", "follows", "followed", "following", "keep", "keeps",
+  "kept", "keeping", "put", "puts", "provide", "provides", "provided", "providing",
+  "help", "helps", "helped", "helping", "add", "adds", "added", "adding", "serve",
+  "serves", "served", "serving", "support", "supports", "supported", "supporting",
+  "come", "comes", "came", "coming",
+  // Prepositions of route and scope; the places and tools they introduce are the claims.
+  "through", "across", "throughout", "about", "among", "around", "upon", "toward",
+  "towards",
+  // Competence words frame a listed skill ("experienced in Python"); the skill is the claim.
+  "experience", "experienced", "familiar", "proficient", "skilled", "know", "knows",
+  // Connectives.
+  "because", "since", "therefore", "thus", "hence", "whenever", "once", "every",
 ]);
+
+// Irregular verb forms whose stem differs from the base form a block uses
+// ("taken" for "takes"). Money verbs are left out: "paid" must be stated, not inferred.
+const IRREGULAR_BASE: Record<string, string> = {
+  took: "take", taken: "take", ran: "run", wrote: "write", written: "write",
+  chose: "choose", chosen: "choose", sent: "send", held: "hold", fell: "fall",
+  began: "begin", begun: "begin", caught: "catch", found: "find", led: "lead", met: "meet",
+  shown: "show", grown: "grow", drawn: "draw", done: "do", gone: "go", seen: "see",
+  rode: "ride", told: "tell", thought: "think",
+};
 
 // General request words a visitor's wh-question may lend an answer ("send", "offer").
 const REQUEST_WORDS: Set<string> = new Set(
@@ -584,7 +613,9 @@ function indexChunk(chunk: CitedChunk): ChunkIndex {
   const stems = new Set<string>();
   for (const raw of lower.match(/[a-z0-9][a-z0-9.+#&_/-]*/g) ?? []) {
     const word = raw.replace(/[.\-/]+$/, "");
-    for (const piece of [word, squash(word), ...word.split(/[-/]/)]) {
+    // Link pieces count too: "github.com/MikeNcube" names GitHub.
+    const linkPieces = word.includes("/") ? word.split(/[-/.]/) : [];
+    for (const piece of [word, squash(word), ...word.split(/[-/]/), ...linkPieces]) {
       if (!piece) continue;
       words.add(piece);
       stems.add(stem(piece));
@@ -609,19 +640,31 @@ function chunkSupports(chunk: ChunkIndex, word: string): boolean {
       || chunk.squashed.includes(squash(word));
   }
   if (/[.@+#&_]/.test(word)) return chunk.lower.includes(word);
-  return chunk.words.has(word) || chunk.stems.has(stem(word));
+  const base = IRREGULAR_BASE[word];
+  return chunk.words.has(word) || chunk.stems.has(stem(word))
+    || Boolean(base && (chunk.words.has(base) || chunk.stems.has(stem(base))));
 }
+
+// A category noun ("database", "frontend") is supported by a block naming a member.
+function categorySupported(word: string, pool: ChunkIndex[]): boolean {
+  const members = categoryMembers(word);
+  return members.length > 0 && members.some((member) => pool.some((c) => chunkSupports(c, member)));
+}
+
+const CLAIM_PHRASES: readonly string[] = [...new Set([...THESAURUS_PHRASES, ...CATEGORY_PHRASES])]
+  .sort((a, b) => b.length - a.length);
 
 // A word, or one of its listed synonyms, appears in the chunk.
 function chunkSupportsOrSynonym(chunk: ChunkIndex, word: string): boolean {
   return chunkSupports(chunk, word) || synonymsOf(word).some((syn) => chunkSupports(chunk, syn));
 }
 
-// Thesaurus phrases ("continuous integration") are one claim each; the rest are words.
+// Thesaurus and category phrases ("continuous integration", "vector store") are
+// one claim each; the rest are words.
 function claimUnits(sentence: string): string[] {
   let rest = sentence.replace(/\[\d+\]/g, " ");
   const units: string[] = [];
-  for (const phrase of THESAURUS_PHRASES) {
+  for (const phrase of CLAIM_PHRASES) {
     const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
     if (re.test(rest)) {
       units.push(phrase);
@@ -705,10 +748,13 @@ export function findUnsupportedClaims(
     const pool = projects.length === 0
       ? answerCited
       : answerCited.filter((c) => c.projects.length === 0 || projects.some((p) => belongsTo(c, p)));
+    // A category noun is looser than a word, so only the sentence's own blocks may vouch for it.
+    const ownCited = cited.filter((c) => pool.includes(c));
     const missing = new Set<string>();
     if (cited.length === 0) missing.add(`[${cites.join("][")}]`);
     for (const word of claimUnits(sentence)) {
       const supported = pool.some((c) => chunkSupportsOrSynonym(c, word))
+        || categorySupported(word, ownCited)
         || (projects.length === 0 && questionAllows(word, keys, pool));
       if (!supported) {
         missing.add(word);
