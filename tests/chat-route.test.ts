@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { NextRequest } from "next/server";
 import { POST } from "../app/api/chat/route";
+import { answerWithStaticFallback, EMAIL_FALLBACK } from "../lib/answer";
 import { ANSWER_CACHE_VERSION } from "../lib/status-copy";
 import { resetQuotaForTests } from "../lib/quota";
 import { resetProviderCircuits } from "../lib/providers";
@@ -66,5 +67,44 @@ describe("chat route never returns 5xx when providers fail", () => {
     assert.equal(body.sources.length, 0);
     assert.match(body.response, /mikencube03@gmail.com/);
     assert.equal(res.headers.get("x-answered-by"), "email");
+  });
+});
+
+describe("quota exhaustion degrades to a grounded answer", () => {
+  it("answers from the knowledge base with sources when every provider returns 429", async () => {
+    globalThis.fetch = (async () =>
+      ({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "retry-after": "60" }),
+        json: async () => ({ error: { code: 429, message: "quota exceeded" } }),
+        text: async () => '{"error":{"code":429,"message":"quota exceeded"}}',
+      }) as Response) as typeof fetch;
+    const res = await POST(chatRequest("What database does the CRM use?"));
+    assert.equal(res.status, 200);
+    const body = await res.json() as { response: string; via: string; sources: unknown[] };
+    assert.equal(body.via, "static");
+    assert.ok(body.sources.length > 0, body.response);
+    assert.match(body.response, /PostgreSQL/);
+  });
+
+  it("retries the keyless path when the full path throws", async () => {
+    let calls = 0;
+    const result = await answerWithStaticFallback({ question: "Who is Mike Ncube?" }, async (input) => {
+      calls += 1;
+      if (calls === 1) throw new Error("unexpected");
+      assert.equal(input.generateGemini, undefined);
+      return { response: "grounded [1].", sources: [{ title: "t", url: "u" }], via: "static" };
+    });
+    assert.equal(calls, 2);
+    assert.equal(result.via, "static");
+  });
+
+  it("gives the email reply only when the keyless path also throws", async () => {
+    const result = await answerWithStaticFallback({ question: "Who is Mike Ncube?" }, async () => {
+      throw new Error("unexpected");
+    });
+    assert.equal(result.response, EMAIL_FALLBACK);
+    assert.equal(result.via, "email");
   });
 });

@@ -1635,6 +1635,26 @@ function reconcileWithConcepts(
   };
 }
 
+// The route's entry point. An unexpected failure on the full path retries the
+// keyless path (static answers over BM25 retrieval), so a visitor gets a grounded
+// answer rather than an error; only a failure there too gives the email reply.
+export async function answerWithStaticFallback(
+  input: AnswerInput,
+  run: (input: AnswerInput) => Promise<AnswerResult> = answerQuestion,
+): Promise<AnswerResult> {
+  try {
+    return await run(input);
+  } catch (err) {
+    console.error("answerQuestion failed; retrying without providers:", err);
+  }
+  try {
+    return await run({ question: input.question, audience: input.audience });
+  } catch (err) {
+    console.error("keyless answer failed:", err);
+    return { response: EMAIL_FALLBACK, sources: [], via: "email" };
+  }
+}
+
 export async function answerQuestion(rawInput: AnswerInput): Promise<AnswerResult> {
   // "Amazon Web Services" is AWS to every later step: routing, retrieval and the gate.
   const question = normaliseTechAliases(rawInput.question.trim());
