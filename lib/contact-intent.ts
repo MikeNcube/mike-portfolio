@@ -81,12 +81,13 @@ const PATTERNS: RegExp[] = [
 
 // A number to reach someone on. The device alone ("his phone") is personal, not a contact detail.
 const PHONE = String.raw`(?:phone|cell(?:\s*phone)?|mobile|telephone|contact)`;
-// "number" as the end of its noun phrase: "his number?", "his number so I can call".
-// "his number one skill" and "the number of projects" use the word otherwise.
-const NUMBER = String.raw`(?:numbers?|no\.?)(?=\s*(?:$|[?.!,;:])|\s+(?:please|so|to|for|and|or|if|is|are|was|again|that)\b)`;
+// "number" as the end of its noun phrase: "his number?", "his number so I can call",
+// "a number I can text". "his number one skill" and "the number of projects" use
+// the word otherwise.
+const NUMBER = String.raw`(?:numbers?|no\.?)(?=\s*(?:$|[?.!,;:])|\s+(?:please|so|to|for|and|or|if|is|are|was|again|that|i|we|you|on|at|where|which)\b)`;
 // Mike himself, not something of his ("Mike's employer").
 const MIKE_HIMSELF = String.raw`(?:mike|him)\b(?!['’]s)`;
-const CALL_ACT = String.raw`(?:call|phone|ring|reach|contact)`;
+const CALL_ACT = String.raw`(?:call|phone|ring|reach|contact|message|text|sms|whats-?app)`;
 const NOT_A_COUNT = String.raw`(?!\s+(?:of|one|1)\b)`;
 
 // A phone number that belongs to Mike. Anyone else's number (his employer's, a

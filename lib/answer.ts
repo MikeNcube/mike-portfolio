@@ -1966,12 +1966,13 @@ function bestChunkSentence(
 }
 
 // A detail the overview leaves out ("what hash binds a signature"): the project's
-// own sentence, when it matches at least two of the question's topic words and
-// more of them than the whole current answer does.
+// own sentence, when it matches more of the question's topic words than the whole
+// current answer does: at least two, or one when the answer matches none.
 function projectSentenceByWords(project: NamedProject, question: string, current: string): AnswerResult | null {
   const currentHits = questionWordHits(current, question);
   const best = bestProjectSentence(project, (sentence) => questionWordHits(sentence, question));
-  if (!best || best.score < 2 || best.score <= currentHits) return null;
+  if (!best || best.score <= currentHits) return null;
+  if (best.score < 2 && currentHits > 0) return null;
   return best.result;
 }
 

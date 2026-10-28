@@ -30,6 +30,9 @@ export const SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ["validate", "validation", "validated"],
   ["status", "tracking", "progress"],
   ["limit", "cap", "quota", "throttle"],
+  ["provider", "providers", "api", "apis"],
+  ["quote", "quotes", "quotation", "quotations"],
+  ["supplier", "suppliers", "vendor", "vendors"],
 ];
 
 // Lowercase, hyphen and space insensitive, so "front-end", "front end" and "frontend" compare equal.
