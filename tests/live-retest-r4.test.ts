@@ -66,6 +66,12 @@ describe("AI companies and vendors answer with the providers in the KB", () => {
     assert.match(result.response, /Anthropic Claude/, result.response);
   });
 
+  it("does not let 'projects' as framing turn a vendor question into the built list", async () => {
+    const result = await ask("Which AI providers turn up across Mike's projects?");
+    assert.match(result.response, /Anthropic Claude/, result.response);
+    assert.doesNotMatch(result.response, /shipped Digi App Form/, result.response);
+  });
+
   it("reads 'build' as a noun when nothing makes it a verb", () => {
     assert.ok(!analyseQuestion("What's the proof-point build on Mike's CV?").concepts.includes("skills"));
   });
@@ -174,5 +180,21 @@ describe("over-refusals the knowledge base covers", () => {
     const result = await ask("What is his number one skill?");
     assert.match(result.response, /stack/, result.response);
     assert.doesNotMatch(result.response, PRIMARY, result.response);
+  });
+});
+
+describe("a place word does not anchor a personal question onto a profile answer", () => {
+  it("refuses what Mike owns and where he has been", async () => {
+    for (const question of ["Is Mike a homeowner in Gauteng?", "What cities has Mike visited?", "Has he taken any trips overseas?"]) {
+      const result = await ask(question);
+      assertRefused(question, result.response, result.sources);
+    }
+  });
+
+  it("still answers a link visit and where he can work from", async () => {
+    const github = await ask("Can I visit Mike's GitHub?");
+    assert.match(github.response, /github\.com\/MikeNcube/, github.response);
+    const where = await ask("Which countries can Mike work from?");
+    assert.match(where.response, /remote-first/, where.response);
   });
 });
