@@ -23,8 +23,10 @@ import {
   conceptById,
   isCredentialAsk,
   isDistinctiveKbTerm,
+  isGenericWord,
   conceptOverride,
   coverageRefusalReason,
+  questionTokens,
   type QuestionAnalysis,
 } from "./concepts";
 import { canonicalQuestionForPhrase } from "./intent-exemplars";
@@ -567,7 +569,10 @@ function rewriteFallbackSentence(raw: string, title: string): string {
     }
   }
   // "A role-based platform for ...": a description with no verb describes the project.
-  if (project && /^(?:A|An)\s/.test(body) && !/\b(?:is|are|was|were|has|have|had|uses?|used|runs?|takes?|does|can|will|would)\b/i.test(body)) {
+  // "A return for correction creates a new revision" has one: a verb before a determiner.
+  if (project && /^(?:A|An)\s/.test(body)
+    && !/\b(?:is|are|was|were|has|have|had|uses?|used|runs?|takes?|does|can|will|would)\b/i.test(body)
+    && !/\b[a-z]+s\s+(?:a|an|the|its|their|every|each|no)\b/.test(body)) {
     // "Claims operations platform" is a common noun phrase and takes "The"; "Proactive Sentinel" is a name.
     const subject = /^[A-Z][a-z]+(?:\s+[a-z][\w-]*)+$/.test(project)
       ? `The ${project.charAt(0).toLowerCase()}${project.slice(1)}`
@@ -2032,11 +2037,31 @@ function bestChunkSentence(
 // own sentence, when it matches at least two of the question's topic words and
 // more of them than the whole current answer does. One shared word is too weak:
 // several sentences tie on it and the first is not necessarily the asked one.
+// A word the current answer lacks that only one of the project's sentences uses
+// ("correction", "quotation") counts twice: that sentence is the asked detail.
 function projectSentenceByWords(project: NamedProject, question: string, current: string): AnswerResult | null {
   const currentHits = questionWordHits(current, question);
-  const best = bestProjectSentence(project, (sentence) => questionWordHits(sentence, question));
+  const pointers = detailWordsMissingFrom(current, question, project);
+  const best = bestProjectSentence(project, (sentence) =>
+    questionWordHits(sentence, question) + (pointers.some((word) => questionWordHits(sentence, word) > 0) ? 1 : 0));
   if (!best || best.score < 2 || best.score <= currentHits) return null;
   return best.result;
+}
+
+// Question words outside project names that `text` does not contain and exactly one
+// sentence of the project's sources uses. A word running through the project
+// ("request" in ZDI) points at no detail in particular.
+function detailWordsMissingFrom(text: string, question: string, project: NamedProject): string[] {
+  const sentences = KNOWLEDGE_CHUNKS.filter((c) => project.sourceIds.includes(c.id))
+    .flatMap((c) => splitIntoSentences(c.text));
+  return questionTokens(withoutProjectNames(question))
+    .filter((token) => !isGenericWord(token.norm) && isDistinctiveKbTerm(token.raw))
+    .filter((token) => {
+      // By stem as a prefix, so "request" also finds "requester".
+      const family = new RegExp(`\\b${token.stem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
+      return !family.test(text) && sentences.filter((s) => family.test(s)).length === 1;
+    })
+    .map((token) => token.raw);
 }
 
 // "pgvector hybrid search" for pgvector: the stack entry that names a technology.

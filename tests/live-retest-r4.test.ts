@@ -217,6 +217,13 @@ describe("judged misses from the final live run", () => {
     assert.match(result.response, /Anthropic Claude/, result.response);
   });
 
+  it("answers a project detail from the one sentence that holds it, not the overview", async () => {
+    const correction = await ask("What does ZDI do when a submission is returned for correction?");
+    assert.match(lead(correction.response), /^A return for correction creates a new revision/, correction.response);
+    const quotation = await ask("Where in ZDI does the requester add a quotation?");
+    assert.match(lead(quotation.response), /attaches a quotation/, quotation.response);
+  });
+
   it("answers a lowercase subject named only in a source title", async () => {
     const result = await ask("Explain the recommender pipeline");
     assert.match(result.response, /reference architecture/, result.response);
