@@ -183,6 +183,46 @@ describe("over-refusals the knowledge base covers", () => {
   });
 });
 
+describe("judged misses from the final live run", () => {
+  it("does not call private test suites public", async () => {
+    const result = await ask("Does Mike write evals for his LLM work?");
+    assert.doesNotMatch(result.response, /\bpublic tests\b/i, result.response);
+  });
+
+  it("says the KB lists no LLM in Zororo's live systems before the safeguards", async () => {
+    const result = await ask("How are hallucinations kept out of Zororo's production systems?");
+    assert.match(lead(result.response), /no LLM in Zororo-Phumulani's live systems/, result.response);
+  });
+
+  it("answers one named technology with the projects that use it", async () => {
+    const result = await ask("How much has Mike worked with LangGraph?");
+    assert.match(result.response, /Sitewarden \[\d\] uses it/, result.response);
+    assert.doesNotMatch(result.response, /Anthropic Claude/, result.response);
+  });
+
+  it("does not answer a staff-group question with the overview of everything built", async () => {
+    const result = await ask("What software did Mike make for Zororo's claims staff?");
+    assert.match(lead(result.response), /claims operations platform/, result.response);
+  });
+
+  it("reads 'let's go' as wording and 'was let go' as a dismissal", async () => {
+    const stack = await ask("right, let's go: what backend does Mike use?");
+    assert.match(stack.response, /FastAPI/, stack.response);
+    const dismissal = await ask("Was Mike let go from a job?");
+    assertRefused("Was Mike let go from a job?", dismissal.response, dismissal.sources);
+  });
+
+  it("answers AI labs as model suppliers even when 'builds on' frames the question", async () => {
+    const result = await ask("Which AI labs supply the models Mike builds on?");
+    assert.match(result.response, /Anthropic Claude/, result.response);
+  });
+
+  it("answers a lowercase subject named only in a source title", async () => {
+    const result = await ask("Explain the recommender pipeline");
+    assert.match(result.response, /reference architecture/, result.response);
+  });
+});
+
 describe("a place word does not anchor a personal question onto a profile answer", () => {
   it("refuses what Mike owns and where he has been", async () => {
     for (const question of ["Is Mike a homeowner in Gauteng?", "What cities has Mike visited?", "Has he taken any trips overseas?"]) {

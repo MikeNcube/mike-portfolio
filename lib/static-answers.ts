@@ -456,7 +456,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how does mike make sure his systems don't break",
     ],
     answer:
-      "Public tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
+      "Tests include Proactive Sentinel (44 passing tests) [1], Sitewarden (89 tests, retrieval and trajectory evals) [2], Zororo AI OS (310 passing tests, including pytest and Rego policy tests) [3], and ZDI (525 backend tests) [4]. Cube has a sandboxed eval harness with a trusted verifier [5].",
     sourceIds: [
       "proactive-sentinel-overview",
       "sitewarden",

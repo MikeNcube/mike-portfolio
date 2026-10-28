@@ -256,7 +256,7 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'recommender-pipeline',
     title: 'Recommender data pipeline (reference)',
     sourceUrl: 'https://github.com/MikeNcube/End-to-End-Recommender-System-Data-Pipeline',
-    text: 'Reference architecture: Airflow DAGs, Great Expectations, AWS Kinesis/S3, Terraform, mock local mode. Labelled reference, not production.',
+    text: 'The recommender data pipeline is a reference architecture: Airflow DAGs, Great Expectations, AWS Kinesis/S3, Terraform, mock local mode. Labelled reference, not production.',
   },
   {
     id: 'aws-web-tier',

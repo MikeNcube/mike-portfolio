@@ -432,11 +432,25 @@ function capitalisedProperNouns(question: string): Set<string> {
   return out;
 }
 
+// Words that name one source in its title ("recommender" for the recommender data
+// pipeline): the subject of that source, however the visitor capitalises it.
+const TITLE_SUBJECTS: ReadonlySet<string> = (() => {
+  const chunksWith = (word: string) =>
+    KNOWLEDGE_CHUNKS.filter((c) => passageHasTerm(`${c.title} ${c.text}`, word)).length;
+  const words = new Set(KNOWLEDGE_CHUNKS.flatMap((c) => tokenize(c.title)));
+  return new Set([...words].filter((w) => w.length >= 5 && chunksWith(w) === 1));
+})();
+
+export function isTitleSubject(term: string): boolean {
+  return TITLE_SUBJECTS.has(term.toLowerCase());
+}
+
 function isDistinctiveUnmatched(term: string, proper: Set<string>): boolean {
   if (term.includes(" ")) return true;
   if (MULTIWORD_SUBJECTS.includes(term.toLowerCase())) return true;
   if (RELATED_TERMS[term.toLowerCase()]) return true;
   if (looksLikeTech(term)) return true;
+  if (TITLE_SUBJECTS.has(term.toLowerCase())) return true;
   // In-domain capitalised entities (Sentinel, ZDI) must appear in the candidate.
   // Visitor names and off-domain proper nouns are not asked-for content.
   return proper.has(term.toLowerCase()) && kbHasTerm(term);

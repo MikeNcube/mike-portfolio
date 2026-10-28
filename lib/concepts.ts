@@ -88,7 +88,7 @@ const PHONE_NUMBER_TERMS = ["phone number", "phone numbers", "contact number", "
 // Read after the concept phrases, so "rate limits from model APIs" stays a failure question.
 const AI_SUPPLIER_TERMS = ["ai", "llm", "model", "genai", "gen ai", "language model", "foundation model"]
   .flatMap((kind) => ["companies", "company", "vendors", "vendor", "providers", "provider", "suppliers",
-    "supplier", "firms", "partners", "apis", "api"].map((supplier) => `${kind} ${supplier}`));
+    "supplier", "firms", "partners", "labs", "lab", "apis", "api"].map((supplier) => `${kind} ${supplier}`));
 const AI_SUPPLIER_LEXICON = buildLexicon([{ id: "ai-tools", terms: AI_SUPPLIER_TERMS }]);
 
 // Wording that carries no topic of their own: ranking words ("his number one skill"
@@ -126,7 +126,7 @@ export const REFUSE_TOPICS: Array<{ id: string; terms: readonly string[] }> = [
   {
     // How a job ended or was judged. The sources hold no employment record.
     id: "employment-record",
-    terms: ["fired", "sacked", "dismissed", "dismissal", "let go", "laid off", "layoff",
+    terms: ["fired", "sacked", "dismissed", "dismissal", "was ... let ... go", "been ... let ... go", "got ... let ... go", "let him go", "let mike go", "laid off", "layoff",
       "layoffs", "retrenched", "retrenchment", "terminated", "termination", "disciplinary",
       "performance review", "performance reviews", "appraisal", "appraisals", "probation"],
   },
@@ -1179,7 +1179,7 @@ export function coverageRefusalReason(analysis: QuestionAnalysis): string | null
   return null;
 }
 
-const FRAMING_CONCEPTS = new Set(["built"]);
+const FRAMING_CONCEPTS = new Set(["built", "skills"]);
 
 // The profile concept whose canonical answer should replace `response`, or null
 // when the response already serves one of the question's concepts.
@@ -1197,8 +1197,8 @@ export function conceptOverride(
   if (concepts.length === 0) return null;
   const dominant = concepts.find((c) => c.dominant);
   if (dominant) return !responseIsRefusal && dominant.evidence.test(response) ? null : dominant;
-  // "Projects" or "built" beside another topic only frames it ("LLM vendors in Mike's
-  // projects"), so the list of what he built does not answer that topic.
+  // "Projects", "built", "tools" or "builds on" beside another topic only frame it
+  // ("LLM vendors in Mike's projects"), so an answer serving only the frame does not answer it.
   const served = concepts.filter((c, i) => i === 0 || !FRAMING_CONCEPTS.has(c.id));
   if (!responseIsRefusal && served.some((c) => c.evidence.test(response))) return null;
   // A mixed question ("Has Mike built a SOC?") keeps an answer that covers its specific term.
