@@ -2,131 +2,189 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design tokens ──────────────────────────────────────────────────── */
+/* Colors are stored as space-separated RGB channel triplets so Tailwind's
+   alpha-value interpolation works: rgb(var(--ink) / 0.5)               */
+
 :root {
-  --bg: #0a0d14;
-  --bg-elev: #0f1320;
-  --fg: #ededf0;
-  --fg-muted: #b9b9c1;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --accent: #0066ff;
-  --signal: #00c896;
+  /* Light — warm cream / paper palette */
+  --page:       249 247 242;   /* #F9F7F2 */
+  --surface:    240 236 228;   /* #F0ECE4 */
+  --ink:        26  21  16;    /* #1A1510 */
+  --ink-muted:  107 98  88;    /* #6B6258 */
+  --ink-faint:  113 104 96;    /* #716860 — AA on page: 4.9:1 */
+  --accent:     43  78  204;   /* #2B4ECC — AA on page: ~6.5:1 */
+  --signal:     15  120 95;    /* #0F785F — green for "live" */
+  --border:     26  21  16;    /* same as ink; use with low alpha */
+
+  /* Fraunces optical size for large display text */
+  --opsz-display: 72;
+
+  /* Architecture diagram tokens */
+  --d-fill: rgb(237 233 225);
+  --d-fill-accent: rgb(229 234 255);
+  --d-stroke: rgba(26, 21, 16, 0.12);
+  --d-text: rgb(26, 21, 16);
+  --d-text-muted: rgb(107, 98, 88);
+  --d-arrow: rgb(43, 78, 204);
+  --d-arrow-muted: rgba(26, 21, 16, 0.35);
 }
 
-html,
-body {
-  background: var(--bg);
-  color: var(--fg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+.dark {
+  /* Dark — warm near-black */
+  --page:       20  18  16;    /* #141210 */
+  --surface:    30  27  24;    /* #1E1B18 */
+  --ink:        240 237 231;   /* #F0EDE7 */
+  --ink-muted:  160 152 143;   /* #A0988F */
+  --ink-faint:  143 135 126;   /* #8F877E — AA on dark page: 5.9:1 */
+  --accent:     119 153 255;   /* #7799FF — AA on dark page: ~7.2:1 */
+  --signal:     0   200 150;   /* #00C896 */
+  --border:     240 237 231;
+
+  /* Architecture diagram tokens — dark mode */
+  --d-fill: rgb(30, 27, 24);
+  --d-fill-accent: rgb(25, 35, 70);
+  --d-stroke: rgba(240, 237, 231, 0.12);
+  --d-text: rgb(240, 237, 231);
+  --d-text-muted: rgb(160, 152, 143);
+  --d-arrow: rgb(119, 153, 255);
+  --d-arrow-muted: rgba(240, 237, 231, 0.35);
 }
 
+/* ─── Base ───────────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 88px;
+  scroll-padding-top: 60px;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11", "kern";
 }
 
 body {
-  font-feature-settings: "ss01", "cv11", "cv03", "kern";
+  background-color: rgb(var(--page));
+  color: rgb(var(--ink));
+  font-size: 1.0625rem;   /* 17px */
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(0, 102, 255, 0.28);
-  color: #ffffff;
+  background: rgb(var(--accent) / 0.15);
+  color: rgb(var(--ink));
 }
 
-/* Visible keyboard focus everywhere, without doubling custom outlines. */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
+/* ─── Component layer ────────────────────────────────────────────────── */
 @layer components {
   .container-edge {
-    @apply mx-auto w-full max-w-6xl px-6 sm:px-8 lg:px-12;
+    @apply mx-auto w-full max-w-content px-5 sm:px-8 lg:px-12;
   }
 
-  /* Section rhythm token: 96px mobile / 128px desktop, hairline top rule. */
   .section {
-    @apply border-t border-white/5 py-24 sm:py-32;
+    @apply border-t border-ink/[0.07] py-20 sm:py-28;
   }
 
-  .eyebrow {
-    @apply inline-flex items-center gap-2 text-micro font-medium uppercase tracking-[0.18em] text-ink-300;
+  /* Accent link — single style used throughout */
+  .link {
+    @apply text-accent underline underline-offset-4 decoration-accent/40 transition-colors hover:decoration-accent;
   }
 
-  .eyebrow-dot {
-    @apply h-1.5 w-1.5 rounded-full bg-accent;
-  }
-
-  .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-caption font-medium text-ink-200;
-  }
-
-  .chip-accent {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-caption font-medium text-accent-glow;
-  }
-
-  .card {
-    @apply relative rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition-colors duration-300 hover:border-white/20;
-  }
-
-  .card-lg {
-    @apply relative rounded-3xl border border-white/10 bg-white/[0.02] p-6 transition-colors duration-300 hover:border-white/20 sm:p-8;
+  /* Clean button — no rounded-full pill, no glow */
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all;
+    min-height: 44px; /* iOS tap target */
   }
 
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-body-sm font-medium text-ink-900 transition hover:bg-ink-100 active:scale-[0.98];
+    @apply btn bg-ink text-page hover:bg-ink/90 active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.02] px-5 py-2.5 text-body-sm font-medium text-white transition hover:border-white/30 hover:bg-white/[0.06];
+    @apply btn border border-ink/15 hover:border-ink/30 hover:bg-ink/[0.04] active:scale-[0.98];
   }
 
-  .section-heading {
-    @apply font-display text-display-md text-white;
+  /* Work list row */
+  .work-row {
+    @apply grid grid-cols-[4rem_1fr_auto] sm:grid-cols-[5rem_1fr_auto] items-baseline gap-x-4 py-4 border-b border-ink/[0.07];
   }
 
-  .mono {
-    @apply font-mono text-micro tracking-tight text-ink-300;
+  /* Status tag — single instance per project, low-key */
+  .status-tag {
+    @apply inline-flex items-center gap-1.5 text-caption font-medium;
+  }
+
+  /* Card — only for case study pages, not homepage */
+  .card {
+    @apply rounded-2xl border border-ink/[0.08] bg-surface/60 p-6 transition-colors hover:border-ink/[0.15];
   }
 }
 
+/* ─── Typography utilities ───────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .font-display-hero {
+    font-family: var(--font-display), Georgia, serif;
+    font-variation-settings: "opsz" 72;
+    letter-spacing: -0.035em;
   }
-  .text-pretty {
-    text-wrap: pretty;
+
+  .font-display-section {
+    font-family: var(--font-display), Georgia, serif;
+    font-variation-settings: "opsz" 36;
+    letter-spacing: -0.025em;
+  }
+
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Diagram labels stay 14px at every viewport — never scale with a viewBox. */
+  .diagram-label {
+    font-size: 14px !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Safe area padding for iPhone notch/home indicator */
+  .pt-safe  { padding-top: max(env(safe-area-inset-top), 0px); }
+  .pb-safe  { padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
+  .px-safe  {
+    padding-left:  max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
   }
 }
 
-/* Scrollbar refinement */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* Equal-width flow nodes on md+; arrows keep intrinsic size and never wrap. */
+@media (min-width: 768px) {
+  .diagram-flow > * {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+  .diagram-flow > .diagram-arrow {
+    flex: 0 0 auto;
+    width: auto;
+  }
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: rgb(var(--ink) / 0.12);
+  border-radius: 6px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--ink) / 0.22); }
 
-/* Respect users who prefer less motion: disable entrance animation,
-   smooth scrolling, and transitions. */
+/* ─── Reduced-motion ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  *,
-  *::before,
-  *::after {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
