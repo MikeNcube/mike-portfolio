@@ -1,107 +1,95 @@
 import Image from "next/image";
 import { profile } from "@/lib/content";
 
+// Warm-tone CSS filter to blend the cool studio shot with the cream page.
+// sepia adds warmth; brightness and saturate keep it photographic not stylised.
+const WARM_FILTER = "sepia(18%) brightness(0.96) saturate(0.82)";
+
 export default function Hero() {
   return (
-    <section id="top" className="relative pt-32 sm:pt-40">
+    <section id="top" className="pt-24 sm:pt-32 pb-16 sm:pb-24">
       <div className="container-edge">
-        <div className="grid gap-14 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-          <div className="flex flex-col gap-7">
-            <p className="animate-fade-up">
-              <span className="chip-accent">
-                <span className="h-1.5 w-1.5 rounded-full bg-signal" />
-                {profile.availability}
-              </span>
+        <div className="grid gap-10 lg:grid-cols-[1fr_300px] lg:items-start lg:gap-16">
+
+          {/* Text column — instant render, no entrance animation */}
+          <div>
+            <p className="mb-6 text-sm text-ink-muted">
+              {profile.availability}
             </p>
 
             <h1
-              className="font-display text-display-xl tracking-tightest text-white text-balance animate-fade-up"
-              style={{ animationDelay: "60ms" }}
+              className="font-display-hero font-medium text-ink text-balance mb-6"
+              style={{ fontSize: "clamp(2.75rem, 5.5vw, 4.5rem)", lineHeight: 1.04 }}
             >
-              Applied AI Engineer —<br />
-              RAG, Python and auditable business automation.
+              I build AI systems<br />
+              for regulated work.
             </h1>
 
-            <p
-              className="max-w-xl text-pretty text-body-lg text-ink-200 animate-fade-up"
-              style={{ animationDelay: "120ms" }}
-            >
-              {profile.oneLiner} Public proof: a live RAG assistant on this
-              page, plus shipped Python platforms in regulated insurance and
-              security.
-            </p>
-
-            <div
-              className="flex flex-wrap items-center gap-3 pt-1 animate-fade-up"
-              style={{ animationDelay: "180ms" }}
-            >
-              <a href="#assistant" className="btn-primary">
-                Ask my AI about my work
-              </a>
-              <a href="#work" className="btn-ghost">
-                View work
-              </a>
-              <a
-                href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
-                className="btn-ghost"
+            {/* Mobile portrait — zoomed head-and-shoulders crop, 80px slot */}
+            <div className="mb-6 lg:hidden">
+              <div
+                className="relative h-20 w-20 overflow-hidden rounded-2xl border border-ink/[0.08]"
+                style={{ boxShadow: "0 2px 12px rgba(26,21,16,0.08)" }}
               >
-                Email for interview
-              </a>
-            </div>
-          </div>
-
-          <div
-            className="relative mx-auto w-full max-w-sm animate-fade-up lg:mx-0"
-            style={{ animationDelay: "140ms" }}
-          >
-            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="overflow-hidden rounded-2xl">
                 <Image
                   src={profile.portrait}
-                  alt={`Portrait of ${profile.name}`}
-                  width={640}
-                  height={720}
+                  alt="Mike S Ncube"
+                  width={160}
+                  height={160}
                   priority
-                  unoptimized
-                  className="aspect-[4/5] w-full object-cover object-top"
-                  sizes="(min-width: 1024px) 400px, (min-width: 640px) 384px, 100vw"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{
+                    filter: WARM_FILTER,
+                    objectPosition: "50% 12%",
+                    transform: "scale(1.85)",
+                    transformOrigin: "50% 12%",
+                  }}
+                  sizes="80px"
                 />
               </div>
-              <div className="flex flex-col gap-1.5 px-1 pb-1 pt-4">
-                <p className="font-display text-title tracking-tight text-white">
-                  {profile.name}
-                </p>
-                <p className="text-body-sm leading-snug text-ink-200">
-                  {profile.subHeadline}
-                </p>
-                <p className="font-mono text-micro text-ink-400">
-                  {profile.location}
-                </p>
-              </div>
+            </div>
+
+            {/* Standfirst — DM Sans 18px, ink-muted (AA: 5.2:1 light, 7.0:1 dark) */}
+            <p className="text-lg text-ink-muted max-w-[520px] text-pretty mb-8 leading-[1.6]">
+              Applied AI Engineer and Systems Architect at Zororo-Phumulani
+              Funeral Assurance (FSP 48558) since 2022. Production systems:
+              Digi App Form, the lead-management CRM, and ZDI (approved for
+              production rollout). Six-plus years in software, about three in
+              generative AI.
+            </p>
+
+            <div className="flex flex-wrap gap-4 items-center">
+              <a href="#assistant" className="btn-primary">
+                Try the assistant
+              </a>
+              <a
+                href={`mailto:${profile.email}?subject=Hi%20Mike`}
+                className="text-base link"
+              >
+                {profile.email}
+              </a>
             </div>
           </div>
-        </div>
 
-        <div className="mt-16 flex flex-wrap items-center gap-x-5 gap-y-2 text-caption">
-          <span className="font-mono uppercase tracking-[0.2em] text-ink-400">
-            Stack
-          </span>
-          <span className="h-px flex-1 bg-white/10" aria-hidden />
-          {[
-            "Python",
-            "Next.js",
-            "Flask",
-            "RAG",
-            "PostgreSQL",
-            "Redis",
-            "Docker",
-            "Railway",
-            "AWS (labs)",
-          ].map((t) => (
-            <span key={t} className="text-ink-200">
-              {t}
-            </span>
-          ))}
+          {/* Desktop portrait — full panel, warm-toned */}
+          <div className="hidden lg:block">
+            <div
+              className="overflow-hidden rounded-2xl border border-ink/[0.08]"
+              style={{ boxShadow: "0 4px 24px rgba(26,21,16,0.06)" }}
+            >
+              <Image
+                src={profile.portrait}
+                alt="Mike S Ncube, Applied AI Engineer, Johannesburg, South Africa"
+                width={1024}
+                height={1024}
+                priority
+                className="aspect-[3/4] w-full object-cover object-top"
+                style={{ filter: WARM_FILTER }}
+                sizes="300px"
+              />
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

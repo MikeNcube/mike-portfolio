@@ -1,58 +1,108 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import SectionHeader from "./SectionHeader";
+import PipelineDiagram, { type PipelineStep } from "./PipelineDiagram";
 import { profile } from "@/lib/content";
 
 type Source = { title: string; url: string };
-type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  sources?: Source[];
+};
 
 const SUGGESTIONS = [
+  "Who is Mike Ncube?",
   "How does the RAG pipeline work technically?",
   "What production systems has Mike shipped?",
   "Walk me through Proactive Sentinel's architecture.",
-  "Is he available for hire?",
 ];
 
-const TECH_SPEC = [
-  { label: "Embed", value: "Gemini embedding-001 · batch KB · query per request" },
-  { label: "Retrieve", value: "Cosine similarity · top-4 chunks · min score 0.35" },
-  { label: "Generate", value: "Gemini 2.5 Flash · grounded prompt · server-side only" },
-  { label: "Guardrails", value: "Rate limit 20/10min · 500 char cap · honest 503/429" },
-];
+function usePipelineSteps(loading: boolean) {
+  const [step, setStep] = useState<PipelineStep>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-const CODE_LINKS = [
-  {
-    label: "lib/rag.ts",
-    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/lib/rag.ts",
-  },
-  {
-    label: "app/api/chat/route.ts",
-    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/app/api/chat/route.ts",
-  },
-  {
-    label: "lib/knowledge.ts",
-    href: "https://github.com/MikeNcube/mike-portfolio/blob/main/lib/knowledge.ts",
-  },
-];
+  useEffect(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+
+    if (loading) {
+      setStep(0);
+      timers.current = [
+        setTimeout(() => setStep(1), 380),
+        setTimeout(() => setStep(2), 760),
+        setTimeout(() => setStep(3), 1140),
+      ];
+    } else {
+      setStep(null);
+    }
+
+    return () => { timers.current.forEach(clearTimeout); };
+  }, [loading]);
+
+  const complete = () => {
+    timers.current.forEach(clearTimeout);
+    setStep(4);
+    timers.current = [setTimeout(() => setStep(null), 1000)];
+  };
+
+  return { step, complete };
+}
 
 export default function Assistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lastSources, setLastSources] = useState<Source[]>([]);
+  const [limiterLabel, setLimiterLabel] = useState("Per-instance cap");
   const logRef = useRef<HTMLDivElement>(null);
+  const lastAnswerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const { step: pipelineStep, complete: pipelineComplete } = usePipelineSteps(loading);
+  const hasMessages = messages.length > 0 || loading;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((data: { limiter?: { distributed?: boolean } }) => {
+        if (cancelled) return;
+        setLimiterLabel(data.limiter?.distributed ? "Rate-limited (Redis)" : "Per-instance cap");
+      })
+      .catch(() => {
+        if (!cancelled) setLimiterLabel("Per-instance cap");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const log = logRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
+    if (!log) return;
+    if (loading) {
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const answer = lastAnswerRef.current;
+    if (!answer) {
+      log.scrollTop = log.scrollHeight;
+      return;
+    }
+    const logRect = log.getBoundingClientRect();
+    const ansRect = answer.getBoundingClientRect();
+    log.scrollTop += ansRect.top - logRect.top;
   }, [messages, loading]);
 
   const send = async (text?: string) => {
     const question = (text ?? input).trim();
     if (!question || loading) return;
     setInput("");
+    setLastSources([]);
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     setLoading(true);
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -60,11 +110,25 @@ export default function Assistant() {
         body: JSON.stringify({ message: question }),
       });
       const data = await res.json();
-      const reply: Message = res.ok
-        ? { role: "assistant", content: data.response, sources: data.sources }
-        : { role: "assistant", content: data.error ?? "Something went wrong. Please try again." };
-      setMessages((prev) => [...prev, reply]);
+      pipelineComplete();
+
+      if (res.ok) {
+        const sources: Source[] = (data.sources ?? []).filter(
+          (s: Source) => s.url.startsWith("http"),
+        );
+        setLastSources(sources);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.response, sources },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.error ?? "Something went wrong. Please try again." },
+        ]);
+      }
     } catch {
+      pipelineComplete();
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Connection error. Please try again." },
@@ -73,176 +137,170 @@ export default function Assistant() {
     setLoading(false);
   };
 
+  const inputHasText = input.trim().length > 0;
+
   return (
     <section id="assistant" className="section">
       <div className="container-edge">
-        <SectionHeader
-          eyebrow="Live RAG demo"
-          title="Verify my AI engineering in 3 minutes."
-          description="Your question is embedded, matched against a curated knowledge base from my real repos, and answered with citations. Out-of-scope questions get an honest refusal — not a hallucination."
-        />
-
-        <div className="mx-auto mt-12 max-w-2xl">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-              <span className="font-mono text-micro text-ink-300">
-                embed → retrieve → gate → generate → cite
-              </span>
-              <a
-                href="https://github.com/MikeNcube/mike-portfolio"
-                target="_blank"
-                rel="noreferrer noopener"
-                className="font-mono text-micro text-ink-300 underline-offset-4 transition hover:text-white hover:underline"
-              >
-                source ↗
-              </a>
-            </div>
-
-            <div
-              ref={logRef}
-              role="log"
-              aria-live="polite"
-              aria-label="Conversation with Mike's AI assistant"
-              className="flex h-80 flex-col gap-4 overflow-y-auto p-5"
+        <div className="mb-8">
+          <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-3">Live demo</p>
+          <h2
+            className="font-display-section font-medium text-ink mb-3"
+            style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", letterSpacing: "-0.025em" }}
+          >
+            Ask the assistant.
+          </h2>
+          <p className="text-base text-ink-muted max-w-[540px]">
+            Grounded in my CV and public repos. Refuses out-of-scope questions and cites sources.{" "}
+            <a
+              href="https://github.com/MikeNcube/mike-portfolio/blob/main/lib/rag.ts"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="link"
             >
-              {messages.length === 0 && (
-                <div className="flex h-full flex-col items-start justify-center gap-3">
-                  <p className="text-body-sm text-ink-300">
-                    Ask about my projects, stack, or availability — answers cite
-                    their sources. Hiring managers: try &ldquo;How does the RAG
-                    pipeline work technically?&rdquo;
-                  </p>
-                  <ul className="flex flex-wrap gap-2">
-                    {SUGGESTIONS.map((s) => (
-                      <li key={s}>
-                        <button
-                          type="button"
-                          onClick={() => send(s)}
-                          className="rounded-full border border-white/15 bg-white/[0.02] px-3.5 py-1.5 text-caption text-ink-100 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                        >
-                          {s}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              Source code
+            </a>
+          </p>
+        </div>
 
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={m.role === "user" ? "self-end" : "self-start"}
-                >
-                  <div
-                    className={[
-                      "max-w-[85%] rounded-2xl px-4 py-3 text-body-sm sm:max-w-md",
-                      m.role === "user"
-                        ? "ml-auto bg-white text-ink-900"
-                        : "border border-white/10 bg-white/[0.03] text-ink-100",
-                    ].join(" ")}
-                  >
-                    <span className="sr-only">
-                      {m.role === "user" ? "You said:" : "Assistant said:"}
-                    </span>
-                    {m.content}
-                    {m.sources && m.sources.length > 0 && (
-                      <span className="mt-3 block border-t border-white/10 pt-2.5">
-                        <span className="font-mono text-micro uppercase tracking-[0.14em] text-ink-400">
-                          Sources
-                        </span>
-                        <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                          {m.sources.map((s) => (
-                            <a
-                              key={`${s.url}-${s.title}`}
-                              href={s.url}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              className="text-micro text-accent-glow underline underline-offset-4 transition hover:text-white"
-                            >
-                              {s.title} ↗
-                            </a>
-                          ))}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+        <div className="mx-auto max-w-2xl">
+          {/* Pipeline — tied to live assistant state */}
+          <div className="mb-4 rounded-xl border border-ink/[0.07] bg-surface/40 p-3 sm:p-4">
+            <PipelineDiagram
+              activeStep={pipelineStep}
+              chunks={lastSources.map((s) => ({ title: s.title }))}
+            />
+          </div>
 
-              {loading && (
-                <p className="font-mono text-micro text-ink-400" aria-label="Assistant is thinking">
-                  retrieving…
+          {/* Chat panel */}
+          <div className="overflow-hidden rounded-2xl border border-ink/[0.07] bg-surface/40">
+
+            {/* Suggestions — compact, shown when no messages */}
+            {!hasMessages && (
+              <div className="p-4 sm:p-5">
+                <p className="text-sm text-ink-muted mb-3">
+                  Ask about my projects, stack, or availability:
                 </p>
-              )}
-            </div>
+                <ul className="flex flex-wrap gap-2">
+                  {SUGGESTIONS.map((s) => (
+                    <li key={s}>
+                      <button
+                        type="button"
+                        onClick={() => send(s)}
+                        className="rounded-lg border border-ink/[0.09] bg-page px-3 py-1.5 text-sm text-ink-muted transition hover:border-ink/20 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                        style={{ minHeight: 36 }}
+                      >
+                        {s}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
+            {/* Message log — visible once conversation starts */}
+            {hasMessages && (
+              <div
+                ref={logRef}
+                role="log"
+                aria-live="polite"
+                aria-label="Conversation with Mike's AI assistant"
+                className="flex flex-col gap-4 overflow-y-auto p-4 sm:p-5"
+                style={{ maxHeight: 360 }}
+              >
+                {messages.map((m, i) => (
+                  <div
+                    key={i}
+                    ref={
+                      m.role === "assistant" && i === messages.length - 1 && !loading
+                        ? lastAnswerRef
+                        : undefined
+                    }
+                    className={m.role === "user" ? "self-end max-w-[85%]" : "self-start max-w-[92%] sm:max-w-lg"}
+                  >
+                    <div
+                      className={[
+                        "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                        m.role === "user"
+                          ? "bg-ink text-page"
+                          : "border border-ink/[0.07] bg-page text-ink",
+                      ].join(" ")}
+                    >
+                      <span className="sr-only">{m.role === "user" ? "You:" : "Assistant:"}</span>
+                      {m.content}
+
+                      {/* Sources — only real http links, only when answered */}
+                      {m.sources && m.sources.filter((s) => s.url.startsWith("http")).length > 0 && (
+                        <div className="mt-3 border-t border-ink/[0.07] pt-2.5">
+                          <p className="text-xs text-ink-muted uppercase tracking-[0.12em] mb-1">Sources</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {m.sources
+                              .filter((s) => s.url.startsWith("http"))
+                              .map((s) => (
+                                <a
+                                  key={`${s.url}-${s.title}`}
+                                  href={s.url}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                  className="text-micro link"
+                                >
+                                  {s.title}
+                                </a>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <p className="font-mono text-micro text-ink-muted" aria-label="Assistant is thinking">
+                    thinking…
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Input */}
             <form
-              className="flex gap-2 border-t border-white/10 p-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                send();
-              }}
+              className="flex gap-2 border-t border-ink/[0.07] p-3 sm:p-4"
+              onSubmit={(e) => { e.preventDefault(); send(); }}
             >
               <label htmlFor="assistant-input" className="sr-only">
-                Ask a question about Mike&rsquo;s work
+                Ask about Mike&rsquo;s work
               </label>
               <input
                 id="assistant-input"
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="e.g. How does similarity gating work?"
+                placeholder="Ask anything about my work…"
                 maxLength={500}
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-body-sm text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="min-w-0 flex-1 rounded-xl border border-ink/[0.09] bg-page px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-ink/25 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                style={{ minHeight: 44 }}
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
-                className="rounded-xl bg-white px-5 py-2.5 text-body-sm font-medium text-ink-900 transition enabled:hover:bg-ink-100 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                disabled={loading || !inputHasText}
+                aria-label="Send message"
+                className={[
+                  "rounded-xl px-5 text-sm font-medium transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  inputHasText && !loading
+                    ? "bg-accent text-page hover:bg-accent/90 active:scale-[0.98]"
+                    : "bg-ink/[0.07] text-ink-muted cursor-not-allowed",
+                ].join(" ")}
+                style={{ minHeight: 44, minWidth: 60 }}
               >
-                Ask
+                {loading ? "…" : "Send"}
               </button>
             </form>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-            <p className="mono mb-4 uppercase tracking-[0.18em] text-ink-400">
-              Technical spec (for engineers)
-            </p>
-            <dl className="grid gap-3 sm:grid-cols-2">
-              {TECH_SPEC.map((row) => (
-                <div key={row.label}>
-                  <dt className="font-mono text-micro uppercase tracking-[0.14em] text-ink-400">{row.label}</dt>
-                  <dd className="mt-1 text-caption text-ink-300">
-                    {row.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              {CODE_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="font-mono text-micro text-ink-200 underline-offset-4 transition hover:text-accent-glow hover:underline"
-                  >
-                    {link.label} ↗
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="mt-4 text-center text-caption text-ink-400">
-            Grounded in my GitHub READMEs and portfolio copy · rate-limited ·{" "}
-            <a
-              href={`mailto:${profile.email}?subject=Interview%20%E2%80%94%20AI%20Engineering`}
-              className="underline underline-offset-4 transition hover:text-ink-200"
-            >
-              request an interview
-            </a>
+          <p className="mt-4 text-center font-mono text-micro text-ink-muted">
+            {limiterLabel} · grounded · refuses out-of-scope ·{" "}
+            <a href={`mailto:${profile.email}`} className="link">email Mike</a>
           </p>
         </div>
       </div>

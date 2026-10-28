@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/fallback.test.ts tests/retrieve.test.ts tests/providers.test.ts tests/chat-route.test.ts tests/visitor-sweep.ts tests/sweep-new.ts tests/sweep-hijack.ts tests/sweep-r50.ts tests/sweep-r51.ts tests/grounding.test.ts tests/sweep-r52.ts tests/concepts.test.ts tests/sweep-r53.ts tests/live-retest.test.ts tests/live-retest-r2.test.ts tests/live-retest-r3.test.ts tests/live-retest-r4.test.ts"
   },
   "dependencies": {
     "next": "14.2.15",
@@ -24,6 +26,7 @@
     "eslint-config-next": "14.2.15",
     "postcss": "8.4.39",
     "tailwindcss": "3.4.10",
+    "tsx": "^4.19.1",
     "typescript": "5.5.3"
   }
 }

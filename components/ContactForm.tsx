@@ -5,6 +5,9 @@ import { profile } from "@/lib/content";
 
 type Status = "idle" | "sending" | "success" | "error";
 
+const inputCls =
+  "w-full rounded-xl border border-ink/[0.09] bg-page px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-ink/25 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
+
 export default function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState<Status>("idle");
@@ -32,9 +35,7 @@ export default function ContactForm() {
         setForm({ name: "", email: "", message: "" });
       } else {
         setStatus("error");
-        setErrorText(
-          data.error ?? `Something went wrong — email me at ${profile.email}.`,
-        );
+        setErrorText(data.error ?? `Something went wrong — email me at ${profile.email}.`);
       }
     } catch {
       setStatus("error");
@@ -42,19 +43,11 @@ export default function ContactForm() {
     }
   };
 
-  const inputClasses =
-    "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-body-sm text-white placeholder:text-ink-400 focus:border-white/30 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate={false}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="contact-name"
-            className="mono uppercase tracking-[0.18em]"
-          >
-            Name
-          </label>
+          <label htmlFor="contact-name" className="text-sm font-medium text-ink-muted">Name</label>
           <input
             id="contact-name"
             name="name"
@@ -64,16 +57,12 @@ export default function ContactForm() {
             autoComplete="name"
             value={form.name}
             onChange={update("name")}
-            className={inputClasses}
+            className={inputCls}
+            style={{ minHeight: 44 }}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="contact-email"
-            className="mono uppercase tracking-[0.18em]"
-          >
-            Email
-          </label>
+          <label htmlFor="contact-email" className="text-sm font-medium text-ink-muted">Email</label>
           <input
             id="contact-email"
             name="email"
@@ -83,18 +72,14 @@ export default function ContactForm() {
             autoComplete="email"
             value={form.email}
             onChange={update("email")}
-            className={inputClasses}
+            className={inputCls}
+            style={{ minHeight: 44 }}
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="contact-message"
-          className="mono uppercase tracking-[0.18em]"
-        >
-          Message
-        </label>
+        <label htmlFor="contact-message" className="text-sm font-medium text-ink-muted">Message</label>
         <textarea
           id="contact-message"
           name="message"
@@ -103,31 +88,27 @@ export default function ContactForm() {
           maxLength={5000}
           value={form.message}
           onChange={update("message")}
-          className={`${inputClasses} resize-y`}
+          className={`${inputCls} resize-y`}
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
         <button
           type="submit"
-          disabled={
-            status === "sending" ||
-            !form.name.trim() ||
-            !form.email.trim() ||
-            !form.message.trim()
-          }
+          disabled={status === "sending" || !form.name.trim() || !form.email.trim() || !form.message.trim()}
           className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+          style={{ minHeight: 44 }}
         >
           {status === "sending" ? "Sending…" : "Send message"}
         </button>
 
-        <p aria-live="polite" className="text-body-sm">
+        <p aria-live="polite" className="text-sm">
           {status === "success" && (
-            <span className="text-signal">
-              Sent — I&rsquo;ll reply from {profile.email}.
-            </span>
+            <span className="text-signal">Sent — I&rsquo;ll reply from {profile.email}.</span>
           )}
-          {status === "error" && <span className="text-red-300">{errorText}</span>}
+          {status === "error" && (
+            <span className="text-red-600 dark:text-red-400">{errorText}</span>
+          )}
         </p>
       </div>
     </form>
