@@ -51,16 +51,18 @@ export default function Hero() {
 
             {/* Standfirst — DM Sans 18px, ink-muted (AA: 5.2:1 light, 7.0:1 dark) */}
             <p className="text-lg text-ink-muted max-w-[520px] text-pretty mb-8 leading-[1.6]">
-              Applied AI Engineer and Systems Architect at Zororo-Phumulani
-              Funeral Assurance (FSP 48558) since 2022. Production systems:
-              Digi App Form, the lead-management CRM, and ZDI (approved for
-              production rollout). Six-plus years in software, about three in
-              generative AI.
+              I’m an applied AI engineer building practical tools for a licensed
+              funeral assurer in Johannesburg. My work includes a live
+              lead-management CRM, digital applications and document workflows.
+              Available for remote work.
             </p>
 
             <div className="flex flex-wrap gap-4 items-center">
               <a href="#assistant" className="btn-primary">
                 Try the assistant
+              </a>
+              <a href="#work" className="btn-ghost">
+                Explore my work
               </a>
               <a
                 href={`mailto:${profile.email}?subject=Hi%20Mike`}

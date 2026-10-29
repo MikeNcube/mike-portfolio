@@ -1,53 +1,27 @@
-# Design System — mike-portfolio
+# Portfolio design direction
 
-Approved 2026-07-10. This is the floor for all UI work: every component uses these tokens. No arbitrary `text-[Npx]` values, no new fonts, no new colours, no gradients.
+The portfolio uses a warm editorial identity to make Mike's engineering work approachable and credible. Preserve the design while making evidence and navigation easy to scan.
 
-## Principles
+- **Audience:** recruiters, hiring managers, technical reviewers and prospective collaborators.
+- **Typography:** Fraunces for editorial display headings, DM Sans for body and controls, and JetBrains Mono for technical labels. Use size and spacing to establish hierarchy.
+- **Colour:** soft limestone and near-black, with a subtle mineral green tint, with blue for interactive links and green for live or shipped status. The dark theme uses warm near-black with lighter text and accents. Maintain readable contrast in both themes.
+- **Layout:** a generous shared container and section rhythm; structured project rows and more detailed case studies. Preserve whitespace while keeping key evidence visible.
+- **Interactions:** clear links and buttons, visible keyboard focus, touch targets of at least 44px where practical, subtle transitions, and reduced-motion support.
+- **Responsive:** stack the hero and two-column content at narrow widths; keep navigation and case-study links accessible on mobile. Avoid horizontal overflow.
+- **Content:** distinguish shipped work, rollout, prototypes and paused work. Support claims with specific case studies and evidence; do not invent outcomes or imply private code is public.
+- **Avoid:** decorative gradients, gratuitous animation, crowded cards, weak contrast, generic claims and visual effects that compete with the work.
 
-1. **Proof over adjectives** — the hero makes one falsifiable claim with immediate verification (live RAG demo).
-2. **Typography is the design** — hierarchy comes from size/weight/colour, never from boxes or decoration.
-3. **Whitespace as structure** — one section rhythm, one container; density reserved for evidence.
-4. **Projects as case evidence** — uniform card anatomy with honest status labels.
-5. **Motion as punctuation** — one entrance pattern, one easing curve, everything under 700ms.
+Review desktop and mobile in light and dark themes before release. Functional, keyboard and accessibility checks complement visual review.
 
-## Typefaces (2, self-hosted via `next/font`)
+## Design tokens and behaviour
 
-- **Inter** — display + body. Weights 400 / 500 / 600 only.
-- **JetBrains Mono** — labels, technical metadata, code.
-
-## Type scale (tokens in `tailwind.config.ts`, 12px hard floor)
-
-| Token | Size / line-height | Use |
+| Token | Light | Dark |
 | --- | --- | --- |
-| `text-display-xl` | clamp(2.5–4.75rem) / 1.02 | Hero |
-| `text-display-lg` | clamp(2.25–4rem) / 1.02 | Page titles |
-| `text-display-md` | clamp(1.75–2.5rem) / 1.1 | Section headings (`.section-heading`) |
-| `text-title-lg` | 28px / 1.2 | Flagship card headings |
-| `text-title` | 19px / 1.3 | Card titles |
-| `text-body-lg` | 17px / 1.65 | Standfirsts, section intros |
-| `text-body` | 15.5px / 1.6 | Default prose |
-| `text-body-sm` | 14px / 1.55 | Dense UI, chat, forms |
-| `text-caption` | 13px / 1.5 | Meta text, chips, small buttons |
-| `text-micro` | 12px / 1.4 | Mono labels, eyebrows — **hard floor, nothing smaller** |
+| Page | `#F4F4ED` | `#141210` |
+| Surface | `#E8EBE1` | `#1E1B18` |
+| Ink | `#1A1510` | `#F0EDE7` |
+| Muted ink | `#535E55` | `#A0988F` |
+| Accent | `#2B4ECC` | `#7799FF` |
+| Signal | `#0F785F` | `#00C896` |
 
-## Colour (all AA-verified on `#0a0d14`)
-
-- Background `#0a0d14`, elevated `#0f1320` (CSS vars in `globals.css`).
-- `ink` 50–900 grey scale; 200 ≈ 12.6:1, 300 ≈ 7.9:1, 400 ≈ 4.9:1 on the background.
-- **Blue `accent` `#0066FF` is the sole interactive accent** — links, hover, focus, active states. Use `accent-glow` `#66a3ff` (≈5.4:1) for accent-coloured text.
-- **Green `signal` `#00C896` (≈7.4:1) is semantic only** — status (Shipped), verified proof points, availability, success messages. Never decorative, never for links or hover states.
-- Borders: `white/8` default, `white/14` strong. No gradients anywhere.
-
-## Spacing & radii
-
-- 4px base grid. Container: `.container-edge` (max-w-6xl, 24/32/48px gutters).
-- Section rhythm: `.section` = `border-t border-white/5 py-24 sm:py-32` (96/128px).
-- Radii: `rounded-xl` 12px (inputs, inner blocks), `rounded-2xl` 16px (cards), `rounded-3xl` 24px (feature cards), `rounded-full` (pills/buttons).
-
-## Motion policy
-
-- One easing: `cubic-bezier(0.16, 1, 0.3, 1)`.
-- Entrance: `animate-fade-up` only, ≤600ms, stagger ≤80ms, first viewport only.
-- Hover: colour/border/opacity at 200–300ms; `active:scale-[0.98]` on primary buttons only.
-- Banned: parallax, scroll-jacking, typewriter effects, infinite loops, animated gradients.
-- `prefers-reduced-motion` globally disables animation/smooth-scroll (see `globals.css`).
+Typography: body 17px, small 15px, caption 13px, technical metadata 12px. Hero and section headings scale with viewport width; use the defined Tailwind sizes as the source of truth. The content container is capped at 1280px. Buttons use an 8px radius; cards and portrait panels use 16px. Section spacing is 80px, increasing to 112px on larger screens. Keep borders and shadows subtle. Use short, purposeful transitions and respect `prefers-reduced-motion`. Text and controls must meet WCAG AA contrast against their actual surfaces; verify badges on surfaces as well as the page.

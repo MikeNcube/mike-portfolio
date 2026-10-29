@@ -12,18 +12,18 @@ import {
   stripSourceAndPathLeakage,
 } from "./normalise-answer";
 
-export const ANSWER_CACHE_VERSION = "r58";
+export const ANSWER_CACHE_VERSION = "r59";
 
 export type StatusSourceRef = { id?: string; title?: string; url?: string };
 
 export const CANONICAL_PRODUCTION_ANSWER =
-  "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Rolling out: ZDI [3] (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
+  "Shipped: Digi App Form [1] and the Zororo CRM [2] (over 40 people, around 10 roles). Approved for rollout, not yet live: ZDI [3]. The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself [4].";
 
 export const CANONICAL_WORK_ANSWER =
   "At Zororo-Phumulani Mike shipped Digi App Form [1] and the lead-management CRM [2]. ZDI is approved for production rollout but not yet live [3]. The claims operations platform is an approved, production-ready standby, not the live system [4]. Zororo AI OS is early-stage and not yet deployed [5].";
 
 export const ZDI_STATUS_SENTENCE =
-  "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live.";
+  "ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live.";
 
 export const AI_OS_STATUS_SENTENCE =
   "Zororo AI OS is built, early-stage and not yet deployed.";
@@ -32,10 +32,10 @@ export const CLAIMS_STATUS_SENTENCE =
   "The claims operations platform is an approved, production-ready standby (failover) for Zororo-Phumulani's current claims system, not the live system itself.";
 
 export const CANONICAL_ZDI_LIVE_ANSWER =
-  "No. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].";
+  "No. ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live [1].";
 
 export const CANONICAL_CRM_ZDI_LIVE_ANSWER =
-  "The lead-management CRM is a shipped live production system at Zororo-Phumulani [1]. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [2].";
+  "The lead-management CRM is a shipped live production system at Zororo-Phumulani [1]. ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live [2].";
 
 export const CANONICAL_AWS_ANSWER =
   "Mike's stack lists AWS services S3, EC2, IAM, CloudWatch, and Bedrock [1]. The resilient web tier on AWS is labelled lab, not production [2]. Training includes the Becoming an AI Practitioner Series (Introduction to AI; Introduction to Generative AI; Prompts and Working with Foundation Models) [3].";
@@ -643,7 +643,7 @@ export function zdiListedAsShipped(text: string): boolean {
   const lower = text.toLowerCase();
   const shippedIdx = lower.search(/shipped\s*:/);
   if (shippedIdx < 0) return false;
-  const rollingIdx = lower.search(/rolling out\s*:/);
+  const rollingIdx = lower.search(/(?:rolling out|approved for rollout, not yet live)\s*:/);
   const end = rollingIdx > shippedIdx ? rollingIdx : lower.length;
   return /\bzdi\b/.test(lower.slice(shippedIdx, end));
 }
@@ -655,7 +655,7 @@ export function productionAnswerIsCanonical(text: string): boolean {
     /^shipped:/i.test(text) &&
     /Digi App Form \[1\]/i.test(text) &&
     /Zororo CRM \[2\]/i.test(text) &&
-    /rolling out:\s*zdi \[3\]/i.test(text) &&
+    /(?:rolling out|approved for rollout, not yet live):\s*zdi \[3\]/i.test(text) &&
     /not yet live/i.test(text) &&
     /claims operations platform/i.test(text) &&
     /not the live system/i.test(text) &&

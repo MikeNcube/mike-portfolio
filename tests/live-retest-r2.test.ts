@@ -390,3 +390,21 @@ describe("validator: question words, synonyms and every cited block", () => {
     assert.ok(words.includes("encrypts"), words.join(","));
   });
 });
+
+
+describe("confirmed employer tenure and CRM launch", () => {
+  for (const question of ["How long has Mike been at Zororo-Phumulani?", "When did Mike start at Zororo?"]) {
+    it(`answers employer tenure: ${question}`, async () => {
+      const result = await answerQuestion({ question });
+      assert.match(result.response, /2018/);
+      assert.match(result.response, /2022/);
+      assert.match(result.response, /June 2024/);
+      assert.ok(result.sources.some((source) => source.id === "employer"));
+    });
+  }
+  it("surfaces the approximate CRM launch date", async () => {
+    const result = await answerQuestion({ question: "When did the CRM go live?" });
+    assert.match(result.response, /approximately July 2026/);
+    assert.ok(result.sources.some((source) => source.id === "zororo-crm"));
+  });
+});

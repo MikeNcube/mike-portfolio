@@ -14,7 +14,7 @@ function statusColor(status: Project["status"]): string {
   switch (status) {
     case "Live demo":            return "text-signal";
     case "Shipped":              return "text-signal";
-    case "Rolling out":          return "text-signal";
+    case "Approved for rollout":          return "text-signal";
     case "Approved · standby":   return "text-accent";
     case "Prototype":            return "text-accent";
     case "Built":                return "text-accent";

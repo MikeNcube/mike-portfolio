@@ -120,3 +120,12 @@ describe("r52 unknowable table", () => {
     assert.ok(UNKNOWABLE_REGEX_COUNT >= 40, String(UNKNOWABLE_REGEX_COUNT));
   });
 });
+
+
+describe("confirmed career timeline grounding", () => {
+  it("accepts dated career evidence without the retired six-plus claim", () => {
+    const g = evaluateGrounding("How many years of experience does Mike have?",
+      "Mike has worked in frontend development since 2022 and AI engineering since June 2024 [1].");
+    assert.equal(g.ok, true, JSON.stringify(g));
+  });
+});

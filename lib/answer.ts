@@ -304,11 +304,11 @@ export function buildPrompt(
     "Never add uncited evaluative conclusions such as 'this shows he can…'. If you state a conclusion, cite it with [n]; otherwise omit it.",
     "Keep answers under 120 words. Plain text only, no markdown headings or bullet points.",
     `When asked which production systems Mike shipped, answer in this structure: '${CANONICAL_PRODUCTION_ANSWER}' Never list ZDI under Shipped. Cite Digi App Form, the CRM, ZDI, and claims with [n] matching the context blocks.`,
-    "Never call ZDI, the claims operations platform, or Zororo AI OS production systems. Production systems are Digi App Form and the CRM. ZDI is rolling out; the claims platform is on standby; Zororo AI OS is early-stage and not deployed. Do not use an umbrella 'production systems' framing that lumps standby or early-stage projects with the live ones, and do not write 'several production and early-stage systems'. Give each project its own status sentence.",
-    "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
+    "Never call ZDI, the claims operations platform, or Zororo AI OS production systems. Production systems are Digi App Form and the CRM. ZDI is approved for rollout and not yet live; the claims platform is on standby; Zororo AI OS is early-stage and not deployed. Do not use an umbrella 'production systems' framing that lumps standby or early-stage projects with the live ones, and do not write 'several production and early-stage systems'. Give each project its own status sentence.",
+    "Never describe ZDI or the claims operations platform as live. ZDI is approved for production rollout at Zororo-Phumulani, not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system.",
     "Content labelled lab, prototype, or not production must never be described as production.",
     `When asked about AWS, answer in this structure: '${CANONICAL_AWS_ANSWER}' Do not say extensive or production-grade unless the context uses those words. List courses as training. Only named certificates are certifications. Never present AWS Training and Certification or AWS Skills Center as a credential.`,
-    "Whenever you mention ZDI, state in one full sentence that it is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live, and cite the source with [n]. Do not repeat that status.",
+    "Whenever you mention ZDI, state in one full sentence that it is approved for production rollout at Zororo-Phumulani but it is not yet live, and cite the source with [n]. Do not repeat that status.",
     "Whenever you mention Zororo AI OS, state in one full sentence that it is built, early stage, and not deployed. Do not write 'Built.' again if the sentence already says built, and never write 'Status: Built' after that.",
     "When asked about Proactive Sentinel, lead with MITRE ATT&CK mapping and event correlation. Cite a Proactive Sentinel PROJECT block, never the interview-guide or 'How to evaluate Mike' block. Mention SHA-256 fingerprint dedup in Redis once; do not also say event dedup.",
     "Mike works remote-first.",
@@ -1698,6 +1698,16 @@ function reconcileWithConcepts(
   analysis: QuestionAnalysis,
   result: AnswerResult,
 ): AnswerResult {
+  if (analysis.projects.length === 0 && analysis.concepts.includes("team")
+    && /\b(?:how (?:big|large)|team size|headcount|big engineering team)\b/i.test(question)) {
+    const team = conceptCanonicalResult("What is Mike's team size?");
+    if (team) return team;
+  }
+  if (analysis.projects.length === 0
+    && /\bhow long\b.{0,35}\b(?:building|built|developing|developed) (?:software|systems)\b/i.test(question)) {
+    const experience = conceptCanonicalResult("How many years of experience does Mike have?");
+    if (experience) return experience;
+  }
   const refused = isRefusal(result.response);
   const concept = conceptOverride(analysis, result.response, refused);
   const fallback = !concept && refused ? anchoredFallback(question, analysis) : null;
@@ -1769,6 +1779,12 @@ export async function answerQuestion(rawInput: AnswerInput): Promise<AnswerResul
     return refusalResult();
   }
   if (asksAboutEarlierWork(question, analysis)) return polishResult(question, earlierWorkReply(), []);
+  if (analysis.projects.length === 0 && /\bzororo(?:-phumulani)?\b/i.test(question)
+    && /\b(?:how long|when did)\b/i.test(question)
+    && /\b(?:been|work(?:ed|ing)?|join(?:ed)?|start(?:ed)?)\b/i.test(question)) {
+    const tenure = conceptCanonicalResult("When did Mike join Zororo-Phumulani?");
+    if (tenure) return polishResult(question, tenure, []);
+  }
   const reconciled = reconcileWithConcepts(question, analysis, await answerRetrieveFirst(input));
   return finishAnswer(question, analysis, reconciled);
 }
@@ -1788,7 +1804,7 @@ function earlierWorkReply(): AnswerResult {
   const chunk = KNOWLEDGE_CHUNKS.find((c) => c.id === "employer");
   return {
     response:
-      "The sources name only Mike's current employer and title: Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance, 2022 to present [1]. They do not list earlier employers or roles.",
+      "The sources do not list earlier employers. Mike's current role is Applied AI Engineer at Zororo-Phumulani [1].",
     sources: chunk ? [{ id: chunk.id, title: chunk.title, url: chunk.sourceUrl }] : [],
     via: "static",
   };

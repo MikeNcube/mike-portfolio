@@ -502,7 +502,7 @@ export const PARAPHRASES: Record<string, { questions: string[]; match: RegExp }>
     ]),
   },
   years: {
-    match: /six-plus years/,
+    match: /frontend development since 2022/i,
     questions: twenty("years", [
       "How many years of experience does Mike have?",
       "How long has Mike been an engineer?",

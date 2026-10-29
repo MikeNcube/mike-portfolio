@@ -36,13 +36,13 @@
 {"question":"Is Mike expected on-site full time?","kind":"answer","mustMatch":"remote-first"}
 {"question":"Does Mike already work remote-first?","kind":"answer","mustMatch":"remote-first"}
 {"question":"Is Mike's default setup remote-first from SA?","kind":"answer","mustMatch":"remote-first"}
-{"question":"How many years has Mike been building software?","kind":"answer","mustMatch":"six-plus years"}
-{"question":"What's Mike's engineering tenure in years?","kind":"answer","mustMatch":"six-plus years"}
-{"question":"Count Mike's years as a software engineer.","kind":"answer","mustMatch":"six-plus years"}
-{"question":"What's the year-count on Mike's career?","kind":"answer","mustMatch":"six-plus years"}
-{"question":"How many years of software work does Mike have?","kind":"answer","mustMatch":"six-plus years"}
-{"question":"Is Mike a six-plus-year engineer?","kind":"answer","mustMatch":"six-plus years"}
-{"question":"How lengthy is Mike's engineering career?","kind":"answer","mustMatch":"six-plus years"}
+{"question":"How many years has Mike been building software?","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"What's Mike's engineering tenure in years?","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"Count Mike's years as a software engineer.","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"What's the year-count on Mike's career?","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"How many years of software work does Mike have?","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"Is Mike a six-plus-year engineer?","kind":"answer","mustMatch":"frontend development since 2022"}
+{"question":"How lengthy is Mike's engineering career?","kind":"answer","mustMatch":"frontend development since 2022"}
 {"question":"What does Mike write APIs in?","kind":"answer","mustMatch":"Python"}
 {"question":"Which backend language is first in Mike's stack?","kind":"answer","mustMatch":"Python"}
 {"question":"Does Python show up as a language Mike uses?","kind":"answer","mustMatch":"Python"}

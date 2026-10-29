@@ -11,7 +11,7 @@ function statusClass(status: Project["status"]): string {
   switch (status) {
     case "Live demo":            return "text-signal";
     case "Shipped":              return "text-signal";
-    case "Rolling out":          return "text-signal";
+    case "Approved for rollout":          return "text-signal";
     case "Approved · standby":   return "text-accent";
     case "Prototype":            return "text-accent";
     case "Built":                return "text-accent";
@@ -65,9 +65,15 @@ function ProjectRow({ project }: { project: Project }) {
           <p className="mt-0.5 text-sm text-ink-muted text-pretty">
             {project.tagline.split(/\./)[0]}.
           </p>
+          {project.featuredSummary && (
+            <p className="mt-2 text-sm text-ink-muted">{project.featuredSummary}</p>
+          )}
           <p className="mt-0.5 text-micro font-mono text-ink-faint">
             {project.stack.slice(0, 4).join(" · ")}
           </p>
+          <Link href={`/projects/${project.slug}`} className="mt-2 inline-flex min-h-11 items-center text-sm link sm:hidden">
+            Read case study <span aria-hidden="true" className="ml-1">→</span>
+          </Link>
         </div>
 
         <div className="hidden sm:flex items-center gap-4 shrink-0">
@@ -111,12 +117,12 @@ export default function Work() {
             Selected projects.
           </h2>
           <p className="text-base text-ink-muted max-w-[520px]">
-            Production systems first, then demos and prototypes. Each links to a case study.
+            Shipped systems, a live AI demo and an approved workflow, followed by more work.
           </p>
         </div>
 
         <p className="text-xs text-ink-muted uppercase tracking-[0.15em] mb-3">
-          Production systems
+          Featured work
         </p>
         <div role="list" className="border-t border-ink/[0.07] mb-10">
           {production.map((p) => (
