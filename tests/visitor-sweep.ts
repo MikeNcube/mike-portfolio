@@ -40,11 +40,11 @@ export const VISITOR_SWEEP: Array<{ question: string; expect: SweepExpect }> = [
   },
   {
     question: "How many years of experience does Mike have?",
-    expect: { kind: "intent", id: "years", match: /six-plus years/ },
+    expect: { kind: "intent", id: "years", match: /frontend development since 2022/i },
   },
   {
     question: "How long has Mike been an engineer?",
-    expect: { kind: "intent", id: "years", match: /six-plus years/ },
+    expect: { kind: "intent", id: "years", match: /frontend development since 2022/i },
   },
   {
     question: "What is Mike's current job title?",

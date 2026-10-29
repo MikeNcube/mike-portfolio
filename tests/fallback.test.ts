@@ -715,7 +715,7 @@ describe("static CV copy", () => {
     assert.match(hit.answer, /^Shipped:/);
     assert.match(hit.answer, /Digi App Form \[1\] and the Zororo CRM \[2\]/);
     assert.match(hit.answer, /40/);
-    assert.match(hit.answer, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
+    assert.match(hit.answer, /Approved for rollout, not yet live:\s*ZDI \[3\]/);
     assert.match(hit.answer, /not yet live/i);
     assert.match(hit.answer, /claims operations platform/i);
     assert.match(hit.answer, /production-ready standby \(failover\) for Zororo-Phumulani's current claims system, not the live system itself \[4\]/);
@@ -790,9 +790,9 @@ describe("static CV copy", () => {
     assert.equal(matchStaticAnswer("what does zdi do")?.answer, zdi.answer);
     assert.equal(matchStaticAnswer("What does ZDI do?")?.answer, zdi.answer);
     assert.equal(matchStaticAnswer("what does zororo document intelligence do")?.answer, zdi.answer);
-    assert.match(zdi.answer, /^ZDI \(approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\)/);
+    assert.match(zdi.answer, /^ZDI \(approved for production rollout at Zororo-Phumulani, not yet live\)/);
     assert.match(zdi.answer, /Zororo Document Intelligence \[1\]/);
-    assert.match(zdi.answer, /rolling out soon/i);
+    assert.match(zdi.answer, /approved for production rollout/i);
     assert.match(zdi.answer, /not yet live/i);
     assert.doesNotMatch(zdi.answer, /Status:\s*Rolling out/i);
     assert.doesNotMatch(zdi.answer, /\bin production\b/);
@@ -806,7 +806,7 @@ describe("static CV copy", () => {
     assert.equal(zdiLive.answer, CANONICAL_ZDI_LIVE_ANSWER);
     assert.match(
       zdiLive.answer,
-      /^No\. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live \[\d+\]\.$/,
+      /^No\. ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live \[\d+\]\.$/,
     );
     assert.doesNotMatch(zdiLive.answer, /\bis live\b/i);
 
@@ -847,7 +847,7 @@ describe("ZDI project placement", () => {
     assert.ok(digi && crm && zdi);
     assert.equal(digi.status, "Shipped");
     assert.equal(crm.status, "Shipped");
-    assert.equal(zdi.status, "Rolling out");
+    assert.equal(zdi.status, "Approved for rollout");
     assert.match(zdi.role, /approved for production rollout at Zororo-Phumulani/);
     assert.match(zdi.outcome, /approved for production rollout at Zororo-Phumulani/i);
     assert.doesNotMatch(zdi.role, /not yet in production/i);
@@ -903,7 +903,7 @@ describe("production-system and ZDI status copy", () => {
 
   it("uses lowercase status badges", () => {
     assert.equal(statusLabel("Shipped"), "shipped");
-    assert.equal(statusLabel("Rolling out"), "rolling out");
+    assert.equal(statusLabel("Approved for rollout"), "approved for rollout · not live");
     assert.equal(statusLabel("Approved · standby"), "approved · standby");
     assert.equal(statusLabel("Built"), "built");
     assert.equal(statusLabel("Prototype"), "prototype");
@@ -952,7 +952,7 @@ describe("production-system and ZDI status copy", () => {
     );
     assert.equal(out, CANONICAL_PRODUCTION_ANSWER);
     assert.equal(zdiListedAsShipped(out), false);
-    assert.match(out, /Rolling out:\s*ZDI \[3\] \(approved for production rollout at Zororo-Phumulani/);
+    assert.match(out, /Approved for rollout, not yet live:\s*ZDI \[3\]/);
     assert.match(out, /production-ready standby \(failover\) for Zororo-Phumulani's current claims system, not the live system itself \[4\]/);
   });
 
@@ -1698,7 +1698,7 @@ describe("production-system and ZDI status copy", () => {
     assert.equal(result.response, CANONICAL_ZDI_LIVE_ANSWER);
     assert.match(
       result.response,
-      /^No\. ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live \[\d+\]\.$/,
+      /^No\. ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live \[\d+\]\.$/,
     );
     assert.doesNotMatch(result.response, /\bis live\b/i);
     assert.ok(result.sources.length >= 1);

@@ -437,7 +437,7 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
   {
     id: "years",
     canonical: "How many years of experience does Mike have?",
-    evidence: /six-plus/i,
+    evidence: /since 2022|June 2024/i,
     terms: ["years", "year", "tenure", "seniority", "how long", "long has", "career length",
       "decade", "senior"],
   },
@@ -739,7 +739,7 @@ export const PROFILE_CONCEPTS: ProfileConcept[] = [
   {
     id: "experience",
     canonical: "Tell me about Mike's experience",
-    evidence: /Applied AI Engineer|six-plus|Zororo-Phumulani/i,
+    evidence: /Applied AI Engineer|since 2022|June 2024|Zororo-Phumulani/i,
     terms: ["experience", "career", "background", "history", "track record",
       "work history", "journey", "professional", "professionally"],
   },

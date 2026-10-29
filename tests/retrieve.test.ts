@@ -31,7 +31,7 @@ describe("keyword retrieval fallback", () => {
     assert.match(crm!.text, /10 roles/);
     const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
     assert.ok(zdi);
-    assert.match(zdi!.text, /rolling out/i);
+    assert.match(zdi!.text, /approved for production rollout/i);
     assert.ok(
       ids.includes("zororo-claims"),
       `expected zororo-claims in ${ids.join(", ")}`,
@@ -53,9 +53,9 @@ describe("keyword retrieval fallback", () => {
     );
     const zdi = hits.find((h) => h.id === "zdi-signature-workflow");
     assert.ok(zdi && zdi.score >= MIN_RELEVANCE_SCORE);
-    assert.match(zdi!.text, /^ZDI \(approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live\)/);
+    assert.match(zdi!.text, /^ZDI \(approved for production rollout at Zororo-Phumulani, not yet live\)/);
     assert.match(zdi!.text, /approved for production rollout/i);
-    assert.match(zdi!.text, /rolling out soon/i);
+    assert.match(zdi!.text, /not yet live/i);
     assert.match(zdi!.text, /not yet live/i);
     assert.doesNotMatch(zdi!.text, /one of Mike's production systems/);
     assert.doesNotMatch(zdi!.text, /\bin production\b/);

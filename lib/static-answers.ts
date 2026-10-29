@@ -23,6 +23,12 @@ export type StaticAnswer = {
 
 export const STATIC_ANSWERS: StaticAnswer[] = [
   {
+    question: "When did Mike join Zororo-Phumulani?",
+    aliases: ["when did mike start at zororo", "how long has mike been at zororo-phumulani", "when did mike join zororo"],
+    answer: "Mike joined Zororo-Phumulani in 2018 in the call centre, moved into frontend development in 2022, and into AI engineering in June 2024 [1].",
+    sourceIds: ["employer"],
+  },
+  {
     question: "Who is Mike Ncube?",
     aliases: [
       "who is mike",
@@ -40,7 +46,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "one-sentence",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI. Email mikencube03@gmail.com.",
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since June 2024 [2]. Frontend development since 2022 and AI engineering since June 2024. Email mikencube03@gmail.com.",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -194,7 +200,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is mike's background",
     ],
     answer:
-      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2]. Six-plus years in software, about three focused on generative AI [1].",
+      "Mike S Ncube is an Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) in Johannesburg, South Africa [1]. He has been the sole AI engineer in a four-person IT team since June 2024 [2]. Frontend development since 2022 and AI engineering since June 2024 [1].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -248,7 +254,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "how long has mike been an engineer",
     ],
     answer:
-      "Mike has six-plus years in software, about three focused on generative AI [1]. He has been the sole AI engineer in a four-person IT team at Zororo-Phumulani since 2022 [1].",
+      "Mike has worked in frontend development since 2022 and AI engineering since June 2024 [1]. He has been the sole AI engineer in a four-person IT team at Zororo-Phumulani since June 2024 [1].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -266,7 +272,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "email signature",
     ],
     answer:
-      "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. He has been the sole AI engineer in a four-person IT team since 2022 [2].",
+      "Mike's title is Applied AI Engineer and Systems Architect at Zororo-Phumulani Funeral Assurance (FSP 48558) [1]. He has been the sole AI engineer in a four-person IT team since June 2024 [2].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -369,7 +375,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "it crew",
     ],
     answer:
-      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since 2022 [1].",
+      "Mike is the sole AI engineer in a four-person IT team at Zororo-Phumulani, since June 2024 [1].",
     sourceIds: ["positioning", "employer"],
   },
   {
@@ -499,7 +505,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "has zdi been rolled out",
     ],
     answer:
-      "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
+      "ZDI is approved for production rollout at Zororo-Phumulani and not yet live [1].",
     sourceIds: ["zdi-signature-workflow"],
   },
   {
@@ -579,7 +585,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what does the signature workflow do",
     ],
     answer:
-      "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence [1]. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
+      "ZDI (approved for production rollout at Zororo-Phumulani, not yet live) is a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence [1]. FastAPI, PostgreSQL and Next.js. Append-only, hash-chained signing events. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid.",
     sourceIds: ["zdi-signature-workflow"],
   },
   {
@@ -625,7 +631,7 @@ export const STATIC_ANSWERS: StaticAnswer[] = [
       "what is zororo crm",
     ],
     answer:
-      "The lead-management CRM is a shipped live production system at Zororo-Phumulani, used by over 40 people across around 10 roles [1]. Deterministic lead grading, strict round-robin routing, role-based access, and an adapter isolating the policy system of record. FastAPI, PostgreSQL, Redis, Celery, and Docker.",
+      "The lead-management CRM is a shipped live production system at Zororo-Phumulani, live since approximately July 2026, used by over 40 people across around 10 roles [1]. Deterministic lead grading, strict round-robin routing, role-based access, and an adapter isolating the policy system of record. FastAPI, PostgreSQL, Redis, Celery, and Docker.",
     sourceIds: ["zororo-crm"],
   },
   {

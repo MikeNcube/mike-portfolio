@@ -8,11 +8,11 @@
 
 :root {
   /* Light — warm cream / paper palette */
-  --page:       249 247 242;   /* #F9F7F2 */
-  --surface:    240 236 228;   /* #F0ECE4 */
+  --page:       244 244 237;   /* soft limestone */
+  --surface:    232 235 225;   /* pale mineral surface */
   --ink:        26  21  16;    /* #1A1510 */
-  --ink-muted:  107 98  88;    /* #6B6258 */
-  --ink-faint:  113 104 96;    /* #716860 — AA on page: 4.9:1 */
+  --ink-muted:  83  94  85;    /* muted forest-grey */
+  --ink-faint:  91  101 92;    /* muted forest-grey */
   --accent:     43  78  204;   /* #2B4ECC — AA on page: ~6.5:1 */
   --signal:     15  120 95;    /* #0F785F — green for "live" */
   --border:     26  21  16;    /* same as ink; use with low alpha */
@@ -21,11 +21,11 @@
   --opsz-display: 72;
 
   /* Architecture diagram tokens */
-  --d-fill: rgb(237 233 225);
+  --d-fill: rgb(232 235 225);
   --d-fill-accent: rgb(229 234 255);
   --d-stroke: rgba(26, 21, 16, 0.12);
   --d-text: rgb(26, 21, 16);
-  --d-text-muted: rgb(107, 98, 88);
+  --d-text-muted: rgb(83, 94, 85);
   --d-arrow: rgb(43, 78, 204);
   --d-arrow-muted: rgba(26, 21, 16, 0.35);
 }

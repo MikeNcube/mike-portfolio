@@ -33,7 +33,7 @@ const jetbrains = JetBrains_Mono({
 const SITE_URL = "https://mike-portfolio-tawny.vercel.app";
 const SITE_NAME = "Mike S Ncube";
 const SITE_DESCRIPTION =
-  "Applied AI Engineer and Systems Architect building governed, auditable AI systems for regulated work. Six-plus years in software, three focused on generative AI. Live RAG assistant on this page.";
+  "Applied AI Engineer and Systems Architect building governed, auditable AI systems for regulated work. Frontend development since 2022 and AI engineering since 2024. Live RAG assistant on this page.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F9F7F2" },
+    { media: "(prefers-color-scheme: light)", color: "#F4F4ED" },
     { media: "(prefers-color-scheme: dark)", color: "#141210" },
   ],
   width: "device-width",

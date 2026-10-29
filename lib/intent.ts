@@ -187,12 +187,12 @@ const PROJECT_STATE: Record<string, { live: boolean; prototype: boolean; line: s
   zdi: {
     live: false,
     prototype: false,
-    line: "ZDI is approved for production rollout at Zororo-Phumulani and rolling out soon, but it is not yet live [1].",
+    line: "ZDI is approved for production rollout at Zororo-Phumulani but it is not yet live [1].",
   },
   crm: {
     live: true,
     prototype: false,
-    line: "The lead-management CRM is a shipped live production system at Zororo-Phumulani, used by over 40 people across around 10 roles [1].",
+    line: "The lead-management CRM is a shipped live production system at Zororo-Phumulani, live since approximately July 2026, used by over 40 people across around 10 roles [1].",
   },
   digi: {
     live: true,

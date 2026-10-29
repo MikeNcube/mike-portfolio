@@ -15,13 +15,13 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     id: 'positioning',
     title: 'Who Mike is',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since 2022, building the organisation\'s AI capability from zero. Six-plus years in software, about three focused on generative AI. He works remote-first. Contact: mikencube03@gmail.com.',
+    text: 'Mike S Ncube is an Applied AI Engineer and Systems Architect based in Johannesburg, South Africa. He works at Zororo-Phumulani Funeral Assurance (FSP 48558), where he has been the sole AI engineer in a four-person IT team since June 2024, building the organisation\'s AI capability from zero. Frontend development since 2022 and AI engineering since June 2024. He works remote-first. Contact: mikencube03@gmail.com.',
   },
   {
     id: 'employer',
     title: 'Zororo-Phumulani — employer and work context',
     sourceUrl: 'https://github.com/MikeNcube',
-    text: 'Mike\'s employer is Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider. Title: Applied AI Engineer and Systems Architect, 2022 to present. Sole AI engineer in a four-person IT team. Production systems: Digi App Form (live), the lead-management CRM (live), and ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live). The claims operations platform is an approved, production-ready standby (failover), not the live system. Also built Zororo AI OS (early stage, not deployed) and a claims extraction pipeline. POPIA-aware design throughout. Works directly with non-technical staff, compliance, and executive stakeholders.',
+    text: 'Mike\'s employer is Zororo-Phumulani Funeral Assurance (FSP 48558), a licensed South African financial services provider. Mike joined Zororo-Phumulani in 2018 in the call centre, worked in frontend development from 2022 to 2024, and moved into AI engineering in June 2024. Title: Applied AI Engineer and Systems Architect, June 2024 to present. Sole AI engineer in a four-person IT team. Live production systems: Digi App Form and the lead-management CRM. ZDI is approved for production rollout at Zororo-Phumulani but not yet live. The claims operations platform is an approved, production-ready standby (failover), not the live system. Also built Zororo AI OS (early stage, not deployed) and a claims extraction pipeline. POPIA-aware design throughout. Works directly with non-technical staff, compliance, and executive stakeholders.',
   },
   {
     id: 'stack',
@@ -53,8 +53,8 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
   },
   {
     id: 'zororo-crm',
-    title: 'Lead-management CRM (production, Zororo-Phumulani)',
-    sourceUrl: 'https://github.com/MikeNcube',
+    title: 'Lead-management CRM (production, Zororo-Phumulani) — Mike’s case study',
+    sourceUrl: 'https://mike-portfolio-tawny.vercel.app/projects/zororo-crm',
     keywords: [
       'production systems',
       'shipped',
@@ -66,12 +66,12 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'lead-management',
       'tech lead',
     ],
-    text: "Shipped live production system at Zororo-Phumulani Funeral Assurance: lead-management CRM used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
+    text: "Shipped live production system at Zororo-Phumulani Funeral Assurance, live since approximately July 2026: lead-management CRM used by over 40 people across around 10 roles. Deterministic lead grading, strict round-robin routing rules, role-based access, server-side session revocation, and an adapter isolating the policy system of record so a live integration change touches one file. FastAPI, PostgreSQL, Redis, Celery, Docker, reversible additive migrations, full test suite. Private codebase — architecture walk-through available in interview.",
   },
   {
     id: 'zdi-signature-workflow',
-    title: 'ZDI — Signature & Approval Workflow (Zororo Document Intelligence)',
-    sourceUrl: 'https://github.com/MikeNcube',
+    title: 'ZDI — Signature & Approval Workflow (Zororo Document Intelligence) — Mike’s case study',
+    sourceUrl: 'https://mike-portfolio-tawny.vercel.app/projects/zdi-signature-workflow',
     keywords: [
       'ZDI',
       'Zororo Document Intelligence',
@@ -83,15 +83,13 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
       'Zororo',
       'Zororo-Phumulani',
       'approved for production rollout',
-      'rolling out',
-      'rolling out soon',
       'not yet live',
       'production systems',
       'production systems',
       'Mike production systems',
       'Signature Service',
     ],
-    text: "ZDI (approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live) is Zororo Document Intelligence, a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link (no login); the requester completes the form, attaches a quotation and signs. Manager, Accounts and IT workspaces share one FastAPI backend and one routing contract. Capability check and workflow guards: a requester can never approve their own request. Config-driven route: submitted → manager review → accounts review → archived. A return for correction creates a new revision and the route restarts. Every signature is an append-only, hash-chained signing event that binds signer, role and capacity, explicit intent, method (drawn, captured or typed), and a SHA-256 of the exact content revision. A worker renders an archival PDF with an evidence appendix. An evidence check re-verifies the hashes. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
+    text: "ZDI (approved for production rollout at Zororo-Phumulani, not yet live) is Zororo Document Intelligence, a Signature & Approval Workflow: evidence-grade e-signatures and a requester → manager → Accounts approval workflow, the second domain of Zororo Document Intelligence. A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link (no login); the requester completes the form, attaches a quotation and signs. Manager, Accounts and IT workspaces share one FastAPI backend and one routing contract. Capability check and workflow guards: a requester can never approve their own request. Config-driven route: submitted → manager review → accounts review → archived. A return for correction creates a new revision and the route restarts. Every signature is an append-only, hash-chained signing event that binds signer, role and capacity, explicit intent, method (drawn, captured or typed), and a SHA-256 of the exact content revision. A worker renders an archival PDF with an evidence appendix. An evidence check re-verifies the hashes. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. No AI in approvals. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
   },
   {
     id: 'zororo-ai-os',
@@ -112,8 +110,8 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
   },
   {
     id: 'zororo-claims',
-    title: 'Claims operations platform (Zororo-Phumulani)',
-    sourceUrl: 'https://github.com/MikeNcube',
+    title: 'Claims operations platform (Zororo-Phumulani) — Mike’s case study',
+    sourceUrl: 'https://mike-portfolio-tawny.vercel.app/projects/zororo-claims',
     keywords: [
       'claims operations platform',
       'Approved · standby',
@@ -157,8 +155,8 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
   },
   {
     id: 'digi-app-form',
-    title: 'Digi App Form — regulated insurance intake (Zororo-Phumulani)',
-    sourceUrl: 'https://github.com/MikeNcube',
+    title: 'Digi App Form — regulated insurance intake (Zororo-Phumulani) — Mike’s case study',
+    sourceUrl: 'https://mike-portfolio-tawny.vercel.app/projects/digi-app-form',
     keywords: [
       'production systems',
       'shipped',

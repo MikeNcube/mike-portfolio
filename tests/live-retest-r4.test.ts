@@ -268,8 +268,8 @@ describe("model answers open so they stand alone", () => {
 
   it("names Mike when a model answer opens on 'He'", async () => {
     const result = await groq("How many years has Mike worked in software?", ["positioning"],
-      "He has six-plus years in software, about three focused on generative AI [1].");
-    assert.match(result.response, /^Mike has six-plus years/, result.response);
+      "He has worked in frontend development since 2022 and AI engineering since June 2024 [1].");
+    assert.match(result.response, /^Mike has worked in frontend development since 2022/, result.response);
   });
 
   it("drops a connective that points back at nothing", async () => {

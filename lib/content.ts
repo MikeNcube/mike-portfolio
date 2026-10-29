@@ -4,7 +4,7 @@
 export type ProjectStatus =
   | "Live demo"
   | "Shipped"
-  | "Rolling out"
+  | "Approved for rollout"
   | "Approved · standby"
   | "Prototype"
   | "Paused"
@@ -19,8 +19,8 @@ export function statusLabel(status: ProjectStatus): string {
       return "live";
     case "Shipped":
       return "shipped";
-    case "Rolling out":
-      return "rolling out";
+    case "Approved for rollout":
+      return "approved for rollout · not live";
     case "Approved · standby":
       return "approved · standby";
     case "Prototype":
@@ -57,6 +57,7 @@ export const WORK_ORDER = [
 export const PRODUCTION_SLUGS = [
   "digi-app-form",
   "zororo-crm",
+  "portfolio-rag-assistant",
   "zdi-signature-workflow",
 ] as const;
 
@@ -75,6 +76,7 @@ export type Project = {
   status: ProjectStatus;
   domain: string;
   year: string;
+  featuredSummary?: string;
   repoUrl?: string;
   privateRepo?: boolean;
   demoUrl?: string;
@@ -108,6 +110,7 @@ export const flagshipProjects: Project[] = [
     status: "Live demo",
     domain: "RAG · Full-stack AI",
     year: "2026",
+    featuredSummary: "Built this live assistant to demonstrate grounded retrieval and citations.",
     repoUrl: "https://github.com/MikeNcube/mike-portfolio",
     demoUrl: "/#assistant",
     demoLabel: "Try it above",
@@ -168,13 +171,13 @@ export const flagshipProjects: Project[] = [
     tagline:
       "Production CRM at Zororo-Phumulani Funeral Assurance: used by over 40 people across around 10 roles. FastAPI, PostgreSQL, Redis, Celery, Docker.",
     workSection: "platform",
-    role: "Sole AI engineer — production system at employer (Zororo-Phumulani)",
+    role: "Builder — production system at Zororo-Phumulani",
     problem:
       "A licensed South African funeral-assurance call centre needed a CRM that enforced deterministic lead grading and strict round-robin routing — not a suggestion, but a business rule that the system guarantees.",
     built:
       "FastAPI backend with PostgreSQL for lead and agent records. Deterministic lead grading (rules-based, not ML). Strict round-robin routing that cannot be bypassed. Role-based access across around 10 roles. Server-side session revocation. An adapter isolating the policy system of record so a live integration change touches one file. Reversible additive migrations. Full test suite. Redis and Celery for async tasks. Docker deployment.",
     outcome:
-      "Production system used by over 40 people at Zororo-Phumulani Funeral Assurance. Private codebase — architecture walk-through available in interview.",
+      "Live since approximately July 2026; used by over 40 people at Zororo-Phumulani Funeral Assurance. Private codebase — architecture walk-through available in interview.",
     engineeringDecisions: [
       "Deterministic lead grading (rules, not ML) because in a regulated product the grading logic must be auditable and explainable to compliance staff.",
       "The policy system is isolated behind an adapter: a live integration change touches one file, not spread calls across the codebase.",
@@ -184,7 +187,8 @@ export const flagshipProjects: Project[] = [
     stack: ["Python", "FastAPI", "PostgreSQL", "Redis", "Celery", "Docker"],
     status: "Shipped",
     domain: "Production · CRM",
-    year: "2022–present",
+    year: "2026",
+    featuredSummary: "Built lead routing and access controls for a CRM used by over 40 people; live since approximately July 2026.",
   },
   {
     slug: "zdi-signature-workflow",
@@ -198,7 +202,7 @@ export const flagshipProjects: Project[] = [
     built:
       "A reusable Signature Service and requisition workflow on FastAPI, PostgreSQL and Next.js. A manager sends a requester a single-use, expiring secure link; the requester completes the form, attaches a quotation and signs. The request returns to that manager to approve and sign, return with a reason, or reject; only then can Accounts act, sign off, or return it for correction. Every signature is a row in an append-only, hash-chained signing-event table that binds the signer, their role and capacity at signing, explicit intent, the method (drawn, captured or typed), and a SHA-256 of the exact content revision. On final approval a background worker renders an archival PDF with an evidence appendix. Separate Manager, Accounts and IT workspaces plus a Management App share one backend and one routing contract, with capability-based access control and segregation of duties.",
     outcome:
-      "Approved for production rollout at Zororo-Phumulani. Rolling out soon, not yet live. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
+      "Approved for production rollout at Zororo-Phumulani; not yet live. 525 backend tests on SQLite, Postgres-only suites and both front-end test suites passing. ZDI never pays, never produces a bank file and never marks anything as paid. Private codebase — walk-through available in interview.",
     systemOverview:
       "Requester (secure link, no login) → submit + sign → manager review (approve & sign / return / reject) → Accounts review (approve & sign / return / reject / forward to a colleague) → archive_pending → worker renders PDF, stores it, hashes it → archived. A return issues a correction link; the resubmission becomes a new revision and the route restarts, so an approval of revision 1 never carries over to revision 2. Each step writes the mutable requisition status, an append-only workflow event and an append-only audit event in the same transaction; notifications go through a transactional outbox so a mail outage cannot block an approval. An evidence check recomputes the signing events, event hashes, document hash, attachment and PDF hashes on demand.",
     engineeringDecisions: [
@@ -212,9 +216,10 @@ export const flagshipProjects: Project[] = [
       "Honest about limits: the evidence is tamper-evident within the database's controls, not a cryptographically signed PDF; no AI touches approvals or payments.",
     ],
     stack: ["Python", "FastAPI", "PostgreSQL", "Alembic", "Next.js", "TypeScript", "reportlab", "Docker", "pytest", "Vitest"],
-    status: "Rolling out",
+    status: "Approved for rollout",
     domain: "Governed workflow · E-signature evidence",
     year: "2026",
+    featuredSummary: "Designed a signature and approval workflow with tamper-evident records; not yet live.",
   },
   {
     slug: "zororo-ai-os",
@@ -347,6 +352,7 @@ export const flagshipProjects: Project[] = [
     status: "Shipped",
     domain: "Insurance · Full-stack web",
     year: "2026",
+    featuredSummary: "Built digital intake and document generation for funeral-assurance applications.",
   },
   {
     slug: "proactive-sentinel",
@@ -494,7 +500,7 @@ export const profile = {
   avatar: "/Mike_Org.jpeg",
   portrait: "/Mike_Org.jpeg",
   headline: "Applied AI Engineer",
-  subHeadline: "Applied AI Engineer and Systems Architect · Zororo-Phumulani Funeral Assurance · 2022–present",
+  subHeadline: "Applied AI Engineer · Zororo-Phumulani · 2024–present",
   oneLiner: "I build AI systems for regulated work.",
   availability: "Available · Johannesburg · Remote",
   role: "Applied AI Engineer",

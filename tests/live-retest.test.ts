@@ -68,7 +68,7 @@ describe("live retest (a): validator rejects claim words the cited block does no
   });
 
   it("keeps an answer that uses its cited block's own words", () => {
-    const text = "ZDI is approved for production rollout at Zororo-Phumulani, rolling out soon, not yet live [1]. "
+    const text = "ZDI is approved for production rollout at Zororo-Phumulani, not yet live [1]. "
       + "It is a Signature & Approval Workflow on FastAPI, PostgreSQL and Next.js [1].";
     assert.deepEqual(findUnsupportedClaims(text, cited("zdi-signature-workflow")), []);
     assert.match(validateModelSentences(text, cited("zdi-signature-workflow")), /not yet live/);

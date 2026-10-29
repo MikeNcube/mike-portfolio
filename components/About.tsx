@@ -20,15 +20,13 @@ export default function About() {
               <p>
                 Applied AI Engineer and Systems Architect at{" "}
                 <strong className="text-ink font-medium">Zororo-Phumulani Funeral Assurance</strong>{" "}
-                (FSP 48558), where I have been the sole AI engineer since 2022. I built
+                (FSP 48558), where I have worked in AI engineering since June 2024. I built
                 Digi App Form, the lead-management CRM used by over 40 people, and
                 ZDI (approved for production rollout) in a four-person IT team.
               </p>
               <p>
-                Six-plus years in software, about three focused on generative AI.
-                My strongest public proof is the live assistant above: open devtools,
-                read the network calls, click the citations. No formal degree.
-                Capability evidenced by shipped systems and a{" "}
+                At Zororo-Phumulani, I moved from call-centre work into frontend development in 2022, then into AI engineering in 2024.
+                Explore the live assistant above, the project case studies, and my{" "}
                 <a
                   href={profile.github}
                   target="_blank"

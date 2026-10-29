@@ -67,14 +67,14 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     mustContain: ["Digi", "CRM", "ZDI"],
     meaningChecks: [
       { label: "shipped", anyOf: ["Shipped:", "shipped"] },
-      { label: "rolling_out", anyOf: ["Rolling out:", "rolling out"] },
+      { label: "rollout_status", anyOf: ["approved for rollout", "approved for production rollout"] },
       { label: "standby", anyOf: ["standby", "failover", "fail-over"] },
     ],
     mustNotContain: ["confidential client"],
     expectRefusal: false,
     expectSources: true,
     expectCitation: true,
-    description: "Shipped Digi [1] and CRM [2]; Rolling out ZDI [3]; claims [4] on standby",
+    description: "Shipped Digi [1] and CRM [2]; ZDI approved for rollout, not yet live [3]; claims [4] on standby",
   },
   {
     id: "built-at-zororo",
@@ -170,7 +170,6 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     audience: "developer",
     meaningChecks: [
       { label: "approved", anyOf: ["approved"] },
-      { label: "rolling_out", anyOf: ["rolling out"] },
       { label: "not_live", anyOf: ["not yet live", "not live"] },
     ],
     mustNotContain: [
@@ -189,7 +188,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     ],
     expectRefusal: false,
     expectSources: true,
-    description: "ZDI — approved, rolling out, and not yet live (model wording or canonical)",
+    description: "ZDI — approved for rollout and not yet live (model wording or canonical)",
   },
   {
     id: "zdi-live",
@@ -198,7 +197,6 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     meaningChecks: [
       { label: "not_live", anyOf: ["not yet live", "not live"] },
       { label: "approved", anyOf: ["approved"] },
-      { label: "rolling_out", anyOf: ["rolling out"] },
     ],
     mustNotContain: [
       "is live",
@@ -208,7 +206,7 @@ export const EVAL_QUESTIONS: EvalQuestion[] = [
     ],
     expectRefusal: false,
     expectSources: true,
-    description: "ZDI is not yet live — full cited sentence: approved, rolling out, not yet live",
+    description: "ZDI is not yet live — full cited sentence: approved for rollout, not yet live",
   },
   {
     id: "zororo-ai-os",

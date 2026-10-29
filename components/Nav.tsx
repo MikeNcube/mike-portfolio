@@ -37,7 +37,7 @@ export default function Nav() {
 
         {/* Logo / name */}
         <a
-          href="#top"
+          href="/#top"
           className="flex h-full min-h-12 items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-ink/15">
@@ -60,7 +60,7 @@ export default function Nav() {
           {navSections.map((s) => (
             <a
               key={s.id}
-              href={`#${s.id}`}
+              href={`/#${s.id}`}
               className="inline-flex h-full min-h-12 items-center rounded-lg px-3.5 text-sm text-ink-muted transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
               {s.label}
@@ -109,7 +109,7 @@ export default function Nav() {
             {navSections.map((s) => (
               <a
                 key={s.id}
-                href={`#${s.id}`}
+                href={`/#${s.id}`}
                 onClick={() => setOpen(false)}
                 className="min-h-[44px] flex items-center rounded-lg px-2 text-base text-ink-muted hover:text-ink"
               >
